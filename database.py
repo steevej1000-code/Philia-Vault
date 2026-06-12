@@ -64,10 +64,38 @@ def init_db():
     conn = get_db()
     cursor = conn.cursor()
     
-    # Create assets table
+    # Create users table for auth (supports email/password & google auth)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL UNIQUE,
+        password TEXT,
+        google_id TEXT,
+        stripe_customer_id TEXT,
+        premium_status INTEGER DEFAULT 0,
+        premium_expires TEXT,
+        currency TEXT DEFAULT 'EUR'
+    )
+    """)
+
+    # Try to add missing columns to users if the table already existed
+    for col_def in [
+        ("google_id", "TEXT"),
+        ("stripe_customer_id", "TEXT"),
+        ("premium_status", "INTEGER DEFAULT 0"),
+        ("premium_expires", "TEXT"),
+        ("currency", "TEXT DEFAULT 'EUR'")
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")
+        except Exception:
+            pass
+
+    # Create assets table (with user_id)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS assets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
         name TEXT NOT NULL,
         type TEXT NOT NULL,
         value REAL NOT NULL,
@@ -76,10 +104,11 @@ def init_db():
     )
     """)
     
-    # Create liabilities table
+    # Create liabilities table (with user_id)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS liabilities (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
         name TEXT NOT NULL,
         type TEXT NOT NULL,
         total_amount REAL NOT NULL,
@@ -89,10 +118,11 @@ def init_db():
     )
     """)
     
-    # Create transactions table
+    # Create transactions table (with user_id)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
         description TEXT NOT NULL,
         type TEXT NOT NULL,
         amount REAL NOT NULL,
@@ -100,37 +130,11 @@ def init_db():
     )
     """)
 
-    # Create users table for auth
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL
-    )
-    """)
-
-    # Create user_profile table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS user_profile (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        premium_status INTEGER DEFAULT 0,
-        premium_expires TEXT,
-        subscriber_id TEXT,
-        currency TEXT DEFAULT 'USD'
-    )
-    """)
-    
-    # Try to add currency column if table existed without it
-    try:
-        cursor.execute("ALTER TABLE user_profile ADD COLUMN currency TEXT DEFAULT 'USD'")
-    except Exception:
-        pass
-
-    # Create savings_goals table
+    # Create savings_goals table (with user_id)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS savings_goals (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
         name TEXT NOT NULL,
         target_amount TEXT NOT NULL,
         current_amount TEXT NOT NULL,
@@ -138,89 +142,118 @@ def init_db():
     )
     """)
 
-    # Check if we need to seed the database
-    cursor.execute("SELECT COUNT(*) FROM assets")
-    if cursor.fetchone()[0] == 0:
-        # Seed Assets
-        assets = [
-            ("Stocks Portfolio", "Stocks", encrypt_val(42850.00), encrypt_val(840.12)),
-            ("Crypto Staking", "Crypto", encrypt_val(12305.50), encrypt_val(312.45)),
-            ("Shopify Store", "Commerce", encrypt_val(28400.00), encrypt_val(4250.00)),
-            ("Rental Property", "Real Estate", encrypt_val(350000.00), encrypt_val(1800.00))
-        ]
-        cursor.executemany("INSERT INTO assets (name, type, value, monthly_yield) VALUES (?, ?, ?, ?)", assets)
-        
-        # Seed Liabilities
-        liabilities = [
-            ("Real Estate Mortgage", "Mortgage", encrypt_val(422000.00), encrypt_val(245000.00), encrypt_val(1450.00)),
-            ("Tesla Model Y Lease", "Loan", encrypt_val(56000.00), encrypt_val(12400.00), encrypt_val(680.00)),
-            ("Business Expansion Loan", "Loan", encrypt_val(56000.00), encrypt_val(4500.00), encrypt_val(210.00)),
-            ("Netflix Premium", "Subscription", encrypt_val(215.00), encrypt_val(215.00), encrypt_val(17.92)),
-            ("Spotify Family", "Subscription", encrypt_val(119.00), encrypt_val(119.00), encrypt_val(9.92)),
-            ("Klarna Shopping BNPL", "Subscription", encrypt_val(840.00), encrypt_val(840.00), encrypt_val(70.00)),
-            ("Adobe CC Portfolio", "Subscription", encrypt_val(635.00), encrypt_val(635.00), encrypt_val(52.92))
-        ]
-        cursor.executemany("INSERT INTO liabilities (name, type, total_amount, remaining_amount, monthly_cost) VALUES (?, ?, ?, ?, ?)", liabilities)
-        
-        # Seed Transactions (Recent yields & payments)
-        transactions = [
-            ("Vanguard S&P 500 ETF Dividend", "asset_yield", encrypt_val(124.50), "2026-06-09"),
-            ("Amazon FBA - Home Goods Store #1 Payout", "asset_yield", encrypt_val(3210.00), "2026-06-10"),
-            ("Mortgage Auto-pay", "liability_payment", encrypt_val(-1450.00), "2026-06-15"),
-            ("Tesla Lease Payment", "liability_payment", encrypt_val(-680.00), "2026-06-20"),
-            ("Premium Insurance Plan", "liability_payment", encrypt_val(-210.00), "2026-06-24")
-        ]
-        cursor.executemany("INSERT INTO transactions (description, type, amount, date) VALUES (?, ?, ?, ?)", transactions)
-        
-        # Seed User Profile
-        cursor.execute("INSERT INTO user_profile (name, premium_status) VALUES ('Alex', 0)")
-        
-        conn.commit()
-    
-    # Ensure there is at least one profile even if seeded before IAP change
-    cursor.execute("SELECT COUNT(*) FROM user_profile")
-    if cursor.fetchone()[0] == 0:
-        cursor.execute("INSERT INTO user_profile (name, premium_status) VALUES ('Alex', 0)")
-        conn.commit()
-        
-    conn.close()
-
-# User Profile Helpers
-def get_user_profile():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM user_profile LIMIT 1")
-    row = cursor.fetchone()
-    conn.close()
-    if row:
-        d = dict(row)
-        if "currency" not in d or d["currency"] is None:
-            d["currency"] = "USD"
-        return d
-    return {"name": "Alex", "premium_status": 0, "subscriber_id": None, "currency": "USD"}
-
-def set_premium_status(status, subscriber_id=None):
-    conn = get_db()
-    cursor = conn.cursor()
-    if subscriber_id:
-        cursor.execute("UPDATE user_profile SET premium_status=?, subscriber_id=? WHERE id=1", (int(status), subscriber_id))
-    else:
-        cursor.execute("UPDATE user_profile SET premium_status=? WHERE id=1", (int(status),))
+    # Migrate old data if any exists without user_id
+    for table in ["assets", "liabilities", "transactions", "savings_goals"]:
+        try:
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN user_id TEXT")
+        except Exception:
+            pass
+            
     conn.commit()
     conn.close()
 
-def update_user_currency(currency):
+# Seed mock data for new users to start with a realistic dashboard
+def seed_user_data(user_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("UPDATE user_profile SET currency=? WHERE id=1", (currency,))
+    
+    # Check if user already has data
+    cursor.execute("SELECT COUNT(*) FROM assets WHERE user_id = ?", (user_id,))
+    if cursor.fetchone()[0] == 0:
+        # Seed Assets
+        assets = [
+            (user_id, "Stocks Portfolio", "Stocks", encrypt_val(42850.00), encrypt_val(840.12)),
+            (user_id, "Crypto Staking", "Crypto", encrypt_val(12305.50), encrypt_val(312.45)),
+            (user_id, "Shopify Store", "Commerce", encrypt_val(28400.00), encrypt_val(4250.00)),
+            (user_id, "Rental Property", "Real Estate", encrypt_val(350000.00), encrypt_val(1800.00))
+        ]
+        cursor.executemany("INSERT INTO assets (user_id, name, type, value, monthly_yield) VALUES (?, ?, ?, ?, ?)", assets)
+        
+        # Seed Liabilities
+        liabilities = [
+            (user_id, "Real Estate Mortgage", "Mortgage", encrypt_val(422000.00), encrypt_val(245000.00), encrypt_val(1450.00)),
+            (user_id, "Tesla Model Y Lease", "Loan", encrypt_val(56000.00), encrypt_val(12400.00), encrypt_val(680.00)),
+            (user_id, "Business Expansion Loan", "Loan", encrypt_val(56000.00), encrypt_val(4500.00), encrypt_val(210.00)),
+            (user_id, "Netflix Premium", "Subscription", encrypt_val(215.00), encrypt_val(215.00), encrypt_val(17.92)),
+            (user_id, "Spotify Family", "Subscription", encrypt_val(119.00), encrypt_val(119.00), encrypt_val(9.92)),
+            (user_id, "Klarna Shopping BNPL", "Subscription", encrypt_val(840.00), encrypt_val(840.00), encrypt_val(70.00)),
+            (user_id, "Adobe CC Portfolio", "Subscription", encrypt_val(635.00), encrypt_val(635.00), encrypt_val(52.92))
+        ]
+        cursor.executemany("INSERT INTO liabilities (user_id, name, type, total_amount, remaining_amount, monthly_cost) VALUES (?, ?, ?, ?, ?, ?)", liabilities)
+        
+        # Seed Transactions (Recent yields & payments)
+        transactions = [
+            (user_id, "Vanguard S&P 500 ETF Dividend", "asset_yield", encrypt_val(124.50), "2026-06-09"),
+            (user_id, "Amazon FBA - Home Goods Store #1 Payout", "asset_yield", encrypt_val(3210.00), "2026-06-10"),
+            (user_id, "Mortgage Auto-pay", "liability_payment", encrypt_val(-1450.00), "2026-06-15"),
+            (user_id, "Tesla Lease Payment", "liability_payment", encrypt_val(-680.00), "2026-06-20"),
+            (user_id, "Premium Insurance Plan", "liability_payment", encrypt_val(-210.00), "2026-06-24")
+        ]
+        cursor.executemany("INSERT INTO transactions (user_id, description, type, amount, date) VALUES (?, ?, ?, ?, ?)", transactions)
+        
+        conn.commit()
+    conn.close()
+
+# User Profile Helpers
+def get_user_profile(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ? OR id = ?", (user_id, user_id))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        conn = get_db()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("INSERT INTO users (email, password) VALUES (?, '')", (user_id,))
+            conn.commit()
+        except Exception:
+            pass
+        conn.close()
+        
+        # Seed default dashboard data
+        seed_user_data(user_id)
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE email = ? OR id = ?", (user_id, user_id))
+        row = cursor.fetchone()
+        conn.close()
+        
+    if row:
+        d = dict(row)
+        # return compatible dictionary format
+        return {
+            "name": d["email"].split("@")[0].capitalize() if "@" in d["email"] else d["email"],
+            "email": d["email"],
+            "premium_status": d["premium_status"],
+            "stripe_customer_id": d["stripe_customer_id"],
+            "currency": d["currency"] or "EUR"
+        }
+    return None
+
+def set_premium_status(user_id, status, stripe_customer_id=None):
+    conn = get_db()
+    cursor = conn.cursor()
+    if stripe_customer_id:
+        cursor.execute("UPDATE users SET premium_status=?, stripe_customer_id=? WHERE email=? OR id=?", (int(status), stripe_customer_id, user_id, user_id))
+    else:
+        cursor.execute("UPDATE users SET premium_status=? WHERE email=? OR id=?", (int(status), user_id, user_id))
+    conn.commit()
+    conn.close()
+
+def update_user_currency(user_id, currency):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET currency=? WHERE email=? OR id=?", (currency, user_id, user_id))
     conn.commit()
     conn.close()
 
 # Savings Goals Helpers
-def get_savings_goals():
+def get_savings_goals(user_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM savings_goals ORDER BY id DESC")
+    cursor.execute("SELECT * FROM savings_goals WHERE user_id = ? ORDER BY id DESC", (user_id,))
     rows = []
     for r in cursor.fetchall():
         d = dict(r)
@@ -230,38 +263,38 @@ def get_savings_goals():
     conn.close()
     return rows
 
-def add_savings_goal(name, target_amount, current_amount, target_date):
+def add_savings_goal(user_id, name, target_amount, current_amount, target_date):
     conn = get_db()
     cursor = conn.cursor()
     enc_target = encrypt_val(target_amount)
     enc_current = encrypt_val(current_amount)
-    cursor.execute("INSERT INTO savings_goals (name, target_amount, current_amount, target_date) VALUES (?, ?, ?, ?)",
-                   (name, enc_target, enc_current, target_date))
+    cursor.execute("INSERT INTO savings_goals (user_id, name, target_amount, current_amount, target_date) VALUES (?, ?, ?, ?, ?)",
+                   (user_id, name, enc_target, enc_current, target_date))
     conn.commit()
     conn.close()
 
-def update_savings_goal(goal_id, name, target_amount, current_amount, target_date):
+def update_savings_goal(user_id, goal_id, name, target_amount, current_amount, target_date):
     conn = get_db()
     cursor = conn.cursor()
     enc_target = encrypt_val(target_amount)
     enc_current = encrypt_val(current_amount)
-    cursor.execute("UPDATE savings_goals SET name=?, target_amount=?, current_amount=?, target_date=? WHERE id=?",
-                   (name, enc_target, enc_current, target_date, goal_id))
+    cursor.execute("UPDATE savings_goals SET name=?, target_amount=?, current_amount=?, target_date=? WHERE id=? AND user_id=?",
+                   (name, enc_target, enc_current, target_date, goal_id, user_id))
     conn.commit()
     conn.close()
 
-def delete_savings_goal(goal_id):
+def delete_savings_goal(user_id, goal_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM savings_goals WHERE id=?", (goal_id,))
+    cursor.execute("DELETE FROM savings_goals WHERE id=? AND user_id=?", (goal_id, user_id))
     conn.commit()
     conn.close()
 
 # Assets CRUD Helpers
-def get_assets():
+def get_assets(user_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM assets ORDER BY id DESC")
+    cursor.execute("SELECT * FROM assets WHERE user_id = ? ORDER BY id DESC", (user_id,))
     rows = []
     for r in cursor.fetchall():
         d = dict(r)
@@ -271,36 +304,36 @@ def get_assets():
     conn.close()
     return rows
 
-def add_asset(name, type_, value, monthly_yield):
+def add_asset(user_id, name, type_, value, monthly_yield):
     conn = get_db()
     cursor = conn.cursor()
     enc_value = encrypt_val(value)
     enc_yield = encrypt_val(monthly_yield)
-    cursor.execute("INSERT INTO assets (name, type, value, monthly_yield) VALUES (?, ?, ?, ?)", (name, type_, enc_value, enc_yield))
+    cursor.execute("INSERT INTO assets (user_id, name, type, value, monthly_yield) VALUES (?, ?, ?, ?, ?)", (user_id, name, type_, enc_value, enc_yield))
     conn.commit()
     conn.close()
 
-def update_asset(asset_id, name, type_, value, monthly_yield):
+def update_asset(user_id, asset_id, name, type_, value, monthly_yield):
     conn = get_db()
     cursor = conn.cursor()
     enc_value = encrypt_val(value)
     enc_yield = encrypt_val(monthly_yield)
-    cursor.execute("UPDATE assets SET name=?, type=?, value=?, monthly_yield=? WHERE id=?", (name, type_, enc_value, enc_yield, asset_id))
+    cursor.execute("UPDATE assets SET name=?, type=?, value=?, monthly_yield=? WHERE id=? AND user_id=?", (name, type_, enc_value, enc_yield, asset_id, user_id))
     conn.commit()
     conn.close()
 
-def delete_asset(asset_id):
+def delete_asset(user_id, asset_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM assets WHERE id=?", (asset_id,))
+    cursor.execute("DELETE FROM assets WHERE id=? AND user_id=?", (asset_id, user_id))
     conn.commit()
     conn.close()
 
 # Liabilities CRUD Helpers
-def get_liabilities():
+def get_liabilities(user_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM liabilities ORDER BY id DESC")
+    cursor.execute("SELECT * FROM liabilities WHERE user_id = ? ORDER BY id DESC", (user_id,))
     rows = []
     for r in cursor.fetchall():
         d = dict(r)
@@ -311,40 +344,40 @@ def get_liabilities():
     conn.close()
     return rows
 
-def add_liability(name, type_, total_amount, remaining_amount, monthly_cost):
+def add_liability(user_id, name, type_, total_amount, remaining_amount, monthly_cost):
     conn = get_db()
     cursor = conn.cursor()
     enc_total = encrypt_val(total_amount)
     enc_rem = encrypt_val(remaining_amount)
     enc_cost = encrypt_val(monthly_cost)
-    cursor.execute("INSERT INTO liabilities (name, type, total_amount, remaining_amount, monthly_cost) VALUES (?, ?, ?, ?, ?)",
-                   (name, type_, enc_total, enc_rem, enc_cost))
+    cursor.execute("INSERT INTO liabilities (user_id, name, type, total_amount, remaining_amount, monthly_cost) VALUES (?, ?, ?, ?, ?, ?)",
+                   (user_id, name, type_, enc_total, enc_rem, enc_cost))
     conn.commit()
     conn.close()
 
-def update_liability(lib_id, name, type_, total_amount, remaining_amount, monthly_cost):
+def update_liability(user_id, lib_id, name, type_, total_amount, remaining_amount, monthly_cost):
     conn = get_db()
     cursor = conn.cursor()
     enc_total = encrypt_val(total_amount)
     enc_rem = encrypt_val(remaining_amount)
     enc_cost = encrypt_val(monthly_cost)
-    cursor.execute("UPDATE liabilities SET name=?, type=?, total_amount=?, remaining_amount=?, monthly_cost=? WHERE id=?",
-                   (name, type_, enc_total, enc_rem, enc_cost, lib_id))
+    cursor.execute("UPDATE liabilities SET name=?, type=?, total_amount=?, remaining_amount=?, monthly_cost=? WHERE id=? AND user_id=?",
+                   (name, type_, enc_total, enc_rem, enc_cost, lib_id, user_id))
     conn.commit()
     conn.close()
 
-def delete_liability(lib_id):
+def delete_liability(user_id, lib_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM liabilities WHERE id=?", (lib_id,))
+    cursor.execute("DELETE FROM liabilities WHERE id=? AND user_id=?", (lib_id, user_id))
     conn.commit()
     conn.close()
 
 # Transactions Helpers
-def get_transactions():
+def get_transactions(user_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM transactions ORDER BY date DESC, id DESC")
+    cursor.execute("SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC, id DESC", (user_id,))
     rows = []
     for r in cursor.fetchall():
         d = dict(r)
@@ -353,11 +386,11 @@ def get_transactions():
     conn.close()
     return rows
 
-def add_transaction(description, type_, amount, date):
+def add_transaction(user_id, description, type_, amount, date):
     conn = get_db()
     cursor = conn.cursor()
     enc_amount = encrypt_val(amount)
-    cursor.execute("INSERT INTO transactions (description, type, amount, date) VALUES (?, ?, ?, ?)", (description, type_, enc_amount, date))
+    cursor.execute("INSERT INTO transactions (user_id, description, type, amount, date) VALUES (?, ?, ?, ?, ?)", (user_id, description, type_, enc_amount, date))
     conn.commit()
     conn.close()
 
@@ -378,6 +411,8 @@ def create_user(email, password):
     except sqlite3.IntegrityError:
         success = False # User already exists
     conn.close()
+    if success:
+        seed_user_data(email.lower().strip())
     return success
 
 def verify_user(email, password):
@@ -388,3 +423,32 @@ def verify_user(email, password):
     user = cursor.fetchone()
     conn.close()
     return dict(user) if user else None
+
+def create_or_get_google_user(email, google_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    email_clean = email.lower().strip()
+    cursor.execute("SELECT * FROM users WHERE email=?", (email_clean,))
+    user = cursor.fetchone()
+    if user:
+        if not user["google_id"]:
+            cursor.execute("UPDATE users SET google_id=? WHERE email=?", (google_id, email_clean))
+            conn.commit()
+        conn.close()
+        return email_clean
+    else:
+        # Create Google user
+        cursor.execute("INSERT INTO users (email, google_id, password) VALUES (?, ?, '')", (email_clean, google_id))
+        conn.commit()
+        conn.close()
+        seed_user_data(email_clean)
+        return email_clean
+
+def get_user_by_stripe_customer_id(customer_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE stripe_customer_id=?", (customer_id,))
+    user = cursor.fetchone()
+    conn.close()
+    return dict(user) if user else None
+

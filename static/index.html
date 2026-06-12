@@ -13,6 +13,8 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script id="tailwind-config">
       tailwind.config = {
         darkMode: "class",
@@ -297,16 +299,10 @@
                     <div class="flex-grow border-t border-white/5"></div>
                 </div>
 
-                <!-- Google Auth Mock -->
-                <button onclick="handleGoogleAuth()" class="w-full py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 border border-white/5 active:scale-95 transition-all">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.77c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                    </svg>
-                    <span data-i18n="google_auth_btn">Continuer avec Google</span>
-                </button>
+                <!-- Google Auth Button (Real Google GSI Sign In) -->
+                <div class="flex justify-center w-full my-2">
+                    <div id="google-signin-btn-container" class="w-full flex justify-center"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -514,22 +510,33 @@
 
             <!-- Bento Breakdown -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- AI Coach Alert Card -->
-                <div class="glass-card rounded-3xl p-6 border-2 border-primary-container/20 relative overflow-hidden group cursor-pointer" onclick="switchTab('coach')">
-                    <div class="absolute inset-0 bg-gradient-to-br from-tertiary/5 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <div class="flex items-start gap-4 relative z-10">
-                        <div class="w-12 h-12 rounded-2xl bg-tertiary-container/30 flex items-center justify-center text-tertiary shadow-sm shrink-0">
-                            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
-                        </div>
-                        <div>
-                            <h4 data-i18n="dash_coach_title" class="font-headline-md text-primary flex items-center gap-2 text-base">
-                                Conseil du Coach IA
-                                <span class="w-2 h-2 rounded-full bg-secondary-container animate-pulse"></span>
-                            </h4>
-                            <p class="text-body-md text-on-surface-variant mt-2 text-sm" id="dash-coach-text">
-                                Analyse en cours de votre portefeuille...
-                            </p>
-                        </div>
+                <!-- Interactive Financial Independence To-Do List -->
+                <div class="glass-card rounded-3xl p-6 border-2 border-primary-container/20 relative overflow-hidden group">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 data-i18n="dash_todo_title" class="font-headline-md text-primary flex items-center gap-2 text-base">
+                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">playlist_add_check</span>
+                            Plan d'Action d'Indépendance
+                        </h4>
+                        <span id="todo-progress-badge" class="text-xs font-bold text-secondary bg-secondary-container/20 px-2 py-0.5 rounded-full">0%</span>
+                    </div>
+                    
+                    <div class="space-y-3.5" id="dashboard-todo-list">
+                        <label class="flex items-center gap-3 cursor-pointer group/item text-sm text-on-surface">
+                            <input type="checkbox" id="todo-step-1" class="rounded border-white/10 bg-black/40 text-primary focus:ring-primary/25 w-4 h-4 cursor-pointer" onchange="updateTodoProgress()"/>
+                            <span data-i18n="todo_step1">Constituer une épargne de précaution</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group/item text-sm text-on-surface">
+                            <input type="checkbox" id="todo-step-2" class="rounded border-white/10 bg-black/40 text-primary focus:ring-primary/25 w-4 h-4 cursor-pointer" onchange="updateTodoProgress()"/>
+                            <span data-i18n="todo_step2">Éliminer les dettes à taux élevé (>5%)</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group/item text-sm text-on-surface">
+                            <input type="checkbox" id="todo-step-3" class="rounded border-white/10 bg-black/40 text-primary focus:ring-primary/25 w-4 h-4 cursor-pointer" onchange="updateTodoProgress()"/>
+                            <span data-i18n="todo_step3">Créer un objectif d'épargne</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group/item text-sm text-on-surface">
+                            <input type="checkbox" id="todo-step-4" class="rounded border-white/10 bg-black/40 text-primary focus:ring-primary/25 w-4 h-4 cursor-pointer" onchange="updateTodoProgress()"/>
+                            <span data-i18n="todo_step4">Simuler un investissement dans La Balance</span>
+                        </label>
                     </div>
                 </div>
 
@@ -794,9 +801,14 @@
                     <span class="text-sm font-bold text-primary flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-[18px]">smart_toy</span> <span data-i18n="coach_chat_title">Diagnostic & Audit IA</span>
                     </span>
-                    <button onclick="exportAuditPDF()" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-semibold text-white flex items-center gap-1 active:scale-95 transition-all">
-                        <span class="material-symbols-outlined text-xs">picture_as_pdf</span> <span data-i18n="coach_pdf_btn">Télécharger l'Audit (PDF)</span>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openBillingPortal()" class="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl text-xs font-semibold text-primary flex items-center gap-1 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-xs">manage_accounts</span> <span data-i18n="coach_billing_btn">Gérer mon abonnement</span>
+                        </button>
+                        <button onclick="exportAuditPDF()" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-semibold text-white flex items-center gap-1 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-xs">picture_as_pdf</span> <span data-i18n="coach_pdf_btn">Télécharger l'Audit (PDF)</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="flex-1 p-6 overflow-y-auto custom-scrollbar space-y-4" id="chat-thread">
                     <!-- Loaded dynamically, starting with coach message -->
@@ -1048,6 +1060,7 @@
                 paywall_subscribe_btn: "S'abonner via App Store / Google Play",
                 coach_chat_title: "Diagnostic & Audit IA",
                 coach_pdf_btn: "Télécharger l'Audit (PDF)",
+                coach_billing_btn: "Gérer mon abonnement",
                 coach_chat_placeholder: "Demandez un audit ou posez une question financière...",
                 nav_dashboard: "Tableau",
                 nav_assets: "Actifs",
@@ -1101,9 +1114,11 @@
                 repaid_label: "Remboursé",
                 year_suffix: "/an",
                 month_suffix: "/m",
-                coach_advice_low: "Vos passifs drainent plus de la moitié de vos revenus. Réduisez vos abonnements ou simulez une acquisition d'actif dans La Balance.",
-                coach_advice_mid: "Vous êtes à {percent}% de l'indépendance ! Réinvestir {amount}/mois supplémentaires débloquerait votre liberté financière {months} mois plus tôt.",
-                coach_advice_high: "Incroyable ! Votre IIF dépasse 100%. Vous êtes officiellement libre financièrement. Votre cashflow passif couvre l'ensemble de vos coûts.",
+                dash_todo_title: "Plan d'Action d'Indépendance",
+                todo_step1: "Constituer une épargne de précaution",
+                todo_step2: "Éliminer les dettes à taux élevé (>5%)",
+                todo_step3: "Créer un objectif d'épargne",
+                todo_step4: "Simuler un investissement dans La Balance",
                 savings_no_goals: "Aucun objectif d'épargne pour le moment. Cliquez sur \"Nouvel Objectif\" pour commencer.",
                 savings_target_label: "Cible",
                 savings_unspecified: "Non spécifiée",
@@ -1197,6 +1212,7 @@
                 paywall_subscribe_btn: "Subscribe via App Store / Google Play",
                 coach_chat_title: "AI Diagnostic & Audit",
                 coach_pdf_btn: "Download Audit (PDF)",
+                coach_billing_btn: "Manage subscription",
                 coach_chat_placeholder: "Ask for an audit or ask a financial question...",
                 nav_dashboard: "Dashboard",
                 nav_assets: "Assets",
@@ -1253,6 +1269,11 @@
                 coach_advice_low: "Your liabilities drain more than half of your income. Reduce your subscriptions or simulate an asset acquisition in The Scale.",
                 coach_advice_mid: "You are {percent}% away from independence! Reinvesting {amount}/month extra would unlock your financial freedom {months} months earlier.",
                 coach_advice_high: "Incredible! Your IIF exceeds 100%. You are officially financially free. Your passive cashflow covers all your costs.",
+                dash_todo_title: "Financial Independence Action Plan",
+                todo_step1: "Build an emergency savings fund",
+                todo_step2: "Eliminate high-interest debt (>5%)",
+                todo_step3: "Create a savings goal",
+                todo_step4: "Simulate an investment in The Scale",
                 savings_no_goals: "No savings goals at the moment. Click \"New Goal\" to start.",
                 savings_target_label: "Target",
                 savings_unspecified: "Unspecified",
@@ -1346,6 +1367,7 @@
                 paywall_subscribe_btn: "Suscribirse mediante App Store / Google Play",
                 coach_chat_title: "Diagnóstico y Auditoría de IA",
                 coach_pdf_btn: "Descargar Auditoría (PDF)",
+                coach_billing_btn: "Gestionar suscripción",
                 coach_chat_placeholder: "Solicite una auditoría o haga una pregunta financiera...",
                 nav_dashboard: "Tablero",
                 nav_assets: "Activos",
@@ -1402,6 +1424,11 @@
                 coach_advice_low: "Sus pasivos drenan más de la mitad de sus ingresos. Reduzca sus suscripciones o simule una adquisición de activos en La Balanza.",
                 coach_advice_mid: "¡Está a un {percent}% de la independencia! Reinvertir {amount}/mes adicionales desbloquearía su libertad financiera {months} meses antes.",
                 coach_advice_high: "¡Increíble! Su IIF supera el 100%. Está oficialmente libre financieramente. Su flujo de caja pasivo cubre todos sus costos.",
+                dash_todo_title: "Plan de Acción para la Independencia Financiera",
+                todo_step1: "Constituir un fondo de ahorro de emergencia",
+                todo_step2: "Eliminar las deudas de alta tasa de interés (>5%)",
+                todo_step3: "Crear un objetivo de ahorro",
+                todo_step4: "Simular una inversión en La Balanza",
                 savings_no_goals: "Ningún objetivo de ahorro por el momento. Haga clic en \"Nuevo Objetivo\" para comenzar.",
                 savings_target_label: "Objetivo",
                 savings_unspecified: "No especificada",
@@ -1495,6 +1522,7 @@
                 paywall_subscribe_btn: "Assinar via App Store / Google Play",
                 coach_chat_title: "Diagnóstico & Auditoria IA",
                 coach_pdf_btn: "Descarregar Auditoria (PDF)",
+                coach_billing_btn: "Gerir assinatura",
                 coach_chat_placeholder: "Solicite uma auditoria ou faça uma pergunta financeira...",
                 nav_dashboard: "Painel",
                 nav_assets: "Ativos",
@@ -1551,6 +1579,11 @@
                 coach_advice_low: "Seus passivos drenam mais da metade de sua renda. Reduza suas assinaturas ou simule uma aquisição de ativos na Balança.",
                 coach_advice_mid: "Você está a {percent}% da independência! Reinvestir {amount}/mês adicionais desbloquearia sua liberdade financeira {months} meses antes.",
                 coach_advice_high: "Incrível! Seu IIF supera 100%. Você está oficialmente livre financeiramente. Seu fluxo de caixa passivo cobre todos os seus custos.",
+                dash_todo_title: "Plano de Ação para Independência Financeira",
+                todo_step1: "Construir uma poupança de emergência",
+                todo_step2: "Eliminar dívidas com juros altos (>5%)",
+                todo_step3: "Criar um objetivo de poupança",
+                todo_step4: "Simular um investimento na Balança",
                 savings_no_goals: "Nenhum objetivo de poupança no momento. Clique em \"Novo Objetivo\" para começar.",
                 savings_target_label: "Meta",
                 savings_unspecified: "Não especificada",
@@ -1644,6 +1677,7 @@
                 paywall_subscribe_btn: "Über App Store / Google Play abonnieren",
                 coach_chat_title: "KI-Diagnose & Audit",
                 coach_pdf_btn: "Audit herunterladen (PDF)",
+                coach_billing_btn: "Abonnement verwalten",
                 coach_chat_placeholder: "Bitten Sie um ein Audit oder stellen Sie eine finanzielle Frage...",
                 nav_dashboard: "Dashboard",
                 nav_assets: "Aktiva",
@@ -1700,6 +1734,11 @@
                 coach_advice_low: "Ihre Verbindlichkeiten verschlingen mehr als die Hälfte Ihres Einkommens. Reduzieren Sie Ihre Abonnements oder simulieren Sie einen Vermögenserwerb in Die Waage.",
                 coach_advice_mid: "Sie sind zu {percent}% unabhängig! Eine zusätzliche Reinvestition von {amount}/Monat würde Ihre finanzielle Freiheit {months} Monate früher ermöglichen.",
                 coach_advice_high: "Unglaublich! Ihr IIF übersteigt 100%. Sie sind offiziell finanziell frei. Ihr passiver Cashflow deckt alle Ihre Kosten.",
+                dash_todo_title: "Aktionsplan zur finanziellen Unabhängigkeit",
+                todo_step1: "Notgroschen aufbauen",
+                todo_step2: "Hochverzinsliche Schulden (>5%) tilgen",
+                todo_step3: "Ein Sparziel erstellen",
+                todo_step4: "Eine Investition in Die Waage simulieren",
                 savings_no_goals: "Derzeit keine Sparziele. Klicken Sie auf „Neues Sparziel“, um zu beginnen.",
                 savings_target_label: "Ziel",
                 savings_unspecified: "Nicht angegeben",
@@ -1767,6 +1806,37 @@
             'CHF': 'CHF'
         };
         let currentCurrency = 'USD';
+
+        // Override fetch to include authorization headers
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            options = options || {};
+            // Preserve existing headers if any, convert to Headers object or plain object
+            let headers = {};
+            if (options.headers) {
+                if (options.headers instanceof Headers) {
+                    for (let [k, v] of options.headers.entries()) {
+                        headers[k] = v;
+                    }
+                } else {
+                    headers = { ...options.headers };
+                }
+            } else {
+                // Keep headers undefined if not provided to allow browser auto-negotiation (e.g. multipart/form-data)
+                headers = null;
+            }
+            
+            const loggedInEmail = localStorage.getItem('philia_vault_user_email');
+            if (loggedInEmail && loggedInEmail !== "undefined") {
+                headers = headers || {};
+                headers['X-User-Email'] = loggedInEmail;
+            }
+            
+            if (headers !== null) {
+                options.headers = headers;
+            }
+            return originalFetch(url, options);
+        };
 
         function formatCurrency(amount, includeSign = false) {
             const symbol = CURRENCY_SYMBOLS[currentCurrency] || '$';
@@ -1880,6 +1950,11 @@
                 return;
             }
             
+            // Reset state for next try if registration fails
+            if (mode === 'register') {
+                disclaimerAccepted = false;
+            }
+            
             try {
                 const response = await fetch(`/api/auth/${mode}`, {
                     method: 'POST',
@@ -1891,6 +1966,7 @@
                 if (data.success) {
                     errEl.classList.add('hidden');
                     if (mode === 'login') {
+                        localStorage.setItem('philia_vault_user_email', email);
                         localStorage.setItem('philia_vault_logged_in', 'true');
                         checkSession();
                     } else {
@@ -1907,14 +1983,39 @@
             }
         }
 
-        function handleGoogleAuth() {
-            // Mock google authentication
-            localStorage.setItem('philia_vault_logged_in', 'true');
-            checkSession();
+        async function handleGoogleAuth(idToken) {
+            // Send google credential token to backend verify route
+            const token = idToken || "mock_jwt_token_alex_google";
+            try {
+                const response = await fetch('/api/auth/google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_token: token })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    localStorage.setItem('philia_vault_user_email', data.user.email);
+                    localStorage.setItem('philia_vault_logged_in', 'true');
+                    checkSession();
+                } else {
+                    alert("Erreur de connexion Google: " + data.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erreur de connexion Google.");
+            }
         }
+
+        // Global callback for Google Identity Services iframe
+        window.onGoogleSignIn = function(response) {
+            if (response && response.credential) {
+                handleGoogleAuth(response.credential);
+            }
+        };
 
         function handleLogout() {
             localStorage.removeItem('philia_vault_logged_in');
+            localStorage.removeItem('philia_vault_user_email');
             checkSession();
         }
 
@@ -1960,28 +2061,40 @@
             }
         }
 
-        async function triggerIAPCheckout() {
-            const plan = confirm("Souhaitez-vous souscrire à cet abonnement ? (Cette action simulera la validation du reçu RevenueCat)");
-            if (plan) {
-                try {
-                    const webhookRes = await fetch('/api/webhooks/revenuecat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            event: {
-                                type: "INITIAL_PURCHASE",
-                                app_user_id: "rc_alex_user_id_mock"
-                            }
-                        })
-                    });
-                    const webhookData = await webhookRes.json();
-                    if (webhookData.success) {
-                        alert("Abonnement activé avec succès par le webhook de validation de reçu RevenueCat !");
-                        checkPremium();
-                    }
-                } catch (err) {
-                    console.error(err);
+        async function triggerIAPCheckout(planType = "monthly") {
+            try {
+                const response = await fetch('/api/stripe/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan: planType })
+                });
+                const data = await response.json();
+                if (data.success && data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert("Erreur lors de la création de la session de paiement : " + (data.error || "inconnue"));
                 }
+            } catch (err) {
+                console.error(err);
+                alert("Erreur réseau lors de la redirection vers Stripe.");
+            }
+        }
+
+        async function openBillingPortal() {
+            try {
+                const response = await fetch('/api/stripe/create-portal-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (data.success && data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert("Erreur lors de l'accès au portail de gestion : " + (data.error || "inconnue"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erreur de connexion au portail Stripe.");
             }
         }
 
@@ -2071,25 +2184,52 @@
                     });
                 }
 
-                // AI coach card suggestion snippet
-                const coachText = document.getElementById('dash-coach-text');
-                if (data.iif_score < 50) {
-                    coachText.textContent = TRANSLATIONS[currentLang]?.coach_advice_low || "Vos passifs drainent plus de la moitié de vos revenus. Réduisez vos abonnements ou simulez une acquisition d'actif dans La Balance.";
-                } else if (data.iif_score < 100) {
-                    const template = TRANSLATIONS[currentLang]?.coach_advice_mid || "Vous êtes à {percent}% de l'indépendance ! Réinvestir {amount}/mois supplémentaires débloquerait votre liberté financière {months} mois plus tôt.";
-                    coachText.textContent = template
-                        .replace('{percent}', 100 - data.iif_score)
-                        .replace('{amount}', formatCurrency(400))
-                        .replace('{months}', 14);
-                } else {
-                    coachText.textContent = TRANSLATIONS[currentLang]?.coach_advice_high || "Incroyable ! Votre IIF dépasse 100%. Vous êtes officiellement libre financièrement. Votre cashflow passif couvre l'ensemble de vos coûts.";
-                }
+                // Initialize To-Do list state from localStorage
+                initTodoListState();
 
                 // Load savings goals too
                 loadSavingsGoals();
 
             } catch (err) {
                 console.error("Error loading dashboard metrics: ", err);
+            }
+        }
+
+        // To-Do list local persistence and progress calculator functions
+        function initTodoListState() {
+            const email = localStorage.getItem('philia_vault_user_email') || 'global';
+            for (let i = 1; i <= 4; i++) {
+                const checked = localStorage.getItem(`todo_step_${i}_${email}`) === 'true';
+                const checkbox = document.getElementById(`todo-step-${i}`);
+                if (checkbox) {
+                    checkbox.checked = checked;
+                }
+            }
+            updateTodoProgress();
+        }
+
+        function updateTodoProgress() {
+            const email = localStorage.getItem('philia_vault_user_email') || 'global';
+            let checkedCount = 0;
+            for (let i = 1; i <= 4; i++) {
+                const checkbox = document.getElementById(`todo-step-${i}`);
+                if (checkbox) {
+                    localStorage.setItem(`todo_step_${i}_${email}`, checkbox.checked);
+                    if (checkbox.checked) checkedCount++;
+                }
+            }
+            const percentage = Math.round((checkedCount / 4) * 100);
+            const badge = document.getElementById('todo-progress-badge');
+            if (badge) {
+                badge.textContent = `${percentage}%`;
+                // Apply harmonic gradients/colors dynamically based on progress
+                if (percentage === 100) {
+                    badge.className = "text-xs font-bold text-[#0c0e12] bg-primary px-2 py-0.5 rounded-full transition-all";
+                } else if (percentage > 0) {
+                    badge.className = "text-xs font-bold text-secondary bg-secondary-container/20 px-2 py-0.5 rounded-full transition-all";
+                } else {
+                    badge.className = "text-xs font-bold text-on-surface-variant/70 bg-white/5 px-2 py-0.5 rounded-full transition-all";
+                }
             }
         }
 
@@ -2860,6 +3000,41 @@
             checkSession();
             initChat();
             checkPremium();
+
+            // Fetch Google Auth Config dynamically and render the button accordingly
+            fetch('/api/auth/config')
+                .then(res => res.json())
+                .then(config => {
+                    const btnContainer = document.getElementById('google-signin-btn-container');
+                    if (btnContainer) {
+                        if (config.google_client_id) {
+                            // Initialize dynamic Google script button
+                            google.accounts.id.initialize({
+                                client_id: config.google_client_id,
+                                callback: onGoogleSignIn
+                            });
+                            google.accounts.id.renderButton(
+                                btnContainer,
+                                { theme: "outline", size: "large", text: "signin_with", shape: "rectangular" }
+                            );
+                        } else {
+                            // Fallback simulated button for local test mode when no Client ID is defined
+                            btnContainer.innerHTML = `
+                                <button onclick="handleGoogleAuth()" class="w-full py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 border border-white/5 active:scale-95 transition-all">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.77c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                                    </svg>
+                                    <span data-i18n="google_auth_btn">Continuer avec Google (Démo)</span>
+                                </button>
+                            `;
+                            // Re-apply translations for fallback
+                            applyTranslations(savedLang);
+                        }
+                    }
+                }).catch(err => console.error("Error fetching auth config:", err));
         });
     </script>
 </body>
