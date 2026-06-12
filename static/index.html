@@ -1845,19 +1845,15 @@
                     headers = { ...options.headers };
                 }
             } else {
-                // Keep headers undefined if not provided to allow browser auto-negotiation (e.g. multipart/form-data)
-                headers = null;
+                headers = {};
             }
             
             const loggedInEmail = localStorage.getItem('philia_vault_user_email');
             if (loggedInEmail && loggedInEmail !== "undefined") {
-                headers = headers || {};
                 headers['X-User-Email'] = loggedInEmail;
             }
             
-            if (headers !== null) {
-                options.headers = headers;
-            }
+            options.headers = headers;
             return originalFetch(url, options);
         };
 
