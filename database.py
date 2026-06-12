@@ -82,7 +82,8 @@ def init_db():
         first_name TEXT,
         last_name TEXT,
         custom_categories TEXT,
-        avatar TEXT
+        avatar TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
@@ -96,7 +97,8 @@ def init_db():
         ("first_name", "TEXT"),
         ("last_name", "TEXT"),
         ("custom_categories", "TEXT"),
-        ("avatar", "TEXT")
+        ("avatar", "TEXT"),
+        ("created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
     ]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")

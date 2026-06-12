@@ -1036,6 +1036,29 @@
                     </div>
                 </div>
 
+                <!-- Profile Modal Subscription checkout -->
+                <div id="profile-subscribe-section" class="hidden space-y-4 pt-2 bg-white/5 p-4 rounded-2xl border border-white/5">
+                    <h4 class="text-xs font-bold text-primary uppercase tracking-wider">Abonnement Philia Vault Premium</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div id="profile-plan-monthly" onclick="selectProfilePlan('monthly')" class="p-3.5 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between hover:scale-102 transition-transform cursor-pointer relative border-l-4 border-l-primary">
+                            <div>
+                                <h5 class="font-bold text-xs">Mensuel</h5>
+                                <p class="text-[9px] text-outline">9.99$/mois</p>
+                            </div>
+                        </div>
+                        <div id="profile-plan-annual" onclick="selectProfilePlan('annual')" class="p-3.5 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between hover:scale-102 transition-transform cursor-pointer relative border-l-4 border-l-secondary">
+                            <div>
+                                <h5 class="font-bold text-xs">Annuel</h5>
+                                <p class="text-[9px] text-outline">79.99$/an</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="triggerIAPCheckout(selectedProfilePlanId)" class="w-full py-3 rounded-xl vibrant-button font-headline-md font-bold shadow-lg hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <span>S'abonner</span>
+                        <span class="material-symbols-outlined text-[18px]">lock</span>
+                    </button>
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label data-i18n="profile_language" class="block text-xs font-semibold text-on-surface-variant mb-1">Langue</label>
@@ -1078,6 +1101,49 @@
                     <span data-i18n="profile_logout_btn">Déconnexion</span>
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Full Page Blocking Paywall (shown after 3-day trial expires) -->
+    <div id="app-blocking-paywall" class="hidden fixed inset-0 z-[999] bg-[#0c0e12] flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
+        <div class="max-w-md w-full space-y-6 flex flex-col items-center">
+            <!-- Logo/Icon -->
+            <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-[#0c0e12] shadow-lg animate-bounce mb-2">
+                <span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+            </div>
+            
+            <h2 class="text-headline-lg font-headline-lg text-primary">Votre Période d'Essai est Terminée</h2>
+            <p class="text-sm text-on-surface-variant">
+                Pour continuer à utiliser Philia Vault, débloquer votre Coach IA, enregistrer vos budgets et optimiser votre cashflow, veuillez souscrire à un abonnement premium.
+            </p>
+
+            <!-- Plans -->
+            <div class="w-full grid grid-cols-1 gap-4 max-w-sm pt-2">
+                <div id="blocking-plan-monthly" onclick="selectBlockingPlan('monthly')" class="p-5 rounded-2xl bg-[#13161c] border border-white/10 flex flex-col justify-between hover:scale-105 transition-transform cursor-pointer relative border-l-4 border-l-primary">
+                    <span class="absolute -top-2.5 right-4 bg-primary text-[#0c0e12] text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Populaire</span>
+                    <div>
+                        <h4 class="font-bold text-sm">Abonnement Mensuel</h4>
+                        <p class="text-[10px] text-outline">Facturé chaque mois</p>
+                    </div>
+                    <p class="text-headline-md font-headline-md text-primary mt-2">9.99$ <span class="text-xs text-outline">/mois</span></p>
+                </div>
+                <div id="blocking-plan-annual" onclick="selectBlockingPlan('annual')" class="p-5 rounded-2xl bg-[#13161c] border border-white/10 flex flex-col justify-between hover:scale-105 transition-transform cursor-pointer relative border-l-4 border-l-secondary">
+                    <div>
+                        <h4 class="font-bold text-sm">Abonnement Annuel</h4>
+                        <p class="text-[10px] text-outline">Facturation annuelle</p>
+                    </div>
+                    <p class="text-headline-md font-headline-md text-secondary mt-2">79.99$ <span class="text-xs text-outline">/an</span></p>
+                </div>
+            </div>
+            
+            <button onclick="triggerIAPCheckout(selectedBlockingPlanId)" class="w-full max-w-sm py-4 rounded-2xl vibrant-button font-headline-md font-bold shadow-lg hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                <span>S'abonner maintenant</span>
+                <span class="material-symbols-outlined text-[18px]">lock</span>
+            </button>
+
+            <button onclick="handleLogout()" class="text-xs text-error font-semibold hover:underline mt-4 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">logout</span> Se déconnecter
+            </button>
         </div>
     </div>
 
@@ -2430,14 +2496,27 @@
                 const data = await res.json();
                 if (data.success) {
                     const isPremium = data.user.premium_status === 1;
+                    const createdAtStr = data.user.created_at || new Date().toISOString();
+                    const createdDate = new Date(createdAtStr.replace(' ', 'T') + (createdAtStr.includes('Z') || createdAtStr.includes('+') ? '' : 'Z'));
+                    const diffDays = (new Date() - createdDate) / (1000 * 60 * 60 * 24);
+                    const trialExpired = diffDays > 3;
+
                     const paywall = document.getElementById('coach-paywall');
                     const chatWin = document.getElementById('coach-chat-window');
+                    const blockingPaywall = document.getElementById('app-blocking-paywall');
+
+                    // Always hide coach page-level paywall container, we handle blocking globally now
+                    if (paywall) paywall.classList.add('hidden');
+                    if (chatWin) chatWin.classList.remove('hidden');
+
                     if (isPremium) {
-                        paywall.classList.add('hidden');
-                        chatWin.classList.remove('hidden');
+                        if (blockingPaywall) blockingPaywall.classList.add('hidden');
                     } else {
-                        paywall.classList.remove('hidden');
-                        chatWin.classList.add('hidden');
+                        if (trialExpired) {
+                            if (blockingPaywall) blockingPaywall.classList.remove('hidden');
+                        } else {
+                            if (blockingPaywall) blockingPaywall.classList.add('hidden');
+                        }
                     }
 
                     // Store first name & custom categories
@@ -2566,12 +2645,30 @@
                     
                     const isPremium = user.premium_status === 1;
                     const statusSpan = document.getElementById('profile-subscription-status');
+                    const subscribeSection = document.getElementById('profile-subscribe-section');
+                    
+                    const createdAtStr = user.created_at || new Date().toISOString();
+                    const createdDate = new Date(createdAtStr.replace(' ', 'T') + (createdAtStr.includes('Z') || createdAtStr.includes('+') ? '' : 'Z'));
+                    const diffDays = (new Date() - createdDate) / (1000 * 60 * 60 * 24);
+                    const trialDaysRemaining = Math.max(0, 3 - diffDays);
+                    const trialExpired = diffDays > 3;
+
                     if (isPremium) {
-                        statusSpan.textContent = TRANSLATIONS[currentLang]?.profile_status_premium || 'Premium ⭐';
+                        statusSpan.textContent = 'Premium ⭐';
                         statusSpan.className = 'text-xs font-bold px-2.5 py-1 rounded-full inline-block bg-primary/20 text-primary border border-primary/20';
+                        if (subscribeSection) subscribeSection.classList.add('hidden');
                     } else {
-                        statusSpan.textContent = TRANSLATIONS[currentLang]?.profile_status_free || 'Gratuit (Standard)';
-                        statusSpan.className = 'text-xs font-bold px-2.5 py-1 rounded-full inline-block bg-white/5 text-on-surface-variant border border-white/5';
+                        if (!trialExpired) {
+                            statusSpan.textContent = currentLang === 'fr' ? `Essai gratuit (${Math.ceil(trialDaysRemaining)}j restants)` : `Free Trial (${Math.ceil(trialDaysRemaining)}d left)`;
+                            statusSpan.className = 'text-xs font-bold px-2.5 py-1 rounded-full inline-block bg-secondary/20 text-secondary border border-secondary/20';
+                        } else {
+                            statusSpan.textContent = currentLang === 'fr' ? 'Expiré ❌' : 'Expired ❌';
+                            statusSpan.className = 'text-xs font-bold px-2.5 py-1 rounded-full inline-block bg-error/20 text-error border border-error/20';
+                        }
+                        if (subscribeSection) {
+                            subscribeSection.classList.remove('hidden');
+                            selectProfilePlan('monthly');
+                        }
                     }
                     
                     document.getElementById('profile-custom-categories').value = user.custom_categories || '';
@@ -2686,6 +2783,50 @@
                 
                 monthlyCard.classList.remove('border-primary', 'ring-2', 'ring-primary/40', 'bg-primary/5');
                 monthlyCard.classList.add('bg-[#13161c]/60', 'border-white/10');
+            }
+        }
+
+        let selectedBlockingPlanId = 'monthly';
+        function selectBlockingPlan(planType) {
+            selectedBlockingPlanId = planType;
+            const monthlyCard = document.getElementById('blocking-plan-monthly');
+            const annualCard = document.getElementById('blocking-plan-annual');
+            if (!monthlyCard || !annualCard) return;
+            
+            if (planType === 'monthly') {
+                monthlyCard.classList.remove('border-white/10', 'bg-[#13161c]');
+                monthlyCard.classList.add('border-primary', 'ring-2', 'ring-primary/40', 'bg-primary/5');
+                
+                annualCard.classList.remove('border-secondary', 'ring-2', 'ring-secondary/40', 'bg-secondary/5');
+                annualCard.classList.add('border-white/10', 'bg-[#13161c]');
+            } else {
+                annualCard.classList.remove('border-white/10', 'bg-[#13161c]');
+                annualCard.classList.add('border-secondary', 'ring-2', 'ring-secondary/40', 'bg-secondary/5');
+                
+                monthlyCard.classList.remove('border-primary', 'ring-2', 'ring-primary/40', 'bg-primary/5');
+                monthlyCard.classList.add('border-white/10', 'bg-[#13161c]');
+            }
+        }
+
+        let selectedProfilePlanId = 'monthly';
+        function selectProfilePlan(planType) {
+            selectedProfilePlanId = planType;
+            const monthlyCard = document.getElementById('profile-plan-monthly');
+            const annualCard = document.getElementById('profile-plan-annual');
+            if (!monthlyCard || !annualCard) return;
+            
+            if (planType === 'monthly') {
+                monthlyCard.classList.remove('border-white/10', 'bg-white/5');
+                monthlyCard.classList.add('border-primary', 'ring-2', 'ring-primary/40', 'bg-primary/5');
+                
+                annualCard.classList.remove('border-secondary', 'ring-2', 'ring-secondary/40', 'bg-secondary/5');
+                annualCard.classList.add('border-white/10', 'bg-white/5');
+            } else {
+                annualCard.classList.remove('border-white/10', 'bg-white/5');
+                annualCard.classList.add('border-secondary', 'ring-2', 'ring-secondary/40', 'bg-secondary/5');
+                
+                monthlyCard.classList.remove('border-primary', 'ring-2', 'ring-primary/40', 'bg-primary/5');
+                monthlyCard.classList.add('border-white/10', 'bg-white/5');
             }
         }
 
@@ -3643,6 +3784,8 @@
             }
 
             selectPlan('monthly');
+            selectBlockingPlan('monthly');
+            selectProfilePlan('monthly');
 
             // Fetch Google Auth Config dynamically and render the button accordingly
             fetch('/api/auth/config')
