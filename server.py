@@ -9,7 +9,11 @@ from flask_cors import CORS
 load_dotenv()
 
 app = Flask(__name__, static_folder="static")
-CORS(app)
+CORS(app, 
+     origins="*",
+     allow_headers=["Content-Type", "X-User-Email", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     supports_credentials=False)
 
 # Initialize DB on load
 database.init_db()
