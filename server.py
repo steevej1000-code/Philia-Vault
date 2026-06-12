@@ -339,6 +339,19 @@ def toggle_user_premium():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route("/api/user/profile", methods=["POST"])
+def update_profile():
+    user_id = get_current_user_id()
+    data = request.json or {}
+    first_name = data.get("first_name", "")
+    last_name = data.get("last_name", "")
+    custom_categories = data.get("custom_categories", "")
+    try:
+        database.update_user_profile(user_id, first_name, last_name, custom_categories)
+        return jsonify({"success": True, "message": "Profile mis à jour avec succès"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route("/api/user/settings", methods=["POST"])
 def update_settings():
     user_id = get_current_user_id()

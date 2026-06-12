@@ -2,6 +2,10 @@ import sqlite3
 import os
 import base64
 from cryptography.fernet import Fernet
+from dotenv import load_dotenv
+
+# Load environment variables early for encryption keys
+load_dotenv()
 
 DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "cashflow.db"))
 db_dir = os.path.dirname(DB_PATH)
@@ -74,7 +78,10 @@ def init_db():
         stripe_customer_id TEXT,
         premium_status INTEGER DEFAULT 0,
         premium_expires TEXT,
-        currency TEXT DEFAULT 'EUR'
+        currency TEXT DEFAULT 'EUR',
+        first_name TEXT,
+        last_name TEXT,
+        custom_categories TEXT
     )
     """)
 
@@ -84,7 +91,10 @@ def init_db():
         ("stripe_customer_id", "TEXT"),
         ("premium_status", "INTEGER DEFAULT 0"),
         ("premium_expires", "TEXT"),
-        ("currency", "TEXT DEFAULT 'EUR'")
+        ("currency", "TEXT DEFAULT 'EUR'"),
+        ("first_name", "TEXT"),
+        ("last_name", "TEXT"),
+        ("custom_categories", "TEXT")
     ]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")
@@ -228,9 +238,20 @@ def get_user_profile(user_id):
             "email": d["email"],
             "premium_status": d["premium_status"],
             "stripe_customer_id": d["stripe_customer_id"],
-            "currency": d["currency"] or "EUR"
+            "currency": d["currency"] or "EUR",
+            "first_name": d["first_name"] or "",
+            "last_name": d["last_name"] or "",
+            "custom_categories": d["custom_categories"] or ""
         }
     return None
+
+def update_user_profile(user_id, first_name, last_name, custom_categories):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET first_name=?, last_name=?, custom_categories=? WHERE email=? OR id=?", (first_name, last_name, custom_categories, user_id, user_id))
+    conn.commit()
+    conn.close()
+    return True
 
 def set_premium_status(user_id, status, stripe_customer_id=None):
     conn = get_db()
