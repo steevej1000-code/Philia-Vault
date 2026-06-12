@@ -287,7 +287,15 @@
                     <input id="auth-password" type="password" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:bg-[#13161c]" data-i18n-placeholder="login_password_placeholder" placeholder="••••••••"/>
                 </div>
                 <p id="auth-error" class="hidden text-xs text-error text-center font-semibold"></p>
-                
+                <!-- Explicit Terms Agreement Checkbox -->
+                <div class="flex items-start gap-2 py-1">
+                    <input id="auth-terms-checkbox" type="checkbox" class="mt-0.5 rounded border-white/10 bg-black/40 text-primary focus:ring-0 cursor-pointer"/>
+                    <label for="auth-terms-checkbox" class="text-[11px] text-on-surface-variant leading-tight cursor-pointer select-none">
+                        <span data-i18n="accept_terms_label_prefix">J'accepte les</span>
+                        <a href="javascript:void(0)" onclick="document.getElementById('disclaimer-modal').classList.remove('hidden')" class="text-primary hover:underline font-semibold" data-i18n="accept_terms_link">mentions légales & conditions d'utilisation</a>.
+                    </label>
+                </div>
+
                 <div class="flex gap-2 pt-2">
                     <button onclick="handleAuth('login')" data-i18n="login_btn" class="flex-1 py-3.5 vibrant-button text-white rounded-xl text-sm font-bold active:scale-95 transition-all">Se connecter</button>
                     <button onclick="handleAuth('register')" data-i18n="register_btn" class="flex-1 py-3.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-sm font-bold text-white active:scale-95 transition-all border border-white/5">Créer un compte</button>
@@ -998,7 +1006,10 @@
                 disclaimer_bullet3: "Les simulations et données passées ne garantissent pas les rendements futurs.",
                 disclaimer_footer: "We recommend consulting a professional financial advisor before making any major investment decisions.",
                 decline_btn: "Refuser",
-                accept_btn: "J'accepte et je m'inscris",
+                accept_btn: "J'accepte",
+                accept_terms_label_prefix: "J'accepte les",
+                accept_terms_link: "mentions légales & conditions d'utilisation",
+                alert_terms_required: "Veuillez accepter les mentions légales et conditions d'utilisation.",
                 dash_independence_title: "Indice d'Indépendance",
                 dash_iif_score_label: "IIF SCORE",
                 dash_iif_description: "Votre ratio (Revenus Passifs / Dépenses Totales). Visez 100% pour la liberté totale !",
@@ -1150,7 +1161,10 @@
                 disclaimer_bullet3: "Simulations and past data do not guarantee future returns.",
                 disclaimer_footer: "We strongly recommend consulting a registered or professional financial advisor before making any major investment decisions.",
                 decline_btn: "Decline",
-                accept_btn: "I Accept and Register",
+                accept_btn: "I Accept",
+                accept_terms_label_prefix: "I accept the",
+                accept_terms_link: "legal terms and conditions of use",
+                alert_terms_required: "Please accept the legal terms and conditions of use.",
                 dash_independence_title: "Independence Index",
                 dash_iif_score_label: "IIF SCORE",
                 dash_iif_description: "Your ratio (Passive Income / Total Expenses). Aim for 100% to achieve total freedom!",
@@ -1305,7 +1319,10 @@
                 disclaimer_bullet3: "Las simulaciones y los datos pasados no garantizan rendimientos futuros.",
                 disclaimer_footer: "Le recomendamos encarecidamente consultar a un asesor financiero profesional antes de tomar cualquier decisión de inversión importante.",
                 decline_btn: "Rechazar",
-                accept_btn: "Acepto y me Registro",
+                accept_btn: "Acepto",
+                accept_terms_label_prefix: "Acepto los",
+                accept_terms_link: "términos legales y condiciones de uso",
+                alert_terms_required: "Por favor, acepte los términos legales y condiciones de uso.",
                 dash_independence_title: "Índice de Independencia",
                 dash_iif_score_label: "IIF SCORE",
                 dash_iif_description: "Su ratio (Ingresos Pasivos / Gastos Totales). ¡Apunte al 100% para lograr la libertad absoluta!",
@@ -1460,7 +1477,10 @@
                 disclaimer_bullet3: "As simulações e os dados passados não garantem rendimentos futuros.",
                 disclaimer_footer: "Recomendamos vivamente que consulte um consultor financeiro profissional antes de tomar qualquer decisão de investimento importante.",
                 decline_btn: "Recusar",
-                accept_btn: "Aceito e Registo-me",
+                accept_btn: "Aceito",
+                accept_terms_label_prefix: "Aceito os",
+                accept_terms_link: "termos legais e condições de utilização",
+                alert_terms_required: "Por favor, aceite os termos legais e condições de utilização.",
                 dash_independence_title: "Índice de Independência",
                 dash_iif_score_label: "IIF SCORE",
                 dash_iif_description: "A sua proporção (Rendimentos Passivos / Despesas Totais). Aponte para 100% para alcançar a liberdade total!",
@@ -1615,7 +1635,10 @@
                 disclaimer_bullet3: "Simulationen und Daten aus der Vergangenheit garantieren keine zukünftigen Erträge.",
                 disclaimer_footer: "Wir empfehlen Ihnen dringend, einen professionellen Finanzberater zu konsultieren, bevor Sie wichtige Anlageentscheidungen treffen.",
                 decline_btn: "Ablehnen",
-                accept_btn: "Ich stimme zu und registriere mich",
+                accept_btn: "Ich stimme zu",
+                accept_terms_label_prefix: "Ich akzeptiere die",
+                accept_terms_link: "rechtlichen Hinweise & Nutzungsbedingungen",
+                alert_terms_required: "Bitte akzeptieren Sie die rechtlichen Hinweise und Nutzungsbedingungen.",
                 dash_independence_title: "Unabhängigkeitsindex",
                 dash_iif_score_label: "IIF SCORE",
                 dash_iif_description: "Ihr Verhältnis (Passives Einkommen / Gesamtausgaben). Streben Sie 100% an, um finanzielle Freiheit zu erreichen!",
@@ -1924,20 +1947,22 @@
         let disclaimerAccepted = false;
 
         function acceptDisclaimer() {
-            disclaimerAccepted = true;
             document.getElementById('disclaimer-modal').classList.add('hidden');
-            handleAuth('register');
+            const checkbox = document.getElementById('auth-terms-checkbox');
+            if (checkbox) checkbox.checked = true;
         }
 
         function declineDisclaimer() {
-            disclaimerAccepted = false;
             document.getElementById('disclaimer-modal').classList.add('hidden');
+            const checkbox = document.getElementById('auth-terms-checkbox');
+            if (checkbox) checkbox.checked = false;
         }
 
         async function handleAuth(mode) {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
             const errEl = document.getElementById('auth-error');
+            const checkbox = document.getElementById('auth-terms-checkbox');
             
             if (!email || !password) {
                 errEl.textContent = "Veuillez remplir tous les champs.";
@@ -1945,13 +1970,12 @@
                 return;
             }
 
-            if (mode === 'register' && !disclaimerAccepted) {
-                document.getElementById('disclaimer-modal').classList.remove('hidden');
+            if (mode === 'register' && checkbox && !checkbox.checked) {
+                const termMsg = TRANSLATIONS[currentLang]?.alert_terms_required || "Veuillez accepter les mentions légales et conditions d'utilisation.";
+                errEl.textContent = termMsg;
+                errEl.classList.remove('hidden');
                 return;
             }
-            
-            // Set it back to false only after a successful check, or leave it so they can resubmit without clicking accept again on validation error.
-            disclaimerAccepted = false;
             
             try {
                 const response = await fetch(`/api/auth/${mode}`, {
