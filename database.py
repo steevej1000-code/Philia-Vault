@@ -4,6 +4,9 @@ import base64
 from cryptography.fernet import Fernet
 
 DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "cashflow.db"))
+db_dir = os.path.dirname(DB_PATH)
+if db_dir:
+    os.makedirs(db_dir, exist_ok=True)
 
 def get_encryptor():
     key = os.environ.get("DB_ENCRYPTION_KEY")
