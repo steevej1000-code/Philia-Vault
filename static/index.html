@@ -2647,7 +2647,7 @@
                 // Flow nodes
                 document.getElementById('flow-yield').textContent = formatCurrency(data.total_passive_income, true);
                 document.getElementById('flow-assets').textContent = formatCurrency(data.total_assets);
-                document.getElementById('flow-liabilities').textContent = formatCurrency(data.total_liabilities);
+                document.getElementById('flow-liabilities').textContent = formatCurrency(data.total_monthly_cost);
 
                 // Target Bar
                 const targetPercentage = Math.min(Math.round((data.total_passive_income / (data.total_monthly_cost || 1)) * 100), 100);
