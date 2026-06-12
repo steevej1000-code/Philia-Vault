@@ -443,7 +443,7 @@
         <header class="flex justify-between items-center px-6 py-4 w-full sticky top-0 z-50 bg-[#0c0e12]/60 backdrop-blur-xl border-b border-white/5 shadow-sm">
             <div class="flex items-center gap-3">
                 <div onclick="openProfileModal()" class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 shadow-lg cursor-pointer hover:border-primary transition-all">
-                    <img id="header-avatar-img" alt="Profil Utilisateur" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdBKlfB3oRIHT9X6uRapDv-72wG20xbeaJ39lZb9Mt3O8PZ_ae3T8Kk5ewFp_NWssgEPfs5FzMwCOr_laCHplkONOcKhu_Fi5O1IKvrL1iHqxMCMf5DzcBPgjGjrUQ6ztvJ3XxGlxO2an41IDNWjqRkuMYe_kq9qDUZjyI4dYcQ4X2SUkyfDoRnX61CtI58bkiZqzRLvHLjyBt90lBxnkVzbtJzOKtSKRJ0etVnFiG-lAEbZNIvDxeOAQArys9EKJFG_aP58xTpviu"/>
+                    <img id="header-avatar-img" alt="Profil Utilisateur" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100%' height='100%' fill='%231d232a'/><circle cx='50' cy='38' r='18' fill='%23a6adbb'/><path d='M20,80 C20,60 30,55 50,55 C70,55 80,60 80,80' fill='%23a6adbb'/></svg>"/>
                 </div>
                 <h1 class="text-headline-md font-headline-md font-bold bg-gradient-to-r from-primary via-primary-container to-secondary-container bg-clip-text text-transparent">Philia Vault</h1>
             </div>
@@ -1000,7 +1000,7 @@
             <div class="flex flex-col items-center space-y-2 mb-2">
                 <div class="relative group w-20 h-20 rounded-full overflow-hidden border-2 border-primary/30 shadow-lg cursor-pointer">
                     <!-- Preview Image -->
-                    <img id="profile-avatar-preview" alt="Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdBKlfB3oRIHT9X6uRapDv-72wG20xbeaJ39lZb9Mt3O8PZ_ae3T8Kk5ewFp_NWssgEPfs5FzMwCOr_laCHplkONOcKhu_Fi5O1IKvrL1iHqxMCMf5DzcBPgjGjrUQ6ztvJ3XxGlxO2an41IDNWjqRkuMYe_kq9qDUZjyI4dYcQ4X2SUkyfDoRnX61CtI58bkiZqzRLvHLjyBt90lBxnkVzbtJzOKtSKRJ0etVnFiG-lAEbZNIvDxeOAQArys9EKJFG_aP58xTpviu"/>
+                    <img id="profile-avatar-preview" alt="Avatar" class="w-full h-full object-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100%' height='100%' fill='%231d232a'/><circle cx='50' cy='38' r='18' fill='%23a6adbb'/><path d='M20,80 C20,60 30,55 50,55 C70,55 80,60 80,80' fill='%23a6adbb'/></svg>"/>
                     <!-- Overlay text on hover -->
                     <div onclick="document.getElementById('avatar-file-input').click()" class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-[10px] font-bold text-white text-center p-1 uppercase">
                         Modifier
@@ -2437,7 +2437,7 @@
                     populateCategories(data.user.custom_categories);
 
                     // Update header avatar image
-                    const defaultAvatar = 'https://lh3.googleusercontent.com/aida-public/AB6AXuBdBKlfB3oRIHT9X6uRapDv-72wG20xbeaJ39lZb9Mt3O8PZ_ae3T8Kk5ewFp_NWssgEPfs5FzMwCOr_laCHplkONOcKhu_Fi5O1IKvrL1iHqxMCMf5DzcBPgjGjrUQ6ztvJ3XxGlxO2an41IDNWjqRkuMYe_kq9qDUZjyI4dYcQ4X2SUkyfDoRnX61CtI58bkiZqzRLvHLjyBt90lBxnkVzbtJzOKtSKRJ0etVnFiG-lAEbZNIvDxeOAQArys9EKJFG_aP58xTpviu';
+                    const defaultAvatar = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100%' height='100%' fill='%231d232a'/><circle cx='50' cy='38' r='18' fill='%23a6adbb'/><path d='M20,80 C20,60 30,55 50,55 C70,55 80,60 80,80' fill='%23a6adbb'/></svg>";
                     const activeAvatar = data.user.avatar || defaultAvatar;
                     document.getElementById('header-avatar-img').src = activeAvatar;
 
@@ -2552,7 +2552,7 @@
                     document.getElementById('profile-email').value = user.email || '';
                     
                     selectedAvatarBase64 = user.avatar || '';
-                    const defaultAvatar = 'https://lh3.googleusercontent.com/aida-public/AB6AXuBdBKlfB3oRIHT9X6uRapDv-72wG20xbeaJ39lZb9Mt3O8PZ_ae3T8Kk5ewFp_NWssgEPfs5FzMwCOr_laCHplkONOcKhu_Fi5O1IKvrL1iHqxMCMf5DzcBPgjGjrUQ6ztvJ3XxGlxO2an41IDNWjqRkuMYe_kq9qDUZjyI4dYcQ4X2SUkyfDoRnX61CtI58bkiZqzRLvHLjyBt90lBxnkVzbtJzOKtSKRJ0etVnFiG-lAEbZNIvDxeOAQArys9EKJFG_aP58xTpviu';
+                    const defaultAvatar = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100%' height='100%' fill='%231d232a'/><circle cx='50' cy='38' r='18' fill='%23a6adbb'/><path d='M20,80 C20,60 30,55 50,55 C70,55 80,60 80,80' fill='%23a6adbb'/></svg>";
                     const activeAvatar = user.avatar || defaultAvatar;
                     document.getElementById('profile-avatar-preview').src = activeAvatar;
                     
