@@ -257,59 +257,149 @@
         .ambient-shadow-coral {
             box-shadow: 0 10px 30px -5px rgba(239, 68, 68, 0.04);
         }
+        @keyframes float-slow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-float-slow {
+            animation: float-slow 6s ease-in-out infinite;
+        }
+        @keyframes bar-grow {
+            from { width: 0%; }
+            to { width: 84%; }
+        }
+        .animate-bar-grow {
+            animation: bar-grow 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
     </style>
 </head>
 <body class="font-body-md text-on-surface">
 
     <!-- Login / Registration Screen -->
-    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
-        <!-- Floating atmospheric glow elements -->
-        <div class="fixed top-1/4 left-1/4 w-80 h-80 bg-primary/10 rounded-full blur-[120px] pointer-events-none animate-float"></div>
-        <div class="fixed bottom-1/4 right-1/4 w-80 h-80 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none animate-float" style="animation-delay: -3s;"></div>
+    <div id="login-screen" class="fixed inset-0 z-50 w-full h-full min-h-screen bg-[#07090e] overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-12 text-white">
+        <!-- LEFT PANEL: Dynamic Showcase (Visible on desktop) -->
+        <div class="hidden lg:flex lg:col-span-7 relative flex-col justify-between p-12 overflow-hidden border-r border-white/5 select-none">
+            <!-- Ambient lights -->
+            <div class="absolute -top-40 -left-40 w-96 h-96 bg-primary/20 rounded-full blur-[140px] pointer-events-none"></div>
+            <div class="absolute -bottom-40 -right-20 w-[450px] h-[450px] bg-[#a6e22e]/10 rounded-full blur-[160px] pointer-events-none"></div>
+            <div class="absolute top-1/2 left-1/3 w-[600px] h-[600px] bg-[#0c0e12] rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2 opacity-20 border border-dashed border-white/10 animate-spin" style="animation-duration: 120s;"></div>
 
-        <div class="glass-card max-w-md w-full rounded-[32px] p-8 border border-white/10 shadow-2xl relative overflow-hidden space-y-6">
-            <div class="text-center space-y-2">
-                <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-[#0c0e12] font-black text-xl shadow-lg shadow-primary/20">
+            <!-- Top header -->
+            <div class="flex items-center gap-3 relative z-10">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-[#a6e22e] flex items-center justify-center text-[#0c0e12] font-black text-sm shadow-lg shadow-primary/20">
                     PV
                 </div>
-                <h2 class="text-headline-lg font-headline-lg bg-gradient-to-r from-primary via-primary-container to-secondary-container bg-clip-text text-transparent">Philia Vault</h2>
-                <p data-i18n="login_subtitle" class="text-xs text-on-surface-variant">Accédez à votre coffre-fort financier sécurisé</p>
+                <span class="text-lg font-bold tracking-tight text-white">Philia Vault</span>
             </div>
 
-            <!-- Login Form -->
-            <div id="auth-forms" class="space-y-4">
-                <div>
-                    <label data-i18n="login_email" class="block text-xs font-semibold text-on-surface-variant mb-1">Adresse Email</label>
-                    <input id="auth-email" type="email" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:bg-[#13161c]" data-i18n-placeholder="login_email_placeholder" placeholder="ex: alex@philia.com"/>
-                </div>
-                <div>
-                    <label data-i18n="login_password" class="block text-xs font-semibold text-on-surface-variant mb-1">Mot de passe</label>
-                    <input id="auth-password" type="password" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:bg-[#13161c]" data-i18n-placeholder="login_password_placeholder" placeholder="••••••••"/>
-                </div>
-                <p id="auth-error" class="hidden text-xs text-error text-center font-semibold"></p>
-                <!-- Explicit Terms Agreement Checkbox -->
-                <div class="flex items-start gap-2 py-1">
-                    <input id="auth-terms-checkbox" type="checkbox" class="mt-0.5 rounded border-white/10 bg-black/40 text-primary focus:ring-0 cursor-pointer"/>
-                    <label for="auth-terms-checkbox" class="text-[11px] text-on-surface-variant leading-tight cursor-pointer select-none">
-                        <span data-i18n="accept_terms_label_prefix">J'accepte les</span>
-                        <a href="javascript:void(0)" onclick="document.getElementById('disclaimer-modal').classList.remove('hidden')" class="text-primary hover:underline font-semibold" data-i18n="accept_terms_link">mentions légales & conditions d'utilisation</a>.
-                    </label>
+            <!-- Central showcase content -->
+            <div class="my-auto space-y-8 relative z-10 max-w-lg">
+                <div class="space-y-4">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-primary/10 text-primary border border-primary/20">
+                        <span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+                        Version 4.0 Pro
+                    </span>
+                    <h2 class="text-4xl lg:text-5xl font-black leading-tight tracking-tight text-white">
+                        Prenez le contrôle de votre <span class="bg-gradient-to-r from-primary to-[#a6e22e] bg-clip-text text-transparent">liberté financière</span>.
+                    </h2>
+                    <p class="text-sm text-on-surface-variant/80 leading-relaxed">
+                        Visualisez vos flux en temps réel, auditez vos finances avec notre intelligence artificielle avancée et atteignez votre indépendance financière grâce à Philia Vault.
+                    </p>
                 </div>
 
-                <div class="flex gap-2 pt-2">
-                    <button onclick="handleAuth('login')" data-i18n="login_btn" class="flex-1 py-3.5 vibrant-button text-white rounded-xl text-sm font-bold active:scale-95 transition-all">Se connecter</button>
-                    <button onclick="handleAuth('register')" data-i18n="register_btn" class="flex-1 py-3.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-sm font-bold text-white active:scale-95 transition-all border border-white/5">Créer un compte</button>
+                <!-- Showcase Glassmorphic Card -->
+                <div class="glass-card p-6 rounded-[24px] border border-white/10 shadow-2xl relative overflow-hidden bg-black/40 backdrop-blur-md animate-float-slow">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="space-y-1">
+                            <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Indice d'Indépendance</span>
+                            <div class="text-2xl font-black text-white">Score IIF : <span class="text-primary animate-pulse">84%</span></div>
+                        </div>
+                        <span class="material-symbols-outlined text-primary text-3xl">trending_up</span>
+                    </div>
+
+                    <!-- Micro Progress Bar -->
+                    <div class="w-full h-3 bg-white/5 rounded-full overflow-hidden mb-4 border border-white/5">
+                        <div class="h-full bg-gradient-to-r from-primary to-[#a6e22e] rounded-full animate-bar-grow" style="width: 84%;"></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 text-xs">
+                        <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                            <span class="block text-[10px] text-on-surface-variant mb-0.5">Revenus Passifs</span>
+                            <span class="font-bold text-white text-sm">+4,250 € / mois</span>
+                        </div>
+                        <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                            <span class="block text-[10px] text-on-surface-variant mb-0.5">Dépenses Fixes</span>
+                            <span class="font-bold text-outline text-sm">3,570 € / mois</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer info -->
+            <div class="text-xs text-on-surface-variant/65 relative z-10">
+                &copy; 2026 Philia Vault. Cryptage AES-256 de niveau bancaire.
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: Authentication Form -->
+        <div class="col-span-1 lg:col-span-5 min-h-screen flex flex-col justify-center items-center p-6 lg:p-12 relative overflow-hidden bg-[#0c0e12]">
+            <!-- Subtle backdrop glows for mobile -->
+            <div class="lg:hidden absolute top-1/4 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-[100px] pointer-events-none"></div>
+            <div class="lg:hidden absolute bottom-1/4 right-1/4 w-72 h-72 bg-tertiary/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+            <div class="w-full max-w-md space-y-8 relative z-10">
+                <!-- Mobile brand logo (visible on mobile only) -->
+                <div class="lg:hidden text-center space-y-2 mb-6">
+                    <div class="w-14 h-14 mx-auto rounded-full bg-gradient-to-tr from-primary to-[#a6e22e] flex items-center justify-center text-[#0c0e12] font-black text-lg shadow-lg shadow-primary/20">
+                        PV
+                    </div>
+                    <h2 class="text-headline-md font-bold bg-gradient-to-r from-primary to-[#a6e22e] bg-clip-text text-transparent">Philia Vault</h2>
+                    <p data-i18n="login_subtitle" class="text-xs text-on-surface-variant">Accédez à votre coffre-fort financier sécurisé</p>
                 </div>
 
-                <div class="relative flex py-2 items-center">
-                    <div class="flex-grow border-t border-white/5"></div>
-                    <span data-i18n="or_divider" class="flex-shrink mx-4 text-[10px] text-outline uppercase tracking-wider">ou</span>
-                    <div class="flex-grow border-t border-white/5"></div>
+                <!-- Desktop login title -->
+                <div class="hidden lg:block space-y-2">
+                    <h3 class="text-2xl font-black tracking-tight text-white">Ravi de vous revoir</h3>
+                    <p data-i18n="login_subtitle" class="text-xs text-on-surface-variant">Entrez vos identifiants pour accéder à votre coffre-fort.</p>
                 </div>
 
-                <!-- Google Auth Button (Real Google GSI Sign In) -->
-                <div class="flex justify-center w-full my-2">
-                    <div id="google-signin-btn-container" class="w-full flex justify-center"></div>
+                <!-- Form container -->
+                <div id="auth-forms" class="space-y-5">
+                    <div class="space-y-1">
+                        <label data-i18n="login_email" class="block text-xs font-semibold text-on-surface-variant">Adresse Email</label>
+                        <input id="auth-email" type="email" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary/40 focus:bg-[#13161c] transition-all" data-i18n-placeholder="login_email_placeholder" placeholder="ex: alex@philia.com"/>
+                    </div>
+                    <div class="space-y-1">
+                        <label data-i18n="login_password" class="block text-xs font-semibold text-on-surface-variant">Mot de passe</label>
+                        <input id="auth-password" type="password" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary/40 focus:bg-[#13161c] transition-all" data-i18n-placeholder="login_password_placeholder" placeholder="••••••••"/>
+                    </div>
+
+                    <p id="auth-error" class="hidden text-xs text-error text-center font-semibold"></p>
+
+                    <!-- Terms agreement checkbox -->
+                    <div class="flex items-start gap-2.5 py-1">
+                        <input id="auth-terms-checkbox" type="checkbox" class="mt-0.5 rounded border-white/10 bg-black/40 text-primary focus:ring-0 cursor-pointer w-4 h-4"/>
+                        <label for="auth-terms-checkbox" class="text-[11px] text-on-surface-variant leading-tight cursor-pointer select-none">
+                            <span data-i18n="accept_terms_label_prefix">J'accepte les</span>
+                            <a href="javascript:void(0)" onclick="document.getElementById('disclaimer-modal').classList.remove('hidden')" class="text-primary hover:underline font-semibold" data-i18n="accept_terms_link">mentions légales & conditions d'utilisation</a>.
+                        </label>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                        <button onclick="handleAuth('login')" data-i18n="login_btn" class="flex-1 py-3.5 vibrant-button text-white rounded-xl text-sm font-bold active:scale-95 transition-all">Se connecter</button>
+                        <button onclick="handleAuth('register')" data-i18n="register_btn" class="flex-1 py-3.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-sm font-bold text-white active:scale-95 transition-all border border-white/5">Créer un compte</button>
+                    </div>
+
+                    <div class="relative flex py-2 items-center">
+                        <div class="flex-grow border-t border-white/5"></div>
+                        <span data-i18n="or_divider" class="flex-shrink mx-4 text-[10px] text-outline uppercase tracking-wider">ou</span>
+                        <div class="flex-grow border-t border-white/5"></div>
+                    </div>
+
+                    <!-- Google Sign In Button container -->
+                    <div class="flex justify-center w-full my-2">
+                        <div id="google-signin-btn-container" class="w-full flex justify-center"></div>
+                    </div>
                 </div>
             </div>
         </div>
