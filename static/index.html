@@ -360,6 +360,16 @@
 
                 <!-- Form container -->
                 <div id="auth-forms" class="space-y-5">
+                    <div id="auth-name-fields" class="grid grid-cols-2 gap-3 hidden">
+                        <div class="space-y-1">
+                            <label data-i18n="profile_first_name" class="block text-xs font-semibold text-on-surface-variant">Prénom</label>
+                            <input id="auth-first-name" type="text" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary/40 focus:bg-[#13161c] transition-all"/>
+                        </div>
+                        <div class="space-y-1">
+                            <label data-i18n="profile_last_name" class="block text-xs font-semibold text-on-surface-variant">Nom de famille</label>
+                            <input id="auth-last-name" type="text" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary/40 focus:bg-[#13161c] transition-all"/>
+                        </div>
+                    </div>
                     <div class="space-y-1">
                         <label data-i18n="login_email" class="block text-xs font-semibold text-on-surface-variant">Adresse Email</label>
                         <input id="auth-email" type="email" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary/40 focus:bg-[#13161c] transition-all" data-i18n-placeholder="login_email_placeholder" placeholder="ex: alex@philia.com"/>
@@ -2215,6 +2225,7 @@
             const submitBtnEl = document.getElementById('auth-submit-btn');
             const toggleTextEl = document.getElementById('auth-toggle-text');
             const termsContainer = document.getElementById('auth-terms-container');
+            const nameFields = document.getElementById('auth-name-fields');
             const errEl = document.getElementById('auth-error');
             
             if (errEl) errEl.classList.add('hidden');
@@ -2231,6 +2242,7 @@
                     toggleTextEl.innerHTML = `${togglePrefix} <a href="javascript:void(0)" onclick="setAuthMode('register')" class="text-primary hover:underline font-bold">${toggleAction}</a>`;
                 }
                 if (termsContainer) termsContainer.classList.add('hidden');
+                if (nameFields) nameFields.classList.add('hidden');
             } else {
                 if (titleEl) titleEl.textContent = dictionary.register_title_text || "Créer votre compte";
                 if (subtitleEl) subtitleEl.textContent = dictionary.register_subtitle_text || "Commencez votre voyage vers l'indépendance financière";
@@ -2241,6 +2253,7 @@
                     toggleTextEl.innerHTML = `${togglePrefix} <a href="javascript:void(0)" onclick="setAuthMode('login')" class="text-primary hover:underline font-bold">${toggleAction}</a>`;
                 }
                 if (termsContainer) termsContainer.classList.remove('hidden');
+                if (nameFields) nameFields.classList.remove('hidden');
             }
         }
 
@@ -2251,10 +2264,12 @@
         async function handleAuth(mode) {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
+            const firstName = document.getElementById('auth-first-name')?.value || '';
+            const lastName = document.getElementById('auth-last-name')?.value || '';
             const errEl = document.getElementById('auth-error');
             const checkbox = document.getElementById('auth-terms-checkbox');
             
-            if (!email || !password) {
+            if (!email || !password || (mode === 'register' && (!firstName || !lastName))) {
                 errEl.textContent = "Veuillez remplir tous les champs.";
                 errEl.classList.remove('hidden');
                 return;
@@ -2271,7 +2286,7 @@
                 const response = await fetch(`/api/auth/${mode}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ email, password, first_name: firstName, last_name: lastName })
                 });
                 const data = await response.json();
                 

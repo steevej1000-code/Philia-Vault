@@ -421,12 +421,13 @@ import hashlib
 def hash_password(password):
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
-def create_user(email, password):
+def create_user(email, password, first_name="", last_name=""):
     conn = get_db()
     cursor = conn.cursor()
     pwd_hash = hash_password(password)
     try:
-        cursor.execute("INSERT INTO users (email, password) VALUES (?, ?)", (email.lower().strip(), pwd_hash))
+        cursor.execute("INSERT INTO users (email, password, first_name, last_name) VALUES (?, ?, ?, ?)", 
+                       (email.lower().strip(), pwd_hash, first_name, last_name))
         conn.commit()
         success = True
     except sqlite3.IntegrityError:
