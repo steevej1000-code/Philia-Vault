@@ -348,8 +348,9 @@ def update_profile():
     first_name = data.get("first_name", "")
     last_name = data.get("last_name", "")
     custom_categories = data.get("custom_categories", "")
+    avatar = data.get("avatar")
     try:
-        database.update_user_profile(user_id, first_name, last_name, custom_categories)
+        database.update_user_profile(user_id, first_name, last_name, custom_categories, avatar)
         return jsonify({"success": True, "message": "Profile mis à jour avec succès"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

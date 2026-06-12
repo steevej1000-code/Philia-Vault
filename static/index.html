@@ -443,7 +443,7 @@
         <header class="flex justify-between items-center px-6 py-4 w-full sticky top-0 z-50 bg-[#0c0e12]/60 backdrop-blur-xl border-b border-white/5 shadow-sm">
             <div class="flex items-center gap-3">
                 <div onclick="openProfileModal()" class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 shadow-lg cursor-pointer hover:border-primary transition-all">
-                    <img alt="Profil Utilisateur" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdBKlfB3oRIHT9X6uRapDv-72wG20xbeaJ39lZb9Mt3O8PZ_ae3T8Kk5ewFp_NWssgEPfs5FzMwCOr_laCHplkONOcKhu_Fi5O1IKvrL1iHqxMCMf5DzcBPgjGjrUQ6ztvJ3XxGlxO2an41IDNWjqRkuMYe_kq9qDUZjyI4dYcQ4X2SUkyfDoRnX61CtI58bkiZqzRLvHLjyBt90lBxnkVzbtJzOKtSKRJ0etVnFiG-lAEbZNIvDxeOAQArys9EKJFG_aP58xTpviu"/>
+                    <img id="header-avatar-img" alt="Profil Utilisateur" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdBKlfB3oRIHT9X6uRapDv-72wG20xbeaJ39lZb9Mt3O8PZ_ae3T8Kk5ewFp_NWssgEPfs5FzMwCOr_laCHplkONOcKhu_Fi5O1IKvrL1iHqxMCMf5DzcBPgjGjrUQ6ztvJ3XxGlxO2an41IDNWjqRkuMYe_kq9qDUZjyI4dYcQ4X2SUkyfDoRnX61CtI58bkiZqzRLvHLjyBt90lBxnkVzbtJzOKtSKRJ0etVnFiG-lAEbZNIvDxeOAQArys9EKJFG_aP58xTpviu"/>
                 </div>
                 <h1 class="text-headline-md font-headline-md font-bold bg-gradient-to-r from-primary via-primary-container to-secondary-container bg-clip-text text-transparent">Philia Vault</h1>
             </div>
@@ -952,6 +952,21 @@
                 <span class="material-symbols-outlined">account_circle</span>
                 <span data-i18n="profile_title">Profil Utilisateur</span>
             </h3>
+
+            <!-- Avatar Uploader Section -->
+            <div class="flex flex-col items-center space-y-2 mb-2">
+                <div class="relative group w-20 h-20 rounded-full overflow-hidden border-2 border-primary/30 shadow-lg cursor-pointer">
+                    <!-- Preview Image -->
+                    <img id="profile-avatar-preview" alt="Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdBKlfB3oRIHT9X6uRapDv-72wG20xbeaJ39lZb9Mt3O8PZ_ae3T8Kk5ewFp_NWssgEPfs5FzMwCOr_laCHplkONOcKhu_Fi5O1IKvrL1iHqxMCMf5DzcBPgjGjrUQ6ztvJ3XxGlxO2an41IDNWjqRkuMYe_kq9qDUZjyI4dYcQ4X2SUkyfDoRnX61CtI58bkiZqzRLvHLjyBt90lBxnkVzbtJzOKtSKRJ0etVnFiG-lAEbZNIvDxeOAQArys9EKJFG_aP58xTpviu"/>
+                    <!-- Overlay text on hover -->
+                    <div onclick="document.getElementById('avatar-file-input').click()" class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-[10px] font-bold text-white text-center p-1 uppercase">
+                        Modifier
+                    </div>
+                </div>
+                <!-- Hidden file input -->
+                <input id="avatar-file-input" type="file" accept="image/*" class="hidden" onchange="previewAvatar(this)"/>
+                <span class="text-[9px] text-on-surface-variant font-semibold">Taille max : 500 KB</span>
+            </div>
             
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
@@ -2366,6 +2381,11 @@
                     window.currentUserFirstName = data.user.first_name || '';
                     populateCategories(data.user.custom_categories);
 
+                    // Update header avatar image
+                    const defaultAvatar = 'https://lh3.googleusercontent.com/aida-public/AB6AXuBdBKlfB3oRIHT9X6uRapDv-72wG20xbeaJ39lZb9Mt3O8PZ_ae3T8Kk5ewFp_NWssgEPfs5FzMwCOr_laCHplkONOcKhu_Fi5O1IKvrL1iHqxMCMf5DzcBPgjGjrUQ6ztvJ3XxGlxO2an41IDNWjqRkuMYe_kq9qDUZjyI4dYcQ4X2SUkyfDoRnX61CtI58bkiZqzRLvHLjyBt90lBxnkVzbtJzOKtSKRJ0etVnFiG-lAEbZNIvDxeOAQArys9EKJFG_aP58xTpviu';
+                    const activeAvatar = data.user.avatar || defaultAvatar;
+                    document.getElementById('header-avatar-img').src = activeAvatar;
+
                     // Refresh translations to apply name to greeting
                     applyTranslations(currentLang);
                 }
@@ -2441,6 +2461,25 @@
             applyTranslations(currentLang);
         }
 
+        let selectedAvatarBase64 = null;
+
+        function previewAvatar(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                if (file.size > 500 * 1024) {
+                    alert("L'image est trop volumineuse (max 500 KB).");
+                    input.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profile-avatar-preview').src = e.target.result;
+                    selectedAvatarBase64 = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
         async function openProfileModal() {
             try {
                 // Fetch profile
@@ -2456,6 +2495,11 @@
                     document.getElementById('profile-first-name').value = user.first_name || '';
                     document.getElementById('profile-last-name').value = user.last_name || '';
                     document.getElementById('profile-email').value = user.email || '';
+                    
+                    selectedAvatarBase64 = user.avatar || '';
+                    const defaultAvatar = 'https://lh3.googleusercontent.com/aida-public/AB6AXuBdBKlfB3oRIHT9X6uRapDv-72wG20xbeaJ39lZb9Mt3O8PZ_ae3T8Kk5ewFp_NWssgEPfs5FzMwCOr_laCHplkONOcKhu_Fi5O1IKvrL1iHqxMCMf5DzcBPgjGjrUQ6ztvJ3XxGlxO2an41IDNWjqRkuMYe_kq9qDUZjyI4dYcQ4X2SUkyfDoRnX61CtI58bkiZqzRLvHLjyBt90lBxnkVzbtJzOKtSKRJ0etVnFiG-lAEbZNIvDxeOAQArys9EKJFG_aP58xTpviu';
+                    const activeAvatar = user.avatar || defaultAvatar;
+                    document.getElementById('profile-avatar-preview').src = activeAvatar;
                     
                     const isPremium = user.premium_status === 1;
                     const statusSpan = document.getElementById('profile-subscription-status');
@@ -2504,11 +2548,15 @@
                     body: JSON.stringify({
                         first_name: firstName,
                         last_name: lastName,
-                        custom_categories: customCats
+                        custom_categories: customCats,
+                        avatar: selectedAvatarBase64
                     })
                 });
                 const data = await res.json();
                 if (data.success) {
+                    if (selectedAvatarBase64) {
+                        document.getElementById('header-avatar-img').src = selectedAvatarBase64;
+                    }
                     const successMsg = document.getElementById('profile-success-msg');
                     successMsg.textContent = TRANSLATIONS[currentLang]?.profile_update_success || 'Profile updated successfully!';
                     successMsg.classList.remove('hidden');

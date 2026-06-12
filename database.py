@@ -81,7 +81,8 @@ def init_db():
         currency TEXT DEFAULT 'EUR',
         first_name TEXT,
         last_name TEXT,
-        custom_categories TEXT
+        custom_categories TEXT,
+        avatar TEXT
     )
     """)
 
@@ -94,7 +95,8 @@ def init_db():
         ("currency", "TEXT DEFAULT 'EUR'"),
         ("first_name", "TEXT"),
         ("last_name", "TEXT"),
-        ("custom_categories", "TEXT")
+        ("custom_categories", "TEXT"),
+        ("avatar", "TEXT")
     ]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")
@@ -194,7 +196,6 @@ def get_user_profile(user_id):
         
     if row:
         d = dict(row)
-        # return compatible dictionary format
         return {
             "name": d["email"].split("@")[0].capitalize() if "@" in d["email"] else d["email"],
             "email": d["email"],
@@ -203,14 +204,20 @@ def get_user_profile(user_id):
             "currency": d["currency"] or "EUR",
             "first_name": d["first_name"] or "",
             "last_name": d["last_name"] or "",
-            "custom_categories": d["custom_categories"] or ""
+            "custom_categories": d["custom_categories"] or "",
+            "avatar": d.get("avatar") or ""
         }
     return None
 
-def update_user_profile(user_id, first_name, last_name, custom_categories):
+def update_user_profile(user_id, first_name, last_name, custom_categories, avatar=None):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("UPDATE users SET first_name=?, last_name=?, custom_categories=? WHERE email=? OR id=?", (first_name, last_name, custom_categories, user_id, user_id))
+    if avatar is not None:
+        cursor.execute("UPDATE users SET first_name=?, last_name=?, custom_categories=?, avatar=? WHERE email=? OR id=?", 
+                       (first_name, last_name, custom_categories, avatar, user_id, user_id))
+    else:
+        cursor.execute("UPDATE users SET first_name=?, last_name=?, custom_categories=? WHERE email=? OR id=?", 
+                       (first_name, last_name, custom_categories, user_id, user_id))
     conn.commit()
     conn.close()
     return True
