@@ -1950,10 +1950,8 @@
                 return;
             }
             
-            // Reset state for next try if registration fails
-            if (mode === 'register') {
-                disclaimerAccepted = false;
-            }
+            // Set it back to false only after a successful check, or leave it so they can resubmit without clicking accept again on validation error.
+            disclaimerAccepted = false;
             
             try {
                 const response = await fetch(`/api/auth/${mode}`, {
