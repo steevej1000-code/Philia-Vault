@@ -350,23 +350,6 @@
                 <h1 class="text-headline-md font-headline-md font-bold bg-gradient-to-r from-primary via-primary-container to-secondary-container bg-clip-text text-transparent">Philia Vault</h1>
             </div>
             <div class="flex gap-2 items-center">
-                <!-- Language Selector -->
-                <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-black/60 border border-white/10 text-white rounded-xl px-2 py-1.5 text-xs focus:ring-1 focus:ring-primary/25 cursor-pointer mr-2">
-                    <option value="fr">FR 🇫🇷</option>
-                    <option value="en">EN 🇬🇧</option>
-                    <option value="es">ES 🇪🇸</option>
-                    <option value="pt">PT 🇵🇹</option>
-                    <option value="de">DE 🇩🇪</option>
-                </select>
-                <!-- Currency selector -->
-                <select id="currency-select" onchange="changeCurrency(this.value)" class="bg-black/60 border border-white/10 text-white rounded-xl px-2 py-1.5 text-xs focus:ring-1 focus:ring-primary/25 cursor-pointer mr-2">
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="CAD">CAD (CA$)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="CHF">CHF</option>
-                </select>
-                
                 <button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors">
                     <span class="material-symbols-outlined text-primary">notifications</span>
                 </button>
@@ -900,6 +883,29 @@
                     </div>
                 </div>
 
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label data-i18n="profile_language" class="block text-xs font-semibold text-on-surface-variant mb-1">Langue</label>
+                        <select id="lang-select" onchange="changeLanguage(this.value)" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm cursor-pointer">
+                            <option value="fr">FR 🇫🇷</option>
+                            <option value="en">EN 🇬🇧</option>
+                            <option value="es">ES 🇪🇸</option>
+                            <option value="pt">PT 🇵🇹</option>
+                            <option value="de">DE 🇩🇪</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label data-i18n="profile_currency" class="block text-xs font-semibold text-on-surface-variant mb-1">Devise</label>
+                        <select id="currency-select" onchange="changeCurrency(this.value)" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm cursor-pointer">
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="CAD">CAD (CA$)</option>
+                            <option value="GBP">GBP (£)</option>
+                            <option value="CHF">CHF</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div>
                     <label data-i18n="profile_custom_cats" class="block text-xs font-semibold text-on-surface-variant mb-1">Catégories Personnalisées</label>
                     <textarea id="profile-custom-categories" rows="2" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2 text-sm" data-i18n-placeholder="profile_custom_cats_help" placeholder="Séparez les catégories par des virgules (ex: Immo, Crypto, Luxe)"></textarea>
@@ -1200,6 +1206,8 @@
                 profile_transactions: "Nombre de transactions",
                 profile_custom_cats: "Catégories Personnalisées",
                 profile_custom_cats_help: "Séparez les catégories par des virgules (ex: Immo, Crypto, Luxe)",
+                profile_language: "Langue",
+                profile_currency: "Devise",
                 profile_save_btn: "Enregistrer",
                 profile_close_btn: "Fermer",
                 profile_update_success: "Profil mis à jour avec succès !"
@@ -1371,6 +1379,8 @@
                 profile_transactions: "Transaction Count",
                 profile_custom_cats: "Custom Categories",
                 profile_custom_cats_help: "Separate categories with commas (e.g. Real Estate, Crypto, Luxury)",
+                profile_language: "Language",
+                profile_currency: "Currency",
                 profile_save_btn: "Save",
                 profile_close_btn: "Close",
                 profile_update_success: "Profile updated successfully!"
@@ -1542,6 +1552,8 @@
                 profile_transactions: "Número de transacciones",
                 profile_custom_cats: "Categorías Personalizadas",
                 profile_custom_cats_help: "Separe las categorías con comas (ej. Inmuebles, Crypto, Lujo)",
+                profile_language: "Idioma",
+                profile_currency: "Moneda",
                 profile_save_btn: "Guardar",
                 profile_close_btn: "Cerrar",
                 profile_update_success: "¡Perfil actualizado con éxito!"
@@ -1713,6 +1725,8 @@
                 profile_transactions: "Contagem de transações",
                 profile_custom_cats: "Categorias Personalizadas",
                 profile_custom_cats_help: "Separe as categorias por vírgulas (ex: Imobiliário, Crypto, Luxo)",
+                profile_language: "Idioma",
+                profile_currency: "Moeda",
                 profile_save_btn: "Salvar",
                 profile_close_btn: "Fechar",
                 profile_update_success: "Perfil atualizado com sucesso!"
@@ -1884,6 +1898,8 @@
                 profile_transactions: "Anzahl der Transaktionen",
                 profile_custom_cats: "Benutzerdefinierte Kategorien",
                 profile_custom_cats_help: "Trennen Sie Kategorien durch Kommas (z. B. Immobilien, Krypto, Luxus)",
+                profile_language: "Sprache",
+                profile_currency: "Währung",
                 profile_save_btn: "Speichern",
                 profile_close_btn: "Schließen",
                 profile_update_success: "Profil erfolgreich aktualisiert!"
