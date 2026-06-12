@@ -162,47 +162,9 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Seed mock data for new users to start with a realistic dashboard
+# Seed mock data for new users to start with a realistic dashboard (Disabled for real accounts)
 def seed_user_data(user_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # Check if user already has data
-    cursor.execute("SELECT COUNT(*) FROM assets WHERE user_id = ?", (user_id,))
-    if cursor.fetchone()[0] == 0:
-        # Seed Assets
-        assets = [
-            (user_id, "Stocks Portfolio", "Stocks", encrypt_val(42850.00), encrypt_val(840.12)),
-            (user_id, "Crypto Staking", "Crypto", encrypt_val(12305.50), encrypt_val(312.45)),
-            (user_id, "Shopify Store", "Commerce", encrypt_val(28400.00), encrypt_val(4250.00)),
-            (user_id, "Rental Property", "Real Estate", encrypt_val(350000.00), encrypt_val(1800.00))
-        ]
-        cursor.executemany("INSERT INTO assets (user_id, name, type, value, monthly_yield) VALUES (?, ?, ?, ?, ?)", assets)
-        
-        # Seed Liabilities
-        liabilities = [
-            (user_id, "Real Estate Mortgage", "Mortgage", encrypt_val(422000.00), encrypt_val(245000.00), encrypt_val(1450.00)),
-            (user_id, "Tesla Model Y Lease", "Loan", encrypt_val(56000.00), encrypt_val(12400.00), encrypt_val(680.00)),
-            (user_id, "Business Expansion Loan", "Loan", encrypt_val(56000.00), encrypt_val(4500.00), encrypt_val(210.00)),
-            (user_id, "Netflix Premium", "Subscription", encrypt_val(215.00), encrypt_val(215.00), encrypt_val(17.92)),
-            (user_id, "Spotify Family", "Subscription", encrypt_val(119.00), encrypt_val(119.00), encrypt_val(9.92)),
-            (user_id, "Klarna Shopping BNPL", "Subscription", encrypt_val(840.00), encrypt_val(840.00), encrypt_val(70.00)),
-            (user_id, "Adobe CC Portfolio", "Subscription", encrypt_val(635.00), encrypt_val(635.00), encrypt_val(52.92))
-        ]
-        cursor.executemany("INSERT INTO liabilities (user_id, name, type, total_amount, remaining_amount, monthly_cost) VALUES (?, ?, ?, ?, ?, ?)", liabilities)
-        
-        # Seed Transactions (Recent yields & payments)
-        transactions = [
-            (user_id, "Vanguard S&P 500 ETF Dividend", "asset_yield", encrypt_val(124.50), "2026-06-09"),
-            (user_id, "Amazon FBA - Home Goods Store #1 Payout", "asset_yield", encrypt_val(3210.00), "2026-06-10"),
-            (user_id, "Mortgage Auto-pay", "liability_payment", encrypt_val(-1450.00), "2026-06-15"),
-            (user_id, "Tesla Lease Payment", "liability_payment", encrypt_val(-680.00), "2026-06-20"),
-            (user_id, "Premium Insurance Plan", "liability_payment", encrypt_val(-210.00), "2026-06-24")
-        ]
-        cursor.executemany("INSERT INTO transactions (user_id, description, type, amount, date) VALUES (?, ?, ?, ?, ?)", transactions)
-        
-        conn.commit()
-    conn.close()
+    pass
 
 # User Profile Helpers
 def get_user_profile(user_id):
