@@ -2236,10 +2236,16 @@
         };
         let currentCurrency = 'USD';
 
-        // Override fetch to include authorization headers
+        // Override fetch to include authorization headers and convert relative URLs for Capacitor
         const originalFetch = window.fetch;
         window.fetch = function(url, options) {
             options = options || {};
+            
+            // Check if running in Capacitor and URL is relative
+            if (window.Capacitor && typeof url === 'string' && url.startsWith('/')) {
+                url = 'https://philia-vault.onrender.com' + url;
+            }
+            
             // Preserve existing headers if any, convert to Headers object or plain object
             let headers = {};
             if (options.headers) {
@@ -3787,12 +3793,18 @@
             selectBlockingPlan('monthly');
             selectProfilePlan('monthly');
 
-            // Fetch Google Auth Config dynamically and render the button accordingly
-            fetch('/api/auth/config')
-                .then(res => res.json())
-                .then(config => {
-                    const btnContainer = document.getElementById('google-signin-btn-container');
-                    if (btnContainer) {
+            // Fetch Google Auth Config dynamically and render the button accordingly (hide on Capacitor mobile)
+            if (window.Capacitor) {
+                const orDivider = document.querySelector('[data-i18n="or_divider"]')?.parentElement;
+                const googleContainer = document.getElementById('google-signin-btn-container')?.parentElement;
+                if (orDivider) orDivider.classList.add('hidden');
+                if (googleContainer) googleContainer.classList.add('hidden');
+            } else {
+                fetch('/api/auth/config')
+                    .then(res => res.json())
+                    .then(config => {
+                        const btnContainer = document.getElementById('google-signin-btn-container');
+                        if (btnContainer) {
                         if (config.google_client_id) {
                             // Initialize dynamic Google script button
                             google.accounts.id.initialize({
@@ -3821,6 +3833,7 @@
                         }
                     }
                 }).catch(err => console.error("Error fetching auth config:", err));
+            }
         });
     </script>
 </body>
