@@ -470,6 +470,7 @@ def stripe_checkout():
             return jsonify({"success": True, "url": session.url})
         else:
             # Mock redirect for developer local testing
+            database.set_premium_status(user_id, 1)
             return jsonify({"success": True, "url": domain_url + "/?stripe_session=success_mock"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

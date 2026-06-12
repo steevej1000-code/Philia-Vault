@@ -547,46 +547,89 @@
                         </div>
                         <div class="flex-1 relative min-h-[260px]">
                             <!-- Dynamic SVG Flow -->
-                            <svg class="w-full h-full" preserveAspectRatio="xMidYMid meet" viewBox="0 0 800 300">
-                                <!-- Paths -->
-                                <path class="flow-path" d="M120 150 Q 250 150, 400 80" fill="transparent" opacity="0.8" stroke="url(#flowGradient)" stroke-width="40"></path>
-                                <path class="flow-path" d="M120 150 Q 250 150, 400 220" fill="transparent" opacity="0.75" stroke="url(#expenseGradient)" stroke-width="30"></path>
-                                <path class="flow-path" d="M400 80 Q 550 80, 680 50" fill="transparent" opacity="0.8" stroke="url(#assetGradient)" stroke-width="25"></path>
-                                <path class="flow-path" d="M400 80 Q 550 80, 680 120" fill="transparent" opacity="0.75" stroke="url(#expenseGradient)" stroke-width="15"></path>
-                                <!-- Gradients -->
+                            <!-- Premium Glowing & Animated SVG Flow -->
+                            <svg class="w-full h-full overflow-visible" preserveAspectRatio="xMidYMid meet" viewBox="0 0 800 300">
+                                <!-- Gradients & Filters Definition -->
                                 <defs>
-                                    <linearGradient id="flowGradient" x1="0%" x2="100%" y1="0%" y2="0%">
-                                        <stop offset="0%" stop-color="#ccff00"></stop>
-                                        <stop offset="100%" stop-color="#a3e635"></stop>
-                                    </linearGradient>
-                                    <linearGradient id="expenseGradient" x1="0%" x2="100%" y1="0%" y2="0%">
-                                        <stop offset="0%" stop-color="#ccff00"></stop>
-                                        <stop offset="100%" stop-color="#84cc16"></stop>
+                                    <!-- Neon Glow Filter -->
+                                    <filter id="neonGlow" x="-30%" y="-30%" width="160%" height="160%">
+                                        <feGaussianBlur stdDeviation="4" result="blur" />
+                                        <feMerge>
+                                            <feMergeNode in="blur" />
+                                            <feMergeNode in="SourceGraphic" />
+                                        </feMerge>
+                                    </filter>
+                                    
+                                    <!-- Path Gradients -->
+                                    <linearGradient id="inflowGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+                                        <stop offset="0%" stop-color="#ccff00" stop-opacity="0.6"></stop>
+                                        <stop offset="100%" stop-color="#a3e635" stop-opacity="0.8"></stop>
                                     </linearGradient>
                                     <linearGradient id="assetGradient" x1="0%" x2="100%" y1="0%" y2="0%">
-                                        <stop offset="0%" stop-color="#a3e635"></stop>
-                                        <stop offset="100%" stop-color="#ccff00"></stop>
+                                        <stop offset="0%" stop-color="#a3e635" stop-opacity="0.8"></stop>
+                                        <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.8"></stop>
+                                    </linearGradient>
+                                    <linearGradient id="expenseGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+                                        <stop offset="0%" stop-color="#a3e635" stop-opacity="0.8"></stop>
+                                        <stop offset="100%" stop-color="#ef4444" stop-opacity="0.8"></stop>
                                     </linearGradient>
                                 </defs>
-                                <!-- Nodes -->
-                                <g class="cursor-pointer" onclick="switchTab('assets')">
-                                    <rect fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.05))" height="90" rx="16" width="120" x="20" y="105"></rect>
-                                    <text data-i18n="flow_node_yield" class="font-label-sm text-on-surface-variant fill-current text-[10px]" text-anchor="middle" x="80" y="145">Rendement Actifs</text>
-                                    <text class="font-headline-md font-bold fill-[#006c49] text-[16px]" text-anchor="middle" x="80" y="170" id="flow-yield">$0</text>
+
+                                <!-- Base Static Glow Paths (Behind) -->
+                                <path d="M 150 150 L 355 150" fill="none" stroke="url(#inflowGradient)" stroke-width="24" opacity="0.15" stroke-linecap="round"></path>
+                                <path d="M 445 150 C 510 150, 560 80, 650 80" fill="none" stroke="url(#assetGradient)" stroke-width="18" opacity="0.15" stroke-linecap="round"></path>
+                                <path d="M 445 150 C 510 150, 560 220, 650 220" fill="none" stroke="url(#expenseGradient)" stroke-width="16" opacity="0.15" stroke-linecap="round"></path>
+
+                                <!-- Base Fluid Flows -->
+                                <path d="M 150 150 L 355 150" fill="none" stroke="url(#inflowGradient)" stroke-width="16" opacity="0.45" stroke-linecap="round"></path>
+                                <path d="M 445 150 C 510 150, 560 80, 650 80" fill="none" stroke="url(#assetGradient)" stroke-width="12" opacity="0.45" stroke-linecap="round"></path>
+                                <path d="M 445 150 C 510 150, 560 220, 650 220" fill="none" stroke="url(#expenseGradient)" stroke-width="10" opacity="0.45" stroke-linecap="round"></path>
+
+                                <!-- Animated Glowing Particles/Dashes (Traveling on curves) -->
+                                <path d="M 150 150 L 355 150" fill="none" stroke="#ccff00" stroke-width="3" stroke-linecap="round" stroke-dasharray="12, 30" filter="url(#neonGlow)">
+                                    <animate attributeName="stroke-dashoffset" values="84;0" dur="2s" repeatCount="indefinite" />
+                                </path>
+                                <path d="M 445 150 C 510 150, 560 80, 650 80" fill="none" stroke="#06b6d4" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="14, 35" filter="url(#neonGlow)">
+                                    <animate attributeName="stroke-dashoffset" values="200;0" dur="2.4s" repeatCount="indefinite" />
+                                </path>
+                                <path d="M 445 150 C 510 150, 560 220, 650 220" fill="none" stroke="#ef4444" stroke-width="3" stroke-linecap="round" stroke-dasharray="10, 30" filter="url(#neonGlow)">
+                                    <animate attributeName="stroke-dashoffset" values="200;0" dur="2.4s" repeatCount="indefinite" />
+                                </path>
+
+                                <!-- Rotating Outer Ring on Center Node -->
+                                <circle cx="400" cy="150" r="54" fill="none" stroke="#ccff00" stroke-width="1.5" stroke-opacity="0.6" stroke-dasharray="8, 6">
+                                    <animateTransform attributeName="transform" type="rotate" from="0 400 150" to="360 400 150" dur="12s" repeatCount="indefinite" />
+                                </circle>
+
+                                <!-- Left Node: Rendement Actifs -->
+                                <g class="cursor-pointer group" onclick="switchTab('assets')">
+                                    <rect x="20" y="110" width="130" height="80" rx="16" fill="#13161c" fill-opacity="0.85" stroke="rgba(204, 255, 0, 0.25)" stroke-width="1.5" filter="drop-shadow(0 8px 16px rgba(0,0,0,0.5))" class="transition-all hover:stroke-primary/65"></rect>
+                                    <text class="material-symbols-outlined" font-size="20" fill="#ccff00" x="85" y="136" text-anchor="middle" style="font-family: 'Material Symbols Outlined';">payments</text>
+                                    <text data-i18n="flow_node_yield" class="fill-current text-on-surface-variant font-bold text-[9px]" text-anchor="middle" x="85" y="154">Rendement Actifs</text>
+                                    <text class="font-bold fill-[#ccff00] text-[15px]" text-anchor="middle" x="85" y="174" id="flow-yield">$0</text>
                                 </g>
+
+                                <!-- Center Node: CASHFLOW -->
                                 <g class="cursor-pointer">
-                                    <circle cx="400" cy="150" fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.08))" r="45"></circle>
-                                    <text class="font-label-sm font-bold fill-[#006c49] text-[11px]" text-anchor="middle" x="400" y="154">CASHFLOW</text>
+                                    <circle cx="400" cy="150" r="45" fill="#13161c" fill-opacity="0.9" stroke="rgba(204, 255, 0, 0.45)" stroke-width="2" filter="drop-shadow(0 8px 24px rgba(0,0,0,0.6))"></circle>
+                                    <text class="material-symbols-outlined" font-size="20" fill="#ccff00" x="400" y="136" text-anchor="middle" style="font-family: 'Material Symbols Outlined';">sync_alt</text>
+                                    <text class="font-bold fill-white text-[11px] tracking-wider" text-anchor="middle" x="400" y="154">CASHFLOW</text>
                                 </g>
-                                <g class="cursor-pointer" onclick="switchTab('assets')">
-                                    <rect fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.05))" height="70" rx="12" width="110" x="660" y="25"></rect>
-                                    <text data-i18n="flow_node_assets" class="font-label-sm text-on-surface-variant fill-current text-[10px]" text-anchor="middle" x="715" y="50">Actifs Gérés</text>
-                                    <text class="font-headline-md font-bold fill-[#06b6d4] text-[14px]" text-anchor="middle" x="715" y="75" id="flow-assets">$0</text>
+
+                                <!-- Top Right Node: Actifs Gérés -->
+                                <g class="cursor-pointer group" onclick="switchTab('assets')">
+                                    <rect x="650" y="40" width="130" height="80" rx="16" fill="#13161c" fill-opacity="0.85" stroke="rgba(6, 182, 212, 0.25)" stroke-width="1.5" filter="drop-shadow(0 8px 16px rgba(0,0,0,0.5))" class="transition-all hover:stroke-secondary/65"></rect>
+                                    <text class="material-symbols-outlined" font-size="20" fill="#06b6d4" x="715" y="66" text-anchor="middle" style="font-family: 'Material Symbols Outlined';">account_balance_wallet</text>
+                                    <text data-i18n="flow_node_assets" class="fill-current text-on-surface-variant font-bold text-[9px]" text-anchor="middle" x="715" y="84">Actifs Gérés</text>
+                                    <text class="font-bold fill-[#06b6d4] text-[15px]" text-anchor="middle" x="715" y="104" id="flow-assets">$0</text>
                                 </g>
-                                <g class="cursor-pointer" onclick="switchTab('liabilities')">
-                                    <rect fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.05))" height="70" rx="12" width="110" x="660" y="205"></rect>
-                                    <text data-i18n="flow_node_liabilities" class="font-label-sm text-on-surface-variant fill-current text-[10px]" text-anchor="middle" x="715" y="230">Dépenses/Dettes</text>
-                                    <text class="font-headline-md font-bold fill-[#9d4300] text-[14px]" text-anchor="middle" x="715" y="255" id="flow-liabilities">$0</text>
+
+                                <!-- Bottom Right Node: Dépenses/Dettes -->
+                                <g class="cursor-pointer group" onclick="switchTab('liabilities')">
+                                    <rect x="650" y="180" width="130" height="80" rx="16" fill="#13161c" fill-opacity="0.85" stroke="rgba(239, 68, 68, 0.25)" stroke-width="1.5" filter="drop-shadow(0 8px 16px rgba(0,0,0,0.5))" class="transition-all hover:stroke-[#ef4444]/65"></rect>
+                                    <text class="material-symbols-outlined" font-size="20" fill="#ef4444" x="715" y="206" text-anchor="middle" style="font-family: 'Material Symbols Outlined';">receipt_long</text>
+                                    <text data-i18n="flow_node_liabilities" class="fill-current text-on-surface-variant font-bold text-[9px]" text-anchor="middle" x="715" y="224">Dépenses/Dettes</text>
+                                    <text class="font-bold fill-[#ef4444] text-[15px]" text-anchor="middle" x="715" y="244" id="flow-liabilities">$0</text>
                                 </g>
                             </svg>
                         </div>
@@ -858,7 +901,7 @@
                 <p data-i18n="paywall_description" class="text-sm text-on-surface-variant max-w-md">Accédez à des audits financiers narratifs, des analyses de fuites de budget et des conseils personnalisés pour accélérer votre indépendance.</p>
                 
                 <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md pt-2">
-                    <div class="p-5 rounded-2xl bg-white/40 border border-white/30 flex flex-col justify-between hover:scale-105 transition-transform cursor-pointer relative border-l-4 border-l-primary">
+                    <div id="plan-monthly" onclick="selectPlan('monthly')" class="p-5 rounded-2xl bg-[#13161c]/60 border border-white/10 flex flex-col justify-between hover:scale-105 transition-transform cursor-pointer relative border-l-4 border-l-primary">
                         <span data-i18n="paywall_popular" class="absolute -top-2.5 right-4 bg-primary text-[#0c0e12] text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Populaire</span>
                         <div>
                             <h4 data-i18n="paywall_monthly_title" class="font-bold text-sm">Abonnement Mensuel</h4>
@@ -866,7 +909,7 @@
                         </div>
                         <p class="text-headline-md font-headline-md text-primary mt-2">9.99$ <span data-i18n="paywall_monthly_period" class="text-xs text-outline">/mois</span></p>
                     </div>
-                    <div class="p-5 rounded-2xl bg-white/40 border border-white/30 flex flex-col justify-between hover:scale-105 transition-transform cursor-pointer border-l-4 border-l-secondary">
+                    <div id="plan-annual" onclick="selectPlan('annual')" class="p-5 rounded-2xl bg-[#13161c]/60 border border-white/10 flex flex-col justify-between hover:scale-105 transition-transform cursor-pointer relative border-l-4 border-l-secondary">
                         <div>
                             <h4 data-i18n="paywall_annual_title" class="font-bold text-sm">Abonnement Annuel</h4>
                             <p data-i18n="paywall_annual_billing" class="text-[10px] text-outline">Facturation annuelle</p>
@@ -875,7 +918,7 @@
                     </div>
                 </div>
                 
-                <button onclick="triggerIAPCheckout()" class="w-full max-w-md py-4 rounded-2xl vibrant-button font-headline-md font-bold shadow-lg hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                <button onclick="triggerIAPCheckout(selectedPlan)" class="w-full max-w-md py-4 rounded-2xl vibrant-button font-headline-md font-bold shadow-lg hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2">
                     <span data-i18n="paywall_subscribe_btn">S'abonner via App Store / Google Play</span>
                     <span class="material-symbols-outlined text-[18px]">lock</span>
                 </button>
@@ -965,7 +1008,7 @@
                 </div>
                 <!-- Hidden file input -->
                 <input id="avatar-file-input" type="file" accept="image/*" class="hidden" onchange="previewAvatar(this)"/>
-                <span class="text-[9px] text-on-surface-variant font-semibold">Taille max : 500 KB</span>
+                <span class="text-[9px] text-on-surface-variant font-semibold">Taille max : 5 MB</span>
             </div>
             
             <div class="space-y-4">
@@ -2076,9 +2119,21 @@
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (dictionary[key]) {
-                    if (key === 'coach_welcome' && window.currentUserFirstName) {
-                        const baseGreeting = dictionary[key].split(',')[0];
-                        el.textContent = baseGreeting + ", " + window.currentUserFirstName + ".";
+                    if (key === 'coach_welcome') {
+                        const hrs = new Date().getHours();
+                        let greeting = '';
+                        if (lang === 'fr') {
+                            greeting = (hrs >= 18 || hrs < 6) ? "Bonsoir." : "Bonjour.";
+                        } else if (lang === 'es') {
+                            greeting = (hrs >= 18 || hrs < 6) ? "Buenas noches." : "Hola.";
+                        } else if (lang === 'pt') {
+                            greeting = (hrs >= 18 || hrs < 6) ? "Boa noite." : "Olá.";
+                        } else if (lang === 'de') {
+                            greeting = (hrs >= 18 || hrs < 6) ? "Guten Abend." : "Hallo.";
+                        } else { // default to 'en'
+                            greeting = (hrs >= 18 || hrs < 6) ? "Good evening." : "Hello.";
+                        }
+                        el.textContent = greeting;
                     } else {
                         el.textContent = dictionary[key];
                     }
@@ -2466,8 +2521,8 @@
         function previewAvatar(input) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
-                if (file.size > 500 * 1024) {
-                    alert("L'image est trop volumineuse (max 500 KB).");
+                if (file.size > 5 * 1024 * 1024) {
+                    alert(currentLang === 'fr' ? "L'image est trop volumineuse (max 5 MB)." : "Image is too large (max 5 MB).");
                     input.value = '';
                     return;
                 }
@@ -2600,6 +2655,29 @@
                 }
             } catch (err) {
                 console.error(err);
+            }
+        }
+
+        let selectedPlan = 'monthly';
+
+        function selectPlan(planType) {
+            selectedPlan = planType;
+            const monthlyCard = document.getElementById('plan-monthly');
+            const annualCard = document.getElementById('plan-annual');
+            if (!monthlyCard || !annualCard) return;
+            
+            if (planType === 'monthly') {
+                monthlyCard.classList.remove('bg-[#13161c]/60', 'border-white/10');
+                monthlyCard.classList.add('border-primary', 'ring-2', 'ring-primary/40', 'bg-primary/5');
+                
+                annualCard.classList.remove('border-secondary', 'ring-2', 'ring-secondary/40', 'bg-secondary/5');
+                annualCard.classList.add('bg-[#13161c]/60', 'border-white/10');
+            } else {
+                annualCard.classList.remove('bg-[#13161c]/60', 'border-white/10');
+                annualCard.classList.add('border-secondary', 'ring-2', 'ring-secondary/40', 'bg-secondary/5');
+                
+                monthlyCard.classList.remove('border-primary', 'ring-2', 'ring-primary/40', 'bg-primary/5');
+                monthlyCard.classList.add('bg-[#13161c]/60', 'border-white/10');
             }
         }
 
@@ -3542,6 +3620,21 @@
             checkSession();
             initChat();
             checkPremium();
+
+            // Handle Stripe checkout redirects / mock session returns
+            const urlParams = new URLSearchParams(window.location.search);
+            const stripeSession = urlParams.get('stripe_session');
+            if (stripeSession) {
+                if (stripeSession === 'success' || stripeSession === 'success_mock') {
+                    checkPremium();
+                    alert(savedLang === 'fr' ? "Félicitations ! Votre abonnement Philia Vault Premium est activé." : "Congratulations! Your Philia Vault Premium subscription is active.");
+                } else if (stripeSession === 'cancel' || stripeSession === 'mock_cancel') {
+                    alert(savedLang === 'fr' ? "Abonnement annulé." : "Subscription cancelled.");
+                }
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            selectPlan('monthly');
 
             // Fetch Google Auth Config dynamically and render the button accordingly
             fetch('/api/auth/config')
