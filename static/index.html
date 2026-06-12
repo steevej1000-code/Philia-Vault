@@ -1987,13 +1987,9 @@
                 
                 if (data.success) {
                     errEl.classList.add('hidden');
-                    if (mode === 'login') {
-                        localStorage.setItem('philia_vault_user_email', email);
-                        localStorage.setItem('philia_vault_logged_in', 'true');
-                        checkSession();
-                    } else {
-                        alert("Compte créé avec succès ! Connectez-vous maintenant.");
-                    }
+                    localStorage.setItem('philia_vault_user_email', email);
+                    localStorage.setItem('philia_vault_logged_in', 'true');
+                    checkSession();
                 } else {
                     errEl.textContent = data.error;
                     errEl.classList.remove('hidden');
