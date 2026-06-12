@@ -4,9 +4,12 @@ import database
 import json
 from dotenv import load_dotenv
 
+from flask_cors import CORS
+
 load_dotenv()
 
 app = Flask(__name__, static_folder="static")
+CORS(app)
 
 # Initialize DB on load
 database.init_db()
