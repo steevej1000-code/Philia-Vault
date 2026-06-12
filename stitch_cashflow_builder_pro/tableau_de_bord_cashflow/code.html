@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cashflow Builder - Dashboard</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&amp;family=Plus+Jakarta+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#bbcabf",
+                    "tertiary-fixed-dim": "#d0bcff",
+                    "surface-container-low": "#f2f4f6",
+                    "error-container": "#ffdad6",
+                    "surface-container-highest": "#e0e3e5",
+                    "primary-fixed-dim": "#4edea3",
+                    "on-primary-container": "#00422b",
+                    "surface-container": "#eceef0",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#191c1e",
+                    "inverse-on-surface": "#eff1f3",
+                    "on-primary": "#ffffff",
+                    "secondary-container": "#fd761a",
+                    "secondary": "#9d4300",
+                    "inverse-primary": "#4edea3",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-tint": "#006c49",
+                    "primary": "#006c49",
+                    "surface-dim": "#d8dadc",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed": "#23005c",
+                    "on-primary-fixed": "#002113",
+                    "primary-container": "#10b981",
+                    "surface-container-high": "#e6e8ea",
+                    "tertiary-container": "#b090ff",
+                    "surface-variant": "#e0e3e5",
+                    "secondary-fixed-dim": "#ffb690",
+                    "surface": "#f7f9fb",
+                    "secondary-fixed": "#ffdbca",
+                    "on-primary-fixed-variant": "#005236",
+                    "on-tertiary-container": "#4600a7",
+                    "primary-fixed": "#6ffbbe",
+                    "on-secondary-fixed-variant": "#783200",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#5516be",
+                    "surface-bright": "#f7f9fb",
+                    "on-secondary-container": "#5c2400",
+                    "on-surface": "#191c1e",
+                    "inverse-surface": "#2d3133",
+                    "on-error-container": "#93000a",
+                    "background": "#f7f9fb",
+                    "outline": "#6c7a71",
+                    "tertiary": "#6d3bd7",
+                    "on-error": "#ffffff",
+                    "on-secondary-fixed": "#341100",
+                    "on-surface-variant": "#3c4a42",
+                    "tertiary-fixed": "#e9ddff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "container-padding": "24px",
+                    "card-gap": "20px",
+                    "unit": "8px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Plus Jakarta Sans"],
+                    "headline-md": ["Montserrat"],
+                    "headline-lg-mobile": ["Montserrat"],
+                    "headline-lg": ["Montserrat"],
+                    "label-sm": ["Plus Jakarta Sans"],
+                    "body-md": ["Plus Jakarta Sans"],
+                    "display": ["Montserrat"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background: radial-gradient(circle at 0% 0%, #f0f9f6 0%, #f7f9fb 50%, #fdf2f0 100%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(0, 108, 73, 0.05);
+        }
+
+        .gradient-text-primary {
+            background: linear-gradient(to right, #006c49, #10b981, #fd761a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .vibrant-button {
+            background: linear-gradient(135deg, #06b6d4, #10b981, #006c49);
+            box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .vibrant-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px -10px rgba(16, 185, 129, 0.5);
+        }
+
+        .iif-gauge {
+            transition: stroke-dashoffset 2s ease-out;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        /* Sankey Flow Simulation */
+        .flow-path {
+            stroke-dasharray: 10;
+            animation: dash 30s linear infinite;
+        }
+
+        @keyframes dash {
+            from { stroke-dashoffset: 1000; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-surface">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-container-padding py-4 w-full docked full-width top-0 sticky z-50 bg-surface/60 dark:bg-surface-dim/60 backdrop-blur-xl border-b border-white/20 dark:border-outline-variant/10 shadow-sm backdrop-blur-2xl">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 shadow-lg">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional studio portrait of a sophisticated young executive with a warm, confident expression. The lighting is soft and cinematic, with a clean, high-key white background that matches a modern light-mode financial application interface. Her appearance suggests intelligence and approachability, perfectly fitting the brand persona of controlled abundance and growth." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdBKlfB3oRIHT9X6uRapDv-72wG20xbeaJ39lZb9Mt3O8PZ_ae3T8Kk5ewFp_NWssgEPfs5FzMwCOr_laCHplkONOcKhu_Fi5O1IKvrL1iHqxMCMf5DzcBPgjGjrUQ6ztvJ3XxGlxO2an41IDNWjqRkuMYe_kq9qDUZjyI4dYcQ4X2SUkyfDoRnX61CtI58bkiZqzRLvHLjyBt90lBxnkVzbtJzOKtSKRJ0etVnFiG-lAEbZNIvDxeOAQArys9EKJFG_aP58xTpviu"/>
+</div>
+<h1 class="text-headline-md font-headline-md font-bold bg-gradient-to-r from-primary via-primary-container to-secondary-container bg-clip-text text-transparent">Cashflow Builder</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary">notifications</span>
+</button>
+</header>
+<main class="max-w-7xl mx-auto px-gutter py-8 pb-32">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-card-gap">
+<!-- Left Column: IIF Gauge & Key Metrics -->
+<div class="lg:col-span-4 flex flex-col gap-card-gap">
+<!-- IIF Circular Gauge Card -->
+<section class="glass-card rounded-3xl p-8 flex flex-col items-center text-center">
+<h2 class="text-headline-md font-headline-md mb-6">Independence Index</h2>
+<div class="relative w-48 h-48 mb-6">
+<svg class="w-full h-full transform -rotate-90">
+<!-- Background Circle -->
+<circle class="text-surface-container-highest" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-width="12"></circle>
+<!-- Progress Circle -->
+<circle class="iif-gauge" cx="96" cy="96" fill="transparent" id="iif-progress" r="88" stroke="url(#paint0_linear)" stroke-dasharray="552.92" stroke-dashoffset="552.92" stroke-linecap="round" stroke-width="12"></circle>
+<defs>
+<lineargradient id="paint0_linear" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#06b6d4"></stop>
+<stop offset="50%" stop-color="#10b981"></stop>
+<stop offset="100%" stop-color="#006c49"></stop>
+</lineargradient>
+</defs>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-display font-display text-primary">68%</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-widest">Score</span>
+</div>
+</div>
+<p class="text-body-md text-on-surface-variant px-4">
+                        You are <span class="text-primary font-bold">12% closer</span> to financial freedom than last month. Keep building!
+                    </p>
+</section>
+<!-- Monthly Net Cashflow Card -->
+<section class="glass-card rounded-3xl p-6 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[64px]" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+</div>
+<div class="relative z-10">
+<h3 class="text-label-sm font-label-sm text-on-surface-variant mb-1">Monthly Net Cashflow</h3>
+<div class="flex items-baseline gap-2">
+<span class="text-headline-lg font-headline-lg text-primary">+$4,280.00</span>
+</div>
+<div class="mt-4 flex items-center gap-2">
+<div class="h-1.5 flex-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[74%] rounded-full"></div>
+</div>
+<span class="text-label-sm font-label-sm text-primary">74% Target</span>
+</div>
+</div>
+</section>
+<!-- Quick Action -->
+<button class="vibrant-button w-full py-4 rounded-2xl flex items-center justify-center gap-2 text-white font-headline-md active:scale-95 transition-transform">
+<span class="material-symbols-outlined">add_circle</span>
+                    Add Transaction
+                </button>
+</div>
+<!-- Right Column: Flow Diagram & Detailed Breakdown -->
+<div class="lg:col-span-8 flex flex-col gap-card-gap">
+<!-- Cashflow Visualization (Sankey-inspired) -->
+<section class="glass-card rounded-3xl p-8 min-h-[420px] flex flex-col">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h2 class="text-headline-md font-headline-md">Cash Flow Engine</h2>
+<p class="text-body-md text-on-surface-variant">Real-time movement of your capital</p>
+</div>
+<div class="flex gap-2">
+<span class="px-3 py-1 rounded-full bg-primary/10 text-primary text-label-sm font-label-sm">Active Flow</span>
+<span class="px-3 py-1 rounded-full bg-secondary/10 text-secondary text-label-sm font-label-sm">Optimization Ready</span>
+</div>
+</div>
+<div class="flex-1 relative">
+<!-- Custom SVG Flow Diagram -->
+<svg class="w-full h-full" preserveaspectratio="xMidYMid meet" viewbox="0 0 800 300">
+<!-- Paths -->
+<path class="flow-path" d="M120 150 Q 250 150, 400 80" fill="transparent" opacity="0.4" stroke="url(#flowGradient)" stroke-width="40"></path>
+<path class="flow-path" d="M120 150 Q 250 150, 400 220" fill="transparent" opacity="0.3" stroke="url(#expenseGradient)" stroke-width="30"></path>
+<path class="flow-path" d="M400 80 Q 550 80, 680 50" fill="transparent" opacity="0.4" stroke="url(#assetGradient)" stroke-width="25"></path>
+<path class="flow-path" d="M400 80 Q 550 80, 680 120" fill="transparent" opacity="0.3" stroke="#bbcabf" stroke-width="15"></path>
+<!-- Gradients -->
+<defs>
+<lineargradient id="flowGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#10b981"></stop>
+<stop offset="100%" stop-color="#06b6d4"></stop>
+</lineargradient>
+<lineargradient id="expenseGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#10b981"></stop>
+<stop offset="100%" stop-color="#fd761a"></stop>
+</lineargradient>
+<lineargradient id="assetGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#06b6d4"></stop>
+<stop offset="100%" stop-color="#006c49"></stop>
+</lineargradient>
+</defs>
+<!-- Nodes -->
+<!-- Income -->
+<g class="cursor-pointer">
+<rect fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.05))" height="100" rx="16" width="100" x="20" y="100"></rect>
+<text class="font-label-sm text-on-surface-variant fill-current" text-anchor="middle" x="70" y="145">Income</text>
+<text class="font-headline-md font-bold fill-[#006c49]" text-anchor="middle" x="70" y="170">$12,400</text>
+</g>
+<!-- Management -->
+<g class="cursor-pointer">
+<circle cx="400" cy="150" fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.08))" r="45"></circle>
+<text class="font-label-sm font-bold fill-[#006c49]" text-anchor="middle" x="400" y="155">BRIDGE</text>
+</g>
+<!-- Assets -->
+<g class="cursor-pointer">
+<rect fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.05))" height="70" rx="12" width="100" x="680" y="20"></rect>
+<text class="font-label-sm text-on-surface-variant fill-current" text-anchor="middle" x="730" y="45">Assets</text>
+<text class="font-headline-md font-bold fill-[#06b6d4]" text-anchor="middle" x="730" y="70">$7.8k</text>
+</g>
+<!-- Expenses -->
+<g class="cursor-pointer">
+<rect fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.05))" height="70" rx="12" width="100" x="680" y="210"></rect>
+<text class="font-label-sm text-on-surface-variant fill-current" text-anchor="middle" x="730" y="235">Expenses</text>
+<text class="font-headline-md font-bold fill-[#9d4300]" text-anchor="middle" x="730" y="260">$3.2k</text>
+</g>
+</svg>
+</div>
+</section>
+<!-- Bento Breakdown -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-card-gap">
+<!-- AI Insight Magic Card -->
+<div class="glass-card rounded-3xl p-6 border-2 border-primary-container/20 relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-br from-tertiary/5 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex items-start gap-4 relative z-10">
+<div class="w-12 h-12 rounded-2xl bg-tertiary-container/30 flex items-center justify-center text-tertiary shadow-sm">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div>
+<h4 class="font-headline-md text-primary flex items-center gap-2">
+                                    Coach Insight
+                                    <span class="w-2 h-2 rounded-full bg-secondary-container animate-pulse"></span>
+</h4>
+<p class="text-body-md text-on-surface-variant mt-2">
+                                    By redirecting $400 from "Subscriptions" to your "Dividend Fund", you could reach Financial Independence <span class="font-bold text-primary">14 months earlier</span>.
+                                </p>
+</div>
+</div>
+</div>
+<!-- Asset Distribution Mini Chart -->
+<div class="glass-card rounded-3xl p-6 flex flex-col justify-between">
+<div class="flex justify-between items-center">
+<h4 class="font-headline-md text-on-surface">Asset Health</h4>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Last 30 Days</span>
+</div>
+<div class="flex items-end gap-2 h-24 mt-4">
+<div class="flex-1 bg-primary-container/20 rounded-t-lg h-[40%] hover:bg-primary-container/40 transition-all cursor-pointer"></div>
+<div class="flex-1 bg-primary-container/20 rounded-t-lg h-[60%] hover:bg-primary-container/40 transition-all cursor-pointer"></div>
+<div class="flex-1 bg-primary-container/20 rounded-t-lg h-[55%] hover:bg-primary-container/40 transition-all cursor-pointer"></div>
+<div class="flex-1 bg-primary-container/20 rounded-t-lg h-[80%] hover:bg-primary-container/40 transition-all cursor-pointer"></div>
+<div class="flex-1 bg-primary-container/20 rounded-t-lg h-[75%] hover:bg-primary-container/40 transition-all cursor-pointer"></div>
+<div class="flex-1 bg-primary-container/20 rounded-t-lg h-[95%] hover:bg-primary-container/40 transition-all cursor-pointer"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-surface/80 dark:bg-inverse-surface/80 backdrop-blur-2xl border-t border-white/10 dark:border-outline-variant/5 shadow-2xl">
+<div class="flex justify-around items-center w-full px-2 pb-6 pt-3">
+<!-- Dashboard (Active) -->
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim scale-110 transition-all hover:opacity-100 active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="text-label-sm font-label-sm">Dashboard</span>
+</a>
+<!-- Assets -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant opacity-60 transition-opacity hover:opacity-100 active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-label-sm font-label-sm">Assets</span>
+</a>
+<!-- Liabilities -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant opacity-60 transition-opacity hover:opacity-100 active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="text-label-sm font-label-sm">Liabilities</span>
+</a>
+<!-- Simulator -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant opacity-60 transition-opacity hover:opacity-100 active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined">calculate</span>
+<span class="text-label-sm font-label-sm">Simulator</span>
+</a>
+<!-- Coach -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant opacity-60 transition-opacity hover:opacity-100 active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="text-label-sm font-label-sm">Coach</span>
+</a>
+</div>
+</nav>
+<script>
+        // Animate the IIF Gauge on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            const circle = document.getElementById('iif-progress');
+            const circumference = 2 * Math.PI * 88;
+            const targetScore = 0.68; // 68%
+            
+            // Set initial offset to full circumference
+            circle.style.strokeDashoffset = circumference;
+            
+            // Trigger animation after a small delay
+            setTimeout(() => {
+                const offset = circumference - (targetScore * circumference);
+                circle.style.strokeDashoffset = offset;
+            }, 500);
+        });
+
+        // Simple interactivity for glass cards
+        document.querySelectorAll('.glass-card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+    </script>
+</body></html>

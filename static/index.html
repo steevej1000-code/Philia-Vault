@@ -1,0 +1,2867 @@
+<!DOCTYPE html>
+<html class="light" lang="fr">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Philia Vault - Wealth Engine</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "rgba(255, 255, 255, 0.1)",
+                    "tertiary-fixed-dim": "#a78bfa",
+                    "surface-container-low": "#181d26",
+                    "error-container": "#450a0a",
+                    "surface-container-highest": "#2e3746",
+                    "primary-fixed-dim": "#ccff00",
+                    "on-primary-container": "#0c0e12",
+                    "surface-container": "#1e2530",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#f8fafc",
+                    "inverse-on-surface": "#0c0e12",
+                    "on-primary": "#0c0e12",
+                    "secondary-container": "#ccff00",
+                    "secondary": "#a3e635",
+                    "inverse-primary": "#ccff00",
+                    "surface-container-lowest": "#000000",
+                    "surface-tint": "#ccff00",
+                    "primary": "#ccff00",
+                    "surface-dim": "#13161c",
+                    "error": "#ef4444",
+                    "on-tertiary-fixed": "#0c0e12",
+                    "on-primary-fixed": "#0c0e12",
+                    "primary-container": "#ccff00",
+                    "surface-container-high": "#242c3b",
+                    "tertiary-container": "#8b5cf6",
+                    "surface-variant": "#2e3746",
+                    "secondary-fixed-dim": "#a3e635",
+                    "surface": "#13161c",
+                    "secondary-fixed": "#a3e635",
+                    "on-primary-fixed-variant": "#ccff00",
+                    "on-tertiary-container": "#ffffff",
+                    "primary-fixed": "#ccff00",
+                    "on-secondary-fixed-variant": "#a3e635",
+                    "on-secondary": "#0c0e12",
+                    "on-tertiary-fixed-variant": "#8b5cf6",
+                    "surface-bright": "#181d26",
+                    "on-secondary-container": "#0c0e12",
+                    "on-surface": "#f8fafc",
+                    "inverse-surface": "#f8fafc",
+                    "on-error-container": "#f8fafc",
+                    "background": "#000000",
+                    "outline": "#475569",
+                    "tertiary": "#8b5cf6",
+                    "on-error": "#ffffff",
+                    "on-secondary-fixed": "#0c0e12",
+                    "on-surface-variant": "#94a3b8",
+                    "tertiary-fixed": "#c084fc"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "container-padding": "24px",
+                    "card-gap": "20px",
+                    "unit": "8px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Plus Jakarta Sans"],
+                    "headline-md": ["Montserrat"],
+                    "headline-lg-mobile": ["Montserrat"],
+                    "headline-lg": ["Montserrat"],
+                    "label-sm": ["Plus Jakarta Sans"],
+                    "body-md": ["Plus Jakarta Sans"],
+                    "display": ["Montserrat"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+        body {
+            background: #000000;
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(20, 24, 33, 0.65);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            background: rgba(26, 32, 44, 0.8);
+            border: 1px solid rgba(204, 255, 0, 0.25);
+            box-shadow: 0 12px 40px 0 rgba(204, 255, 0, 0.05);
+        }
+        .gradient-text-primary {
+            background: linear-gradient(to right, #ccff00, #a3e635, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Apple Specular Specular Liquid Glass Button styling */
+        .vibrant-button {
+            background: linear-gradient(180deg, rgba(204, 255, 0, 0.95) 0%, rgba(163, 230, 53, 0.9) 100%);
+            color: #0c0e12 !important;
+            border-top: 1.5px solid rgba(255, 255, 255, 0.6);
+            border-radius: 9999px;
+            box-shadow: 
+                0 4px 15px rgba(204, 255, 0, 0.3),
+                inset 0 1px 1px rgba(255, 255, 255, 0.8),
+                inset 0 -2px 8px rgba(0, 0, 0, 0.15);
+            font-weight: 700;
+            text-shadow: 0 0.5px 1px rgba(255, 255, 255, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .vibrant-button::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.02) 100%);
+            border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+        }
+        .vibrant-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 8px 25px rgba(204, 255, 0, 0.55),
+                inset 0 1px 2px rgba(255, 255, 255, 0.9),
+                inset 0 -2px 10px rgba(0, 0, 0, 0.2);
+            filter: brightness(1.05);
+        }
+        .vibrant-button:active {
+            transform: translateY(0px);
+            box-shadow: 
+                0 4px 10px rgba(204, 255, 0, 0.3),
+                inset 0 1px 1px rgba(255, 255, 255, 0.8),
+                inset 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .iif-gauge {
+            transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+        .flow-path {
+            stroke-dasharray: 12 8;
+            animation: dash 20s linear infinite;
+            filter: drop-shadow(0 0 6px rgba(204, 255, 0, 0.65));
+        }
+        @keyframes dash {
+            from { stroke-dashoffset: 500; }
+            to { stroke-dashoffset: 0; }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #2e3746;
+            border-radius: 10px;
+        }
+        .slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            background: #ccff00;
+            border: 4px solid #ffffff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        .gauge-container {
+            position: relative;
+            width: 200px;
+            height: 100px;
+            overflow: hidden;
+        }
+        .gauge-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 20px solid #1e2530;
+            clip-path: inset(0 0 50% 0);
+        }
+        .gauge-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 20px solid transparent;
+            border-top-color: currentColor;
+            border-right-color: currentColor;
+            transform: rotate(-45deg);
+            clip-path: inset(0 0 50% 0);
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.5s ease;
+        }
+        .message-bubble-ai {
+            background: linear-gradient(135deg, #181d26 0%, #1e1b29 100%);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+        }
+        .message-bubble-user {
+            background: linear-gradient(135deg, #ccff00 0%, #a3e635 100%);
+            color: #0c0e12 !important;
+        }
+        .ambient-shadow-emerald {
+            box-shadow: 0 10px 30px -5px rgba(204, 255, 0, 0.04);
+        }
+        .ambient-shadow-coral {
+            box-shadow: 0 10px 30px -5px rgba(239, 68, 68, 0.04);
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface">
+
+    <!-- Login / Registration Screen -->
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
+        <!-- Floating atmospheric glow elements -->
+        <div class="fixed top-1/4 left-1/4 w-80 h-80 bg-primary/10 rounded-full blur-[120px] pointer-events-none animate-float"></div>
+        <div class="fixed bottom-1/4 right-1/4 w-80 h-80 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none animate-float" style="animation-delay: -3s;"></div>
+
+        <div class="glass-card max-w-md w-full rounded-[32px] p-8 border border-white/10 shadow-2xl relative overflow-hidden space-y-6">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-[#0c0e12] font-black text-xl shadow-lg shadow-primary/20">
+                    PV
+                </div>
+                <h2 class="text-headline-lg font-headline-lg bg-gradient-to-r from-primary via-primary-container to-secondary-container bg-clip-text text-transparent">Philia Vault</h2>
+                <p data-i18n="login_subtitle" class="text-xs text-on-surface-variant">Accédez à votre coffre-fort financier sécurisé</p>
+            </div>
+
+            <!-- Login Form -->
+            <div id="auth-forms" class="space-y-4">
+                <div>
+                    <label data-i18n="login_email" class="block text-xs font-semibold text-on-surface-variant mb-1">Adresse Email</label>
+                    <input id="auth-email" type="email" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:bg-[#13161c]" data-i18n-placeholder="login_email_placeholder" placeholder="ex: alex@philia.com"/>
+                </div>
+                <div>
+                    <label data-i18n="login_password" class="block text-xs font-semibold text-on-surface-variant mb-1">Mot de passe</label>
+                    <input id="auth-password" type="password" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:bg-[#13161c]" data-i18n-placeholder="login_password_placeholder" placeholder="••••••••"/>
+                </div>
+                <p id="auth-error" class="hidden text-xs text-error text-center font-semibold"></p>
+                
+                <div class="flex gap-2 pt-2">
+                    <button onclick="handleAuth('login')" data-i18n="login_btn" class="flex-1 py-3.5 vibrant-button text-white rounded-xl text-sm font-bold active:scale-95 transition-all">Se connecter</button>
+                    <button onclick="handleAuth('register')" data-i18n="register_btn" class="flex-1 py-3.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-sm font-bold text-white active:scale-95 transition-all border border-white/5">Créer un compte</button>
+                </div>
+
+                <div class="relative flex py-2 items-center">
+                    <div class="flex-grow border-t border-white/5"></div>
+                    <span data-i18n="or_divider" class="flex-shrink mx-4 text-[10px] text-outline uppercase tracking-wider">ou</span>
+                    <div class="flex-grow border-t border-white/5"></div>
+                </div>
+
+                <!-- Google Auth Mock -->
+                <button onclick="handleGoogleAuth()" class="w-full py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 border border-white/5 active:scale-95 transition-all">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.77c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                    </svg>
+                    <span data-i18n="google_auth_btn">Continuer avec Google</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Disclaimer Modal Overlay -->
+    <div id="disclaimer-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 hidden">
+        <div class="glass-card max-w-lg w-full rounded-[24px] p-6 border border-white/10 shadow-2xl relative overflow-hidden space-y-4">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <span class="text-primary">⚠️</span> <span data-i18n="disclaimer_title">Mentions Légales & Conditions</span>
+            </h3>
+            <div class="text-xs text-on-surface-variant leading-relaxed max-h-60 overflow-y-auto space-y-2 pr-2 border-b border-white/5 pb-4">
+                <p><strong data-i18n="disclaimer_heading">Clause de non-responsabilité (Disclaimer) :</strong></p>
+                <p data-i18n="disclaimer_p1">Cette application (<strong>Philia Vault</strong>) et son coach IA fournissent des outils de simulation, de calcul et de suivi financier à titre indicatif et éducatif uniquement. Les informations, analyses, indices (y compris l'Indice d'Indépendance Financière) et suggestions générés par l'IA ne constituent en aucun cas des conseils financiers, d'investissement, fiscaux ou professionnels.</p>
+                <p data-i18n="disclaimer_p2">En vous inscrivant et en utilisant cette application, vous reconnaissez et acceptez que :</p>
+                <ul class="list-disc pl-4 space-y-1">
+                    <li data-i18n="disclaimer_bullet1">Vous assumez l'entière responsabilité de vos décisions et actions financières.</li>
+                    <li data-i18n="disclaimer_bullet2">L'application et ses créateurs ne pourront être tenus responsables de toute perte financière directe ou indirecte résultant de l'utilisation des informations fournies.</li>
+                    <li data-i18n="disclaimer_bullet3">Les simulations et données passées ne garantissent pas les rendements futurs.</li>
+                </ul>
+                <p data-i18n="disclaimer_footer">Nous vous recommandons vivement de consulter un conseiller financier professionnel ou agréé avant de prendre toute décision d'investissement importante.</p>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="declineDisclaimer()" data-i18n="decline_btn" class="flex-1 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-semibold text-white border border-white/5 transition-all">Refuser</button>
+                <button onclick="acceptDisclaimer()" data-i18n="accept_btn" class="flex-1 py-2.5 vibrant-button text-[#0c0e12] rounded-xl text-xs font-bold transition-all">J'accepte et je m'inscris</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Content Wrapper -->
+    <div id="app-content" class="hidden">
+        <!-- Top Navigation Bar -->
+        <header class="flex justify-between items-center px-6 py-4 w-full sticky top-0 z-50 bg-[#0c0e12]/60 backdrop-blur-xl border-b border-white/5 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 shadow-lg">
+                    <img alt="Profil Utilisateur" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdBKlfB3oRIHT9X6uRapDv-72wG20xbeaJ39lZb9Mt3O8PZ_ae3T8Kk5ewFp_NWssgEPfs5FzMwCOr_laCHplkONOcKhu_Fi5O1IKvrL1iHqxMCMf5DzcBPgjGjrUQ6ztvJ3XxGlxO2an41IDNWjqRkuMYe_kq9qDUZjyI4dYcQ4X2SUkyfDoRnX61CtI58bkiZqzRLvHLjyBt90lBxnkVzbtJzOKtSKRJ0etVnFiG-lAEbZNIvDxeOAQArys9EKJFG_aP58xTpviu"/>
+                </div>
+                <h1 class="text-headline-md font-headline-md font-bold bg-gradient-to-r from-primary via-primary-container to-secondary-container bg-clip-text text-transparent">Philia Vault</h1>
+            </div>
+            <div class="flex gap-2 items-center">
+                <!-- Language Selector -->
+                <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-black/60 border border-white/10 text-white rounded-xl px-2 py-1.5 text-xs focus:ring-1 focus:ring-primary/25 cursor-pointer mr-2">
+                    <option value="fr">FR 🇫🇷</option>
+                    <option value="en">EN 🇬🇧</option>
+                    <option value="es">ES 🇪🇸</option>
+                    <option value="pt">PT 🇵🇹</option>
+                    <option value="de">DE 🇩🇪</option>
+                </select>
+                <!-- Currency selector -->
+                <select id="currency-select" onchange="changeCurrency(this.value)" class="bg-black/60 border border-white/10 text-white rounded-xl px-2 py-1.5 text-xs focus:ring-1 focus:ring-primary/25 cursor-pointer mr-2">
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="CAD">CAD (CA$)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="CHF">CHF</option>
+                </select>
+                <!-- Simulated n8n/webhook triggers for testing -->
+                <button onclick="toggleDevPanel()" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-tertiary-fixed text-on-tertiary-fixed-variant border border-tertiary/20 flex items-center gap-1 hover:brightness-95 transition-all">
+                    <span class="material-symbols-outlined text-xs">terminal</span> Dev Portal
+                </button>
+                <button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors">
+                    <span class="material-symbols-outlined text-primary">notifications</span>
+                </button>
+                <button onclick="handleLogout()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors text-error" title="Déconnexion">
+                    <span class="material-symbols-outlined">logout</span>
+                </button>
+            </div>
+        </header>
+
+    <!-- Dev Portal Drawer -->
+    <div id="dev-panel" class="hidden fixed top-20 right-4 z-50 w-80 glass-card rounded-2xl p-5 border border-tertiary/30 shadow-2xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-tertiary flex items-center gap-1 text-sm"><span class="material-symbols-outlined text-sm">settings</span> simulateur n8n / webhooks</h3>
+            <button onclick="toggleDevPanel()" class="text-outline text-xs">Fermer</button>
+        </div>
+        <p class="text-xs text-on-surface-variant mb-4">Simulez des appels webhook entrants pour pousser des profits en temps réel vers votre colonne Actifs.</p>
+        <div class="space-y-3">
+            <button onclick="triggerWebhook('shopify', 'Boutique Shopify Pro', 5800, 38000)" class="w-full text-xs py-2 bg-gradient-to-r from-emerald-600 to-teal-500 text-white rounded-lg font-semibold shadow hover:brightness-105 active:scale-95 transition-all">
+                Pousser Webhook Shopify (+5.8k$/m)
+            </button>
+            <button onclick="triggerWebhook('tiktok', 'TikTok Shop Creator', 4600, 29000)" class="w-full text-xs py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg font-semibold shadow hover:brightness-105 active:scale-95 transition-all">
+                Pousser Webhook TikTok Shop (+4.6k$/m)
+            </button>
+            <div class="border-t border-tertiary/20 pt-3 mt-3">
+                <p class="text-xs text-on-surface-variant mb-2 font-bold">Abonnements In-App (RevenueCat)</p>
+                <div class="flex gap-2">
+                    <button onclick="simulateIAP(1)" class="flex-1 py-1.5 bg-tertiary text-white rounded text-[10px] font-bold">Devenir Premium</button>
+                    <button onclick="simulateIAP(0)" class="flex-1 py-1.5 bg-surface-container text-on-surface rounded text-[10px] font-bold">Retour Gratuit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN VIEWPORT -->
+    <main class="max-w-7xl mx-auto px-4 py-8 pb-32">
+
+        <!-- ==================== TAB 1: DASHBOARD ==================== -->
+        <div id="view-dashboard" class="view-pane space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left: Gauge & Main cashflow metrics -->
+                <div class="lg:col-span-4 flex flex-col gap-6">
+                    <section class="glass-card rounded-3xl p-8 flex flex-col items-center text-center">
+                        <h2 data-i18n="dash_independence_title" class="text-headline-md font-headline-md mb-6">Indice d'Indépendance</h2>
+                        <div class="relative w-48 h-48 mb-6">
+                            <svg class="w-full h-full transform -rotate-90">
+                                <circle class="text-surface-container-highest" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-width="12"></circle>
+                                <circle class="iif-gauge" cx="96" cy="96" fill="transparent" id="iif-progress" r="88" stroke="url(#paint0_linear)" stroke-dasharray="552.92" stroke-dashoffset="552.92" stroke-linecap="round" stroke-width="12"></circle>
+                                <defs>
+                                    <linearGradient id="paint0_linear" x1="0%" x2="100%" y1="0%" y2="0%">
+                                        <stop offset="0%" stop-color="#06b6d4"></stop>
+                                        <stop offset="50%" stop-color="#10b981"></stop>
+                                        <stop offset="100%" stop-color="#006c49"></stop>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span class="text-display font-display text-primary" id="dash-iif-val">0%</span>
+                                <span data-i18n="dash_iif_score_label" class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-widest">IIF SCORE</span>
+                            </div>
+                        </div>
+                        <p data-i18n="dash_iif_description" class="text-body-md text-on-surface-variant px-4">
+                            Votre ratio (Revenus Passifs / Dépenses Totales). Visez <span class="text-primary font-bold">100%</span> pour la liberté totale !
+                        </p>
+                    </section>
+
+                    <section class="glass-card rounded-3xl p-6 relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <span class="material-symbols-outlined text-[64px]" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+                        </div>
+                        <div class="relative z-10">
+                            <h3 data-i18n="dash_monthly_cashflow" class="text-label-sm font-label-sm text-on-surface-variant mb-1">Cashflow Net Mensuel</h3>
+                            <div class="flex items-baseline gap-2">
+                                <span class="text-headline-lg font-headline-lg text-primary" id="dash-net-cashflow">+$0.00</span>
+                            </div>
+                            <div class="mt-4 flex items-center gap-2">
+                                <div class="h-1.5 flex-1 bg-surface-container-highest rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary-container rounded-full" id="dash-target-bar" style="width: 0%;"></div>
+                                </div>
+                                <span class="text-label-sm font-label-sm text-primary" id="dash-target-text">0% Cible</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Right: Flow Diagram -->
+                <div class="lg:col-span-8 flex flex-col gap-6">
+                    <section class="glass-card rounded-3xl p-8 min-h-[420px] flex flex-col">
+                        <div class="flex justify-between items-center mb-8">
+                            <div>
+                                <h2 data-i18n="dash_flow_engine_title" class="text-headline-md font-headline-md">Moteur de Flux Financier</h2>
+                                <p data-i18n="dash_flow_engine_subtitle" class="text-body-md text-on-surface-variant">Visualisation isométrique en temps réel (Sankey-curves)</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <span data-i18n="dash_active_flow_badge" class="px-3 py-1 rounded-full bg-primary/10 text-primary text-label-sm font-label-sm">Flux Actif</span>
+                                <span data-i18n="dash_opts_badge" class="px-3 py-1 rounded-full bg-secondary/10 text-secondary text-label-sm font-label-sm">Optimisations Disponibles</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 relative min-h-[260px]">
+                            <!-- Dynamic SVG Flow -->
+                            <svg class="w-full h-full" preserveAspectRatio="xMidYMid meet" viewBox="0 0 800 300">
+                                <!-- Paths -->
+                                <path class="flow-path" d="M120 150 Q 250 150, 400 80" fill="transparent" opacity="0.8" stroke="url(#flowGradient)" stroke-width="40"></path>
+                                <path class="flow-path" d="M120 150 Q 250 150, 400 220" fill="transparent" opacity="0.75" stroke="url(#expenseGradient)" stroke-width="30"></path>
+                                <path class="flow-path" d="M400 80 Q 550 80, 680 50" fill="transparent" opacity="0.8" stroke="url(#assetGradient)" stroke-width="25"></path>
+                                <path class="flow-path" d="M400 80 Q 550 80, 680 120" fill="transparent" opacity="0.75" stroke="url(#expenseGradient)" stroke-width="15"></path>
+                                <!-- Gradients -->
+                                <defs>
+                                    <linearGradient id="flowGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+                                        <stop offset="0%" stop-color="#ccff00"></stop>
+                                        <stop offset="100%" stop-color="#a3e635"></stop>
+                                    </linearGradient>
+                                    <linearGradient id="expenseGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+                                        <stop offset="0%" stop-color="#ccff00"></stop>
+                                        <stop offset="100%" stop-color="#84cc16"></stop>
+                                    </linearGradient>
+                                    <linearGradient id="assetGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+                                        <stop offset="0%" stop-color="#a3e635"></stop>
+                                        <stop offset="100%" stop-color="#ccff00"></stop>
+                                    </linearGradient>
+                                </defs>
+                                <!-- Nodes -->
+                                <g class="cursor-pointer" onclick="switchTab('assets')">
+                                    <rect fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.05))" height="90" rx="16" width="120" x="20" y="105"></rect>
+                                    <text data-i18n="flow_node_yield" class="font-label-sm text-on-surface-variant fill-current text-[10px]" text-anchor="middle" x="80" y="145">Rendement Actifs</text>
+                                    <text class="font-headline-md font-bold fill-[#006c49] text-[16px]" text-anchor="middle" x="80" y="170" id="flow-yield">$0</text>
+                                </g>
+                                <g class="cursor-pointer">
+                                    <circle cx="400" cy="150" fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.08))" r="45"></circle>
+                                    <text class="font-label-sm font-bold fill-[#006c49] text-[11px]" text-anchor="middle" x="400" y="154">CASHFLOW</text>
+                                </g>
+                                <g class="cursor-pointer" onclick="switchTab('assets')">
+                                    <rect fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.05))" height="70" rx="12" width="110" x="660" y="25"></rect>
+                                    <text data-i18n="flow_node_assets" class="font-label-sm text-on-surface-variant fill-current text-[10px]" text-anchor="middle" x="715" y="50">Actifs Gérés</text>
+                                    <text class="font-headline-md font-bold fill-[#06b6d4] text-[14px]" text-anchor="middle" x="715" y="75" id="flow-assets">$0</text>
+                                </g>
+                                <g class="cursor-pointer" onclick="switchTab('liabilities')">
+                                    <rect fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.05))" height="70" rx="12" width="110" x="660" y="205"></rect>
+                                    <text data-i18n="flow_node_liabilities" class="font-label-sm text-on-surface-variant fill-current text-[10px]" text-anchor="middle" x="715" y="230">Dépenses/Dettes</text>
+                                    <text class="font-headline-md font-bold fill-[#9d4300] text-[14px]" text-anchor="middle" x="715" y="255" id="flow-liabilities">$0</text>
+                                </g>
+                            </svg>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Bento Breakdown -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- AI Coach Alert Card -->
+                <div class="glass-card rounded-3xl p-6 border-2 border-primary-container/20 relative overflow-hidden group cursor-pointer" onclick="switchTab('coach')">
+                    <div class="absolute inset-0 bg-gradient-to-br from-tertiary/5 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="flex items-start gap-4 relative z-10">
+                        <div class="w-12 h-12 rounded-2xl bg-tertiary-container/30 flex items-center justify-center text-tertiary shadow-sm shrink-0">
+                            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+                        </div>
+                        <div>
+                            <h4 data-i18n="dash_coach_title" class="font-headline-md text-primary flex items-center gap-2 text-base">
+                                Conseil du Coach IA
+                                <span class="w-2 h-2 rounded-full bg-secondary-container animate-pulse"></span>
+                            </h4>
+                            <p class="text-body-md text-on-surface-variant mt-2 text-sm" id="dash-coach-text">
+                                Analyse en cours de votre portefeuille...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simple metrics -->
+                <div class="glass-card rounded-3xl p-6 flex flex-col justify-between">
+                    <div class="flex justify-between items-center">
+                        <h4 data-i18n="dash_portfolio_distribution" class="font-headline-md text-on-surface text-base">Distribution du Portefeuille</h4>
+                        <span data-i18n="dash_categories_label" class="text-label-sm font-label-sm text-on-surface-variant">Catégories</span>
+                    </div>
+                    <div class="flex items-end gap-2 h-24 mt-4" id="distribution-chart">
+                        <!-- Filled dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Savings Goals Section -->
+            <div class="glass-card rounded-3xl p-8 border border-white/10 mt-6 space-y-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-headline-md font-headline-md text-white flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">target</span> <span data-i18n="dash_savings_goals_title">Objectifs d'Épargne</span>
+                        </h3>
+                        <p data-i18n="dash_savings_goals_subtitle" class="text-xs text-on-surface-variant">Suivez vos progrès pour financer vos projets de vie.</p>
+                    </div>
+                    <button onclick="openModal('savings')" class="px-4 py-2.5 bg-primary-container/20 text-primary border border-primary/20 hover:bg-primary-container/40 rounded-xl text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all">
+                        <span class="material-symbols-outlined text-xs">add_circle</span> <span data-i18n="dash_new_goal_btn">Nouvel Objectif</span>
+                    </button>
+                </div>
+                <div id="savings-goals-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Filled dynamically by loadSavingsGoals() -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 2: ASSETS ==================== -->
+        <div id="view-assets" class="view-pane hidden space-y-8">
+            <section class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                <div>
+                    <h2 data-i18n="assets_title" class="text-headline-lg font-headline-lg text-on-surface">La Serre Financière (Actifs)</h2>
+                    <p data-i18n="assets_subtitle" class="text-body-md text-on-surface-variant">Suivez vos actifs productifs de trésorerie.</p>
+                </div>
+                <button onclick="openModal('asset')" class="vibrant-button text-white px-5 py-3 rounded-full text-sm font-semibold flex items-center gap-2 hover:scale-105 active:scale-95 duration-200">
+                    <span class="material-symbols-outlined">add_circle</span> <span data-i18n="assets_add_btn">Ajouter un Actif</span>
+                </button>
+            </section>
+
+            <!-- Grid of Asset Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="assets-grid">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Detailed table list -->
+            <section class="glass-card rounded-3xl p-6">
+                <h3 data-i18n="assets_detailed_perf" class="text-headline-md font-headline-md mb-6">Performance Détaillée</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="border-b border-on-surface/5 text-on-surface-variant">
+                                <th data-i18n="table_col_name" class="pb-3 font-semibold">Nom</th>
+                                <th data-i18n="table_col_category" class="pb-3 font-semibold">Catégorie</th>
+                                <th data-i18n="table_col_value" class="pb-3 font-semibold">Valeur Actuelle</th>
+                                <th data-i18n="table_col_yield" class="pb-3 font-semibold">Cashflow Mensuel</th>
+                                <th data-i18n="table_col_actions" class="pb-3 font-semibold text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assets-table-body" class="divide-y divide-on-surface/5">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- ==================== TAB 3: LIABILITIES ==================== -->
+        <div id="view-liabilities" class="view-pane hidden space-y-8">
+            <section class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                <div>
+                    <h2 data-i18n="liabilities_title" class="text-headline-lg-mobile md:text-headline-lg font-headline-lg text-on-background">Tracker de Passifs</h2>
+                    <p data-i18n="liabilities_subtitle" class="text-body-md text-on-surface-variant">Contrôlez les passifs et abonnements qui drainent vos finances.</p>
+                </div>
+                <button onclick="openModal('liability')" class="vibrant-button text-white px-5 py-3 rounded-full text-sm font-semibold flex items-center gap-2 hover:scale-105 active:scale-95 duration-200">
+                    <span class="material-symbols-outlined">add_circle</span> <span data-i18n="liabilities_add_btn">Ajouter un Passif</span>
+                </button>
+            </section>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left: Mortgage and Loans progress -->
+                <div class="lg:col-span-8 glass-card rounded-3xl p-6 ambient-shadow-coral relative overflow-hidden">
+                    <h3 data-i18n="liabilities_repayments_title" class="text-headline-md font-headline-md text-secondary mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined">trending_down</span> Remboursement Progressif
+                    </h3>
+                    <div class="space-y-6" id="liabilities-progress-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Right: Subscriptions Bubble Grid -->
+                <div class="lg:col-span-4 glass-card rounded-3xl p-6 flex flex-col justify-between">
+                    <div>
+                        <h3 data-i18n="liabilities_active_subs" class="text-label-sm font-label-sm text-on-surface-variant mb-4 flex items-center justify-between">
+                            ABONNEMENTS ACTIFS
+                            <span class="material-symbols-outlined text-primary">autorenew</span>
+                        </h3>
+                        <div class="grid grid-cols-2 gap-3" id="subs-grid">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-on-surface/5">
+                        <div class="flex justify-between items-center">
+                            <p data-i18n="liabilities_subs_total" class="text-body-md font-body-md text-on-surface">Total Mensuel Abonnements</p>
+                            <p class="text-headline-md font-headline-md text-secondary" id="subs-total-val">$0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction timeline list -->
+            <section class="glass-card rounded-3xl p-6">
+                <h3 data-i18n="liabilities_timeline_title" class="text-headline-md font-headline-md mb-6">Échéancier des Paiements</h3>
+                <div class="divide-y divide-on-surface/5" id="transactions-list">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+        </div>
+
+        <!-- ==================== TAB 4: SIMULATOR ==================== -->
+        <div id="view-simulator" class="view-pane hidden space-y-8">
+            <div class="mb-10 text-center md:text-left">
+                <h1 data-i18n="sim_title" class="text-display font-display mb-2 text-on-background">La Balance</h1>
+                <p data-i18n="sim_subtitle" class="text-body-lg font-body-lg text-on-surface-variant max-w-xl">Simulez une nouvelle dépense ou un investissement pour voir son impact immédiat sur votre indépendance.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left: Range inputs -->
+                <div class="lg:col-span-7 space-y-6">
+                    <section class="glass-card p-8 rounded-3xl">
+                        <h2 data-i18n="sim_params_title" class="text-headline-md font-headline-md mb-8 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">settings_input_component</span>
+                            Paramètres du Simulateur
+                        </h2>
+                        <div class="space-y-10">
+                            <!-- Input name of simulation -->
+                            <div class="space-y-2">
+                                <label data-i18n="sim_name_label" class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-widest">Nom de l'achat / Investissement</label>
+                                <input id="sim-name-input" type="text" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:bg-[#13161c]" value="Nouvelle Acquisition"/>
+                            </div>
+                            <!-- Price Slider -->
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-end">
+                                    <label data-i18n="sim_amount_label" class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-widest">Montant de l'opération (Capital)</label>
+                                    <span class="text-headline-md font-headline-md text-primary" id="price-display">$45,000</span>
+                                </div>
+                                <input class="w-full h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer slider-thumb" id="price-slider" max="500000" min="1000" step="1000" type="range" value="45000"/>
+                                <div class="flex justify-between text-label-sm font-label-sm text-outline">
+                                    <span>$1k</span>
+                                    <span>$500k</span>
+                                </div>
+                            </div>
+                            <!-- Monthly cost/income -->
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-end">
+                                    <label data-i18n="sim_cashflow_impact_label" class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-widest">Impact sur le Cashflow Mensuel</label>
+                                    <div class="text-right">
+                                        <span class="text-headline-md font-headline-md" id="monthly-display">-$450</span>
+                                        <p class="text-label-sm font-label-sm text-outline" id="monthly-type">Coût Passif (Dépense)</p>
+                                    </div>
+                                </div>
+                                <input class="w-full h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer slider-thumb" id="monthly-slider" max="2000" min="-2000" step="50" type="range" value="-450"/>
+                                <div class="flex justify-between text-label-sm font-label-sm text-outline">
+                                    <span data-i18n="sim_slider_min">Passif (-2000$)</span>
+                                    <span data-i18n="sim_slider_max">Actif (+2000$)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="glass-card p-6 rounded-2xl border-l-4 border-outline-variant">
+                            <p data-i18n="sim_current_cashflow_label" class="text-label-sm font-label-sm text-on-surface-variant mb-1">Cashflow Actuel</p>
+                            <p class="text-headline-md font-headline-md" id="sim-current-cashflow">$0<span class="text-body-md font-body-md text-outline ml-1">/mois</span></p>
+                        </div>
+                        <div class="glass-card p-6 rounded-2xl border-l-4 border-primary" id="after-card">
+                            <p data-i18n="sim_new_cashflow_label" class="text-label-sm font-label-sm text-on-surface-variant mb-1">Nouveau Cashflow</p>
+                            <p class="text-headline-md font-headline-md text-primary" id="after-cashflow">$0<span class="text-body-md font-body-md text-outline ml-1">/mois</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Visual Gauge -->
+                <div class="lg:col-span-5 space-y-6">
+                    <section class="glass-card p-8 rounded-3xl flex flex-col items-center text-center">
+                        <h3 data-i18n="sim_gauge_title" class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-widest mb-8">Asset-Liability Index</h3>
+                        <div class="gauge-container mb-6">
+                            <div class="gauge-background"></div>
+                            <div class="gauge-fill text-secondary" id="gauge-fill"></div>
+                            <div class="absolute bottom-0 left-0 w-full flex flex-col items-center">
+                                <span class="text-display font-display leading-none" id="score-text">50</span>
+                                <span class="text-label-sm font-label-sm font-bold text-on-surface-variant" id="status-text">LIABILITÉ</span>
+                            </div>
+                        </div>
+                        <div class="bg-surface-container-low rounded-2xl p-4 w-full mb-8">
+                            <p class="text-body-md font-body-md text-on-surface-variant" id="insight-text">
+                                Analyse du simulateur...
+                            </p>
+                        </div>
+                        <button onclick="commitSimulation()" data-i18n="sim_save_btn" class="w-full py-4 rounded-xl vibrant-button text-white font-headline-md active:scale-95 transition-all">
+                            Enregistrer dans le Budget Réel
+                        </button>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 5: AI COACH ==================== -->
+        <div id="view-coach" class="view-pane hidden flex flex-col max-w-4xl mx-auto w-full h-[650px] relative">
+            <div class="text-center pb-4 shrink-0">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary mb-4 border border-primary/20">
+                    <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                    <span data-i18n="coach_premium_badge" class="font-label-sm text-label-sm">ESPACE COACH PHILIA VAULT PREMIUM</span>
+                </div>
+                <h2 data-i18n="coach_welcome" class="font-headline-lg text-headline-lg text-on-background mb-2">Bonjour, Alex.</h2>
+                <p data-i18n="coach_subtitle" class="font-body-md text-body-md text-on-surface-variant max-w-lg mx-auto">Votre coach IA analyse continuellement votre cashflow pour accélérer votre liberté.</p>
+            </div>
+
+            <!-- Paywall Container (Visible when free) -->
+            <div id="coach-paywall" class="hidden flex-1 glass-card rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-6 max-w-2xl mx-auto my-4 border border-primary/30 shadow-2xl relative overflow-hidden">
+                <div class="absolute -top-24 -left-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
+                <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
+                
+                <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-[#0c0e12] shadow-lg animate-bounce mb-2">
+                    <span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+                </div>
+                <h3 data-i18n="paywall_title" class="text-headline-md font-headline-md text-primary">Débloquez votre Coach Philia Vault Premium</h3>
+                <p data-i18n="paywall_description" class="text-sm text-on-surface-variant max-w-md">Accédez à des audits financiers narratifs, des analyses de fuites de budget et des conseils personnalisés pour accélérer votre indépendance.</p>
+                
+                <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md pt-2">
+                    <div class="p-5 rounded-2xl bg-white/40 border border-white/30 flex flex-col justify-between hover:scale-105 transition-transform cursor-pointer relative border-l-4 border-l-primary">
+                        <span data-i18n="paywall_popular" class="absolute -top-2.5 right-4 bg-primary text-[#0c0e12] text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Populaire</span>
+                        <div>
+                            <h4 data-i18n="paywall_monthly_title" class="font-bold text-sm">Abonnement Mensuel</h4>
+                            <p data-i18n="paywall_monthly_billing" class="text-[10px] text-outline">Facturé chaque mois</p>
+                        </div>
+                        <p class="text-headline-md font-headline-md text-primary mt-2">9.99$ <span data-i18n="paywall_monthly_period" class="text-xs text-outline">/mois</span></p>
+                    </div>
+                    <div class="p-5 rounded-2xl bg-white/40 border border-white/30 flex flex-col justify-between hover:scale-105 transition-transform cursor-pointer border-l-4 border-l-secondary">
+                        <div>
+                            <h4 data-i18n="paywall_annual_title" class="font-bold text-sm">Abonnement Annuel</h4>
+                            <p data-i18n="paywall_annual_billing" class="text-[10px] text-outline">Facturation annuelle</p>
+                        </div>
+                        <p class="text-headline-md font-headline-md text-secondary mt-2">79.99$ <span data-i18n="paywall_annual_period" class="text-xs text-outline">/an</span></p>
+                    </div>
+                </div>
+                
+                <button onclick="triggerIAPCheckout()" class="w-full max-w-md py-4 rounded-2xl vibrant-button font-headline-md font-bold shadow-lg hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <span data-i18n="paywall_subscribe_btn">S'abonner via App Store / Google Play</span>
+                    <span class="material-symbols-outlined text-[18px]">lock</span>
+                </button>
+            </div>
+
+            <!-- Chat Window (Visible when premium) -->
+            <div id="coach-chat-window" class="hidden flex-1 glass-card rounded-3xl flex flex-col overflow-hidden border border-primary/20">
+                <div class="px-6 py-4 bg-black/20 border-b border-white/5 flex justify-between items-center">
+                    <span class="text-sm font-bold text-primary flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[18px]">smart_toy</span> <span data-i18n="coach_chat_title">Diagnostic & Audit IA</span>
+                    </span>
+                    <button onclick="exportAuditPDF()" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-semibold text-white flex items-center gap-1 active:scale-95 transition-all">
+                        <span class="material-symbols-outlined text-xs">picture_as_pdf</span> <span data-i18n="coach_pdf_btn">Télécharger l'Audit (PDF)</span>
+                    </button>
+                </div>
+                <div class="flex-1 p-6 overflow-y-auto custom-scrollbar space-y-4" id="chat-thread">
+                    <!-- Loaded dynamically, starting with coach message -->
+                </div>
+                
+                <!-- Chat Input -->
+                <div class="p-4 bg-black/30 border-t border-white/5 flex flex-col gap-2">
+                    <div class="flex gap-2 items-center w-full">
+                        <input id="chat-input-field" class="flex-1 bg-black/40 border border-white/10 text-white rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/45 focus:bg-[#13161c]" data-i18n-placeholder="coach_chat_placeholder" placeholder="Demandez un audit ou posez une question financière..." type="text" onkeydown="if(event.key === 'Enter') sendChatMessage()"/>
+                        <button onclick="sendChatMessage()" class="w-12 h-12 rounded-2xl bg-primary text-[#0c0e12] flex items-center justify-center shadow-lg active:scale-90 transition-transform">
+                            <span class="material-symbols-outlined">send</span>
+                        </button>
+                    </div>
+                    <p data-i18n="coach_legal_notice" class="text-[10px] text-center text-outline/50 mt-1 leading-normal">
+                        Philia Vault fournit des analyses et un accompagnement éducatif basés sur l'IA. Ceci ne constitue pas un conseil financier professionnel ou réglementé.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-[#0c0e12]/80 backdrop-blur-2xl border-t border-white/5 shadow-2xl">
+        <div class="flex justify-around items-center w-full px-2 pb-6 pt-3">
+            <a id="nav-dashboard" class="flex flex-col items-center justify-center text-primary scale-110 opacity-100 transition-all cursor-pointer" onclick="switchTab('dashboard')">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span data-i18n="nav_dashboard" class="text-label-sm font-label-sm">Tableau</span>
+            </a>
+            <a id="nav-assets" class="flex flex-col items-center justify-center text-on-surface-variant/70 opacity-60 transition-all cursor-pointer" onclick="switchTab('assets')">
+                <span class="material-symbols-outlined">account_balance_wallet</span>
+                <span data-i18n="nav_assets" class="text-label-sm font-label-sm">Actifs</span>
+            </a>
+            <a id="nav-liabilities" class="flex flex-col items-center justify-center text-on-surface-variant/70 opacity-60 transition-all cursor-pointer" onclick="switchTab('liabilities')">
+                <span class="material-symbols-outlined">payments</span>
+                <span data-i18n="nav_liabilities" class="text-label-sm font-label-sm">Passifs</span>
+            </a>
+            <a id="nav-simulator" class="flex flex-col items-center justify-center text-on-surface-variant/70 opacity-60 transition-all cursor-pointer" onclick="switchTab('simulator')">
+                <span class="material-symbols-outlined">calculate</span>
+                <span data-i18n="nav_simulator" class="text-label-sm font-label-sm">Simulateur</span>
+            </a>
+            <a id="nav-coach" class="flex flex-col items-center justify-center text-on-surface-variant/70 opacity-60 transition-all cursor-pointer" onclick="switchTab('coach')">
+                <span class="material-symbols-outlined">smart_toy</span>
+                <span data-i18n="nav_coach" class="text-label-sm font-label-sm">Coach</span>
+            </a>
+        </div>
+    </nav>
+    </div> <!-- Close app-content -->
+
+    <!-- CRUD MODALS -->
+    <!-- Asset Modal -->
+    <div id="modal-asset" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+        <div class="glass-card max-w-md w-full rounded-3xl p-6 border border-white/40 shadow-2xl">
+            <h3 class="font-headline-md font-bold mb-4 text-primary flex items-center gap-2">
+                <span class="material-symbols-outlined">add_circle</span> <span data-i18n="modal_asset_title">Ajouter un nouvel Actif</span>
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label data-i18n="modal_asset_name" class="block text-xs font-semibold text-on-surface-variant mb-1">Nom de l'actif</label>
+                    <input id="asset-name" type="text" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm" data-i18n-placeholder="modal_asset_name_placeholder" placeholder="ex: Actions Vanguard S&P 500"/>
+                </div>
+                <div>
+                    <label data-i18n="modal_asset_category" class="block text-xs font-semibold text-on-surface-variant mb-1">Catégorie</label>
+                    <select id="asset-type" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm">
+                        <option value="Stocks" data-i18n="cat_stocks" class="bg-[#13161c]">Bourse (Actions/ETFs)</option>
+                        <option value="Crypto" data-i18n="cat_crypto" class="bg-[#13161c]">Cryptomonnaies</option>
+                        <option value="Commerce" data-i18n="cat_commerce" class="bg-[#13161c]">Boutique E-Commerce</option>
+                        <option value="Real Estate" data-i18n="cat_real_estate" class="bg-[#13161c]">Immobilier / REITs</option>
+                        <option value="Precious Metals" data-i18n="cat_precious_metals" class="bg-[#13161c]">Métaux précieux</option>
+                    </select>
+                </div>
+                <div>
+                    <label data-i18n="modal_asset_val" class="block text-xs font-semibold text-on-surface-variant mb-1">Valeur totale ($)</label>
+                    <input id="asset-value" type="number" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm" data-i18n-placeholder="modal_asset_val_placeholder" placeholder="ex: 15000"/>
+                </div>
+                <div>
+                    <label data-i18n="modal_asset_yield" class="block text-xs font-semibold text-on-surface-variant mb-1">Revenu passif mensuel généré ($)</label>
+                    <input id="asset-yield" type="number" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm" data-i18n-placeholder="modal_asset_yield_placeholder" placeholder="ex: 120"/>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeModal('asset')" data-i18n="modal_cancel" class="flex-1 py-3 bg-surface-container rounded-xl text-sm font-bold active:scale-95 transition-all">Annuler</button>
+                <button onclick="submitAsset()" data-i18n="modal_asset_submit" class="flex-1 py-3 vibrant-button text-white rounded-xl text-sm font-bold active:scale-95 transition-all">Créer l'actif</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liability Modal -->
+    <div id="modal-liability" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+        <div class="glass-card max-w-md w-full rounded-3xl p-6 border border-white/40 shadow-2xl">
+            <h3 class="font-headline-md font-bold mb-4 text-secondary flex items-center gap-2">
+                <span class="material-symbols-outlined">add_circle</span> <span data-i18n="modal_lib_title">Ajouter un Passif</span>
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label data-i18n="modal_lib_name" class="block text-xs font-semibold text-on-surface-variant mb-1">Nom du passif</label>
+                    <input id="lib-name" type="text" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm" data-i18n-placeholder="modal_lib_name_placeholder" placeholder="ex: Netflix Premium, Crédit Auto"/>
+                </div>
+                <div>
+                    <label data-i18n="modal_lib_category" class="block text-xs font-semibold text-on-surface-variant mb-1">Catégorie</label>
+                    <select id="lib-type" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm">
+                        <option value="Mortgage" data-i18n="cat_mortgage" class="bg-[#13161c]">Emprunt Immobilier</option>
+                        <option value="Loan" data-i18n="cat_loan" class="bg-[#13161c]">Crédit / Prêt à la consommation</option>
+                        <option value="Subscription" data-i18n="cat_subscription" class="bg-[#13161c]">Abonnement Mensuel / Annuel</option>
+                        <option value="BNPL" data-i18n="cat_bnpl" class="bg-[#13161c]">Paiement Échelonné (BNPL)</option>
+                    </select>
+                </div>
+                <div>
+                    <label data-i18n="modal_lib_total" class="block text-xs font-semibold text-on-surface-variant mb-1">Montant initial ($)</label>
+                    <input id="lib-total" type="number" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm" data-i18n-placeholder="modal_lib_total_placeholder" placeholder="ex: 12000"/>
+                </div>
+                <div>
+                    <label data-i18n="modal_lib_remaining" class="block text-xs font-semibold text-on-surface-variant mb-1">Montant restant à rembourser ($)</label>
+                    <input id="lib-remaining" type="number" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm" data-i18n-placeholder="modal_lib_remaining_placeholder" placeholder="ex: 8500"/>
+                </div>
+                <div>
+                    <label data-i18n="modal_lib_cost" class="block text-xs font-semibold text-on-surface-variant mb-1">Coût mensuel ($)</label>
+                    <input id="lib-cost" type="number" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm" data-i18n-placeholder="modal_lib_cost_placeholder" placeholder="ex: 250"/>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeModal('liability')" data-i18n="modal_cancel" class="flex-1 py-3 bg-surface-container rounded-xl text-sm font-bold active:scale-95 transition-all">Annuler</button>
+                <button onclick="submitLiability()" data-i18n="modal_lib_submit" class="flex-1 py-3 vibrant-button text-white rounded-xl text-sm font-bold active:scale-95 transition-all">Créer le passif</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Savings Goal Modal -->
+    <div id="modal-savings" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+        <div class="glass-card max-w-md w-full rounded-3xl p-6 border border-white/40 shadow-2xl">
+            <h3 class="font-headline-md font-bold mb-4 text-primary flex items-center gap-2">
+                <span class="material-symbols-outlined">target</span> <span data-i18n="modal_savings_title">Nouvel Objectif d'Épargne</span>
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label data-i18n="modal_savings_name" class="block text-xs font-semibold text-on-surface-variant mb-1">Nom du projet / objectif</label>
+                    <input id="savings-name" type="text" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm" data-i18n-placeholder="modal_savings_name_placeholder" placeholder="ex: Apport Immobilier, Fonds d'Urgence"/>
+                </div>
+                <div>
+                    <label data-i18n="modal_savings_target" class="block text-xs font-semibold text-on-surface-variant mb-1">Montant Cible</label>
+                    <input id="savings-target" type="number" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm" data-i18n-placeholder="modal_savings_target_placeholder" placeholder="ex: 20000"/>
+                </div>
+                <div>
+                    <label data-i18n="modal_savings_current" class="block text-xs font-semibold text-on-surface-variant mb-1">Montant Actuel Épargné</label>
+                    <input id="savings-current" type="number" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm" data-i18n-placeholder="modal_savings_current_placeholder" placeholder="ex: 5000" value="0"/>
+                </div>
+                <div>
+                    <label data-i18n="modal_savings_date" class="block text-xs font-semibold text-on-surface-variant mb-1">Date cible estimée</label>
+                    <input id="savings-date" type="text" class="w-full bg-black/40 border border-white/10 text-white focus:ring-primary/40 focus:border-primary/50 focus:bg-[#13161c] rounded-xl px-4 py-2.5 text-sm" data-i18n-placeholder="modal_savings_date_placeholder" placeholder="ex: Décembre 2026"/>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeModal('savings')" data-i18n="modal_cancel" class="flex-1 py-3 bg-surface-container rounded-xl text-sm font-bold active:scale-95 transition-all">Annuler</button>
+                <button onclick="submitSavingsGoal()" data-i18n="modal_savings_submit" class="flex-1 py-3 vibrant-button text-[#0c0e12] rounded-xl text-sm font-bold active:scale-95 transition-all">Créer l'objectif</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Static Background Atmosphere Elements -->
+    <div class="fixed top-20 right-[-10%] w-64 h-64 bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none animate-float"></div>
+    <div class="fixed bottom-40 left-[-5%] w-72 h-72 bg-tertiary/5 rounded-full blur-[120px] -z-10 pointer-events-none animate-float" style="animation-delay: -3s;"></div>
+
+    <!-- APP ENGINE JS -->
+    <script>
+        let currentTab = 'dashboard';
+        let summaryData = {};
+        let chatHistory = [];
+        let currentLang = 'en';
+
+        const TRANSLATIONS = {
+            fr: {
+                login_subtitle: "Accédez à votre coffre-fort financier sécurisé",
+                login_email: "Adresse Email",
+                login_email_placeholder: "ex: alex@philia.com",
+                login_password: "Mot de passe",
+                login_password_placeholder: "••••••••",
+                login_btn: "Se connecter",
+                register_btn: "Créer un compte",
+                or_divider: "ou",
+                google_auth_btn: "Continuer avec Google",
+                disclaimer_title: "Mentions Légales & Conditions",
+                disclaimer_heading: "Clause de non-responsabilité (Disclaimer) :",
+                disclaimer_p1: "Cette application (Philia Vault) et son coach IA fournissent des outils de simulation, de calcul et de suivi financier à titre indicatif et éducatif uniquement. Les informations, analyses, indices (y compris l'Indice d'Indépendance Financière) et suggestions générés par l'IA ne constituent en aucun cas des conseils financiers, d'investissement, fiscaux ou professionnels.",
+                disclaimer_p2: "En vous inscrivant et en utilisant cette application, vous reconnaissez et acceptez que :",
+                disclaimer_bullet1: "Vous assumez l'entière responsabilité de vos décisions et actions financières.",
+                disclaimer_bullet2: "L'application et ses créateurs ne pourront être tenus responsables de toute perte financière directe ou indirecte résultant de l'utilisation des informations fournies.",
+                disclaimer_bullet3: "Les simulations et données passées ne garantissent pas les rendements futurs.",
+                disclaimer_footer: "We recommend consulting a professional financial advisor before making any major investment decisions.",
+                decline_btn: "Refuser",
+                accept_btn: "J'accepte et je m'inscris",
+                dash_independence_title: "Indice d'Indépendance",
+                dash_iif_score_label: "IIF SCORE",
+                dash_iif_description: "Votre ratio (Revenus Passifs / Dépenses Totales). Visez 100% pour la liberté totale !",
+                dash_monthly_cashflow: "Cashflow Net Mensuel",
+                dash_target_suffix: "Cible",
+                dash_flow_engine_title: "Moteur de Flux Financier",
+                dash_flow_engine_subtitle: "Visualisation isométrique en temps réel (Sankey-curves)",
+                dash_active_flow_badge: "Flux Actif",
+                dash_opts_badge: "Optimisations Disponibles",
+                flow_node_yield: "Rendement Actifs",
+                flow_node_assets: "Actifs Gérés",
+                flow_node_liabilities: "Dépenses/Dettes",
+                dash_coach_title: "Conseil du Coach IA",
+                dash_portfolio_distribution: "Distribution du Portefeuille",
+                dash_categories_label: "Catégories",
+                dash_savings_goals_title: "Objectifs d'Épargne",
+                dash_savings_goals_subtitle: "Suivez vos progrès pour financer vos projets de vie.",
+                dash_new_goal_btn: "Nouvel Objectif",
+                assets_title: "La Serre Financière (Actifs)",
+                assets_subtitle: "Suivez vos actifs productifs de trésorerie.",
+                assets_add_btn: "Ajouter un Actif",
+                assets_detailed_perf: "Performance Détaillée",
+                table_col_name: "Nom",
+                table_col_category: "Catégorie",
+                table_col_value: "Valeur Actuelle",
+                table_col_yield: "Cashflow Mensuel",
+                table_col_actions: "Actions",
+                liabilities_title: "Tracker de Passifs",
+                liabilities_subtitle: "Contrôlez les passifs et abonnements qui drainent vos finances.",
+                liabilities_add_btn: "Ajouter un Passif",
+                liabilities_repayments_title: "Remboursement Progressif",
+                liabilities_active_subs: "ABONNEMENTS ACTIFS",
+                liabilities_subs_total: "Total Mensuel Abonnements",
+                liabilities_timeline_title: "Échéancier des Paiements",
+                sim_title: "La Balance",
+                sim_subtitle: "Simulez une nouvelle dépense ou un investissement pour voir son impact immédiat sur votre indépendance.",
+                sim_params_title: "Paramètres du Simulateur",
+                sim_name_label: "Nom de l'achat / Investissement",
+                sim_amount_label: "Montant de l'opération (Capital)",
+                sim_cashflow_impact_label: "Impact sur le Cashflow Mensuel",
+                sim_slider_min: "Passif (-2000$)",
+                sim_slider_max: "Actif (+2000$)",
+                sim_current_cashflow_label: "Cashflow Actuel",
+                sim_new_cashflow_label: "Nouveau Cashflow",
+                sim_gauge_title: "Asset-Liability Index",
+                sim_save_btn: "Enregistrer dans le Budget Réel",
+                coach_premium_badge: "ESPACE COACH PHILIA VAULT PREMIUM",
+                coach_welcome: "Bonjour, Alex.",
+                coach_subtitle: "Votre coach IA analyse continuellement votre cashflow pour accélérer votre liberté.",
+                paywall_title: "Débloquez votre Coach Philia Vault Premium",
+                paywall_description: "Accédez à des audits financiers narratifs, des analyses de fuites de budget et des conseils personnalisés pour accélérer votre indépendance.",
+                paywall_popular: "Populaire",
+                paywall_monthly_title: "Abonnement Mensuel",
+                paywall_monthly_billing: "Facturé chaque mois",
+                paywall_monthly_period: "/mois",
+                paywall_annual_title: "Abonnement Annuel",
+                paywall_annual_billing: "Facturation annuelle",
+                paywall_annual_period: "/an",
+                paywall_subscribe_btn: "S'abonner via App Store / Google Play",
+                coach_chat_title: "Diagnostic & Audit IA",
+                coach_pdf_btn: "Télécharger l'Audit (PDF)",
+                coach_chat_placeholder: "Demandez un audit ou posez une question financière...",
+                nav_dashboard: "Tableau",
+                nav_assets: "Actifs",
+                nav_liabilities: "Passifs",
+                nav_simulator: "Simulateur",
+                nav_coach: "Coach",
+                modal_asset_title: "Ajouter un nouvel Actif",
+                modal_asset_name: "Nom de l'actif",
+                modal_asset_name_placeholder: "ex: Actions Vanguard S&P 500",
+                modal_asset_category: "Catégorie",
+                modal_asset_val: "Valeur totale ($)",
+                modal_asset_val_placeholder: "ex: 15000",
+                modal_asset_yield: "Revenu passif mensuel généré ($)",
+                modal_asset_yield_placeholder: "ex: 120",
+                modal_cancel: "Annuler",
+                modal_asset_submit: "Créer l'actif",
+                modal_lib_title: "Ajouter un Passif",
+                modal_lib_name: "Nom de l'passif",
+                modal_lib_name_placeholder: "ex: Netflix Premium, Crédit Auto",
+                modal_lib_category: "Catégorie",
+                modal_lib_total: "Montant initial ($)",
+                modal_lib_total_placeholder: "ex: 12000",
+                modal_lib_remaining: "Montant restant à rembourser ($)",
+                modal_lib_remaining_placeholder: "ex: 8500",
+                modal_lib_cost: "Coût mensuel ($)",
+                modal_lib_cost_placeholder: "ex: 250",
+                modal_lib_submit: "Créer le passif",
+                modal_savings_title: "Nouvel Objectif d'Épargne",
+                modal_savings_name: "Nom du projet / objectif",
+                modal_savings_name_placeholder: "ex: Apport Immobilier, Fonds d'Urgence",
+                modal_savings_target: "Montant Cible",
+                modal_savings_target_placeholder: "ex: 20000",
+                modal_savings_current: "Montant Actuel Épargné",
+                modal_savings_current_placeholder: "ex: 5000",
+                modal_savings_date: "Date cible estimée",
+                modal_savings_date_placeholder: "ex: Décembre 2026",
+                modal_savings_submit: "Créer l'objectif",
+                cat_stocks: "Bourse (Actions/ETFs)",
+                cat_crypto: "Cryptomonnaies",
+                cat_commerce: "Boutique E-Commerce",
+                cat_real_estate: "Immobilier / REITs",
+                cat_precious_metals: "Métaux précieux",
+                cat_mortgage: "Emprunt Immobilier",
+                cat_loan: "Crédit / Prêt à la consommation",
+                cat_subscription: "Abonnement Mensuel / Annuel",
+                cat_bnpl: "Paiement Échelonné (BNPL)",
+                no_data_available: "Aucune donnée disponible",
+                monthly_yield_label: "Rendement Mensuel",
+                delete_btn_label: "Supprimer",
+                remaining_label: "Restants",
+                repaid_label: "Remboursé",
+                year_suffix: "/an",
+                month_suffix: "/m",
+                coach_advice_low: "Vos passifs drainent plus de la moitié de vos revenus. Réduisez vos abonnements ou simulez une acquisition d'actif dans La Balance.",
+                coach_advice_mid: "Vous êtes à {percent}% de l'indépendance ! Réinvestir {amount}/mois supplémentaires débloquerait votre liberté financière {months} mois plus tôt.",
+                coach_advice_high: "Incroyable ! Votre IIF dépasse 100%. Vous êtes officiellement libre financièrement. Votre cashflow passif couvre l'ensemble de vos coûts.",
+                savings_no_goals: "Aucun objectif d'épargne pour le moment. Cliquez sur \"Nouvel Objectif\" pour commencer.",
+                savings_target_label: "Cible",
+                savings_unspecified: "Non spécifiée",
+                alert_fill_fields: "Veuillez remplir tous les champs.",
+                alert_savings_req: "Veuillez renseigner le nom et le montant cible.",
+                coach_legal_notice: "Philia Vault fournit des analyses et un accompagnement éducatif basés sur l'IA. Ceci ne constitue pas un conseil financier professionnel ou réglementé.",
+                dash_market_tracker_title: "Marchés Financiers (Temps Réel)",
+                dash_market_tracker_subtitle: "Flux en direct des indices mondiaux, actions clés et cryptomonnaies.",
+                theme_auto: "🌗 Auto",
+                theme_dark: "🌙 Sombre",
+                theme_light: "☀️ Clair"
+            },
+            en: {
+                login_subtitle: "Access your secure financial vault",
+                login_email: "Email Address",
+                login_email_placeholder: "e.g., alex@philia.com",
+                login_password: "Password",
+                login_password_placeholder: "••••••••",
+                login_btn: "Log In",
+                register_btn: "Create Account",
+                or_divider: "or",
+                google_auth_btn: "Continue with Google",
+                disclaimer_title: "Legal Terms & Conditions",
+                disclaimer_heading: "Disclaimer:",
+                disclaimer_p1: "This application (Philia Vault) and its AI coach provide simulation, calculation, and financial tracking tools for informational and educational purposes only. Information, analyses, indices (including the Financial Independence Index), and suggestions generated by the AI do not constitute financial, investment, tax, or professional advice.",
+                disclaimer_p2: "By registering and using this app, you acknowledge and agree that:",
+                disclaimer_bullet1: "You assume full responsibility for your financial decisions and actions.",
+                disclaimer_bullet2: "The application and its creators shall not be held liable for any direct or indirect financial loss resulting from the use of the information provided.",
+                disclaimer_bullet3: "Simulations and past data do not guarantee future returns.",
+                disclaimer_footer: "We strongly recommend consulting a registered or professional financial advisor before making any major investment decisions.",
+                decline_btn: "Decline",
+                accept_btn: "I Accept and Register",
+                dash_independence_title: "Independence Index",
+                dash_iif_score_label: "IIF SCORE",
+                dash_iif_description: "Your ratio (Passive Income / Total Expenses). Aim for 100% to achieve total freedom!",
+                dash_monthly_cashflow: "Monthly Net Cashflow",
+                dash_target_suffix: "Target",
+                dash_flow_engine_title: "Financial Flow Engine",
+                dash_flow_engine_subtitle: "Real-time isometric visualization (Sankey-curves)",
+                dash_active_flow_badge: "Active Flow",
+                dash_opts_badge: "Available Optimizations",
+                flow_node_yield: "Assets Yield",
+                flow_node_assets: "Managed Assets",
+                flow_node_liabilities: "Expenses/Debts",
+                dash_coach_title: "AI Coach Advice",
+                dash_portfolio_distribution: "Portfolio Distribution",
+                dash_categories_label: "Categories",
+                dash_savings_goals_title: "Savings Goals",
+                dash_savings_goals_subtitle: "Track your progress to fund your life projects.",
+                dash_new_goal_btn: "New Goal",
+                assets_title: "The Financial Greenhouse (Assets)",
+                assets_subtitle: "Track your cash-producing assets.",
+                assets_add_btn: "Add Asset",
+                assets_detailed_perf: "Detailed Performance",
+                table_col_name: "Name",
+                table_col_category: "Category",
+                table_col_value: "Current Value",
+                table_col_yield: "Monthly Cashflow",
+                table_col_actions: "Actions",
+                liabilities_title: "Liabilities Tracker",
+                liabilities_subtitle: "Control the liabilities and subscriptions draining your finances.",
+                liabilities_add_btn: "Add Liability",
+                liabilities_repayments_title: "Progressive Repayment",
+                liabilities_active_subs: "ACTIVE SUBSCRIPTIONS",
+                liabilities_subs_total: "Monthly Subscriptions Total",
+                liabilities_timeline_title: "Payment Timeline",
+                sim_title: "The Scale",
+                sim_subtitle: "Simulate a new expense or investment to see its immediate impact on your independence.",
+                sim_params_title: "Simulator Parameters",
+                sim_name_label: "Purchase / Investment Name",
+                sim_amount_label: "Operation Amount (Capital)",
+                sim_cashflow_impact_label: "Monthly Cashflow Impact",
+                sim_slider_min: "Passive (-2000$)",
+                sim_slider_max: "Active (+2000$)",
+                sim_current_cashflow_label: "Current Cashflow",
+                sim_new_cashflow_label: "New Cashflow",
+                sim_gauge_title: "Asset-Liability Index",
+                sim_save_btn: "Save to Real Budget",
+                coach_premium_badge: "PREMIUM PHILIA VAULT COACH SPACE",
+                coach_welcome: "Hello, Alex.",
+                coach_subtitle: "Your AI coach continuously analyzes your cashflow to accelerate your freedom.",
+                paywall_title: "Unlock Your Premium Philia Vault Coach",
+                paywall_description: "Access narrative financial audits, budget leak analyses, and personalized advice to accelerate your independence.",
+                paywall_popular: "Popular",
+                paywall_monthly_title: "Monthly Subscription",
+                paywall_monthly_billing: "Billed monthly",
+                paywall_monthly_period: "/month",
+                paywall_annual_title: "Annual Subscription",
+                paywall_annual_billing: "Annual billing",
+                paywall_annual_period: "/year",
+                paywall_subscribe_btn: "Subscribe via App Store / Google Play",
+                coach_chat_title: "AI Diagnostic & Audit",
+                coach_pdf_btn: "Download Audit (PDF)",
+                coach_chat_placeholder: "Ask for an audit or ask a financial question...",
+                nav_dashboard: "Dashboard",
+                nav_assets: "Assets",
+                nav_liabilities: "Liabilities",
+                nav_simulator: "Simulator",
+                nav_coach: "Coach",
+                modal_asset_title: "Add New Asset",
+                modal_asset_name: "Asset Name",
+                modal_asset_name_placeholder: "e.g., Vanguard S&P 500 ETF",
+                modal_asset_category: "Category",
+                modal_asset_val: "Total Value ($)",
+                modal_asset_val_placeholder: "e.g., 15000",
+                modal_asset_yield: "Generated Monthly Passive Income ($)",
+                modal_asset_yield_placeholder: "e.g., 120",
+                modal_cancel: "Cancel",
+                modal_asset_submit: "Create Asset",
+                modal_lib_title: "Add Liability",
+                modal_lib_name: "Liability Name",
+                modal_lib_name_placeholder: "e.g., Netflix Premium, Car Loan",
+                modal_lib_category: "Category",
+                modal_lib_total: "Initial Amount ($)",
+                modal_lib_total_placeholder: "e.g., 12000",
+                modal_lib_remaining: "Remaining Amount to Repay ($)",
+                modal_lib_remaining_placeholder: "e.g., 8500",
+                modal_lib_cost: "Monthly Cost ($)",
+                modal_lib_cost_placeholder: "e.g., 250",
+                modal_lib_submit: "Create Liability",
+                modal_savings_title: "New Savings Goal",
+                modal_savings_name: "Project / Goal Name",
+                modal_savings_name_placeholder: "e.g., Down Payment, Emergency Fund",
+                modal_savings_target: "Target Amount",
+                modal_savings_target_placeholder: "e.g., 20000",
+                modal_savings_current: "Current Saved Amount",
+                modal_savings_current_placeholder: "e.g., 5000",
+                modal_savings_date: "Estimated Target Date",
+                modal_savings_date_placeholder: "e.g., December 2026",
+                modal_savings_submit: "Create Goal",
+                cat_stocks: "Stock Market (Stocks/ETFs)",
+                cat_crypto: "Cryptocurrencies",
+                cat_commerce: "E-Commerce Store",
+                cat_real_estate: "Real Estate / REITs",
+                cat_precious_metals: "Precious Metals",
+                cat_mortgage: "Mortgage",
+                cat_loan: "Loan / Consumer Credit",
+                cat_subscription: "Monthly / Annual Subscription",
+                cat_bnpl: "Buy Now Pay Later (BNPL)",
+                no_data_available: "No data available",
+                monthly_yield_label: "Monthly Yield",
+                delete_btn_label: "Delete",
+                remaining_label: "Remaining",
+                repaid_label: "Repaid",
+                year_suffix: "/yr",
+                month_suffix: "/mo",
+                coach_advice_low: "Your liabilities drain more than half of your income. Reduce your subscriptions or simulate an asset acquisition in The Scale.",
+                coach_advice_mid: "You are {percent}% away from independence! Reinvesting {amount}/month extra would unlock your financial freedom {months} months earlier.",
+                coach_advice_high: "Incredible! Your IIF exceeds 100%. You are officially financially free. Your passive cashflow covers all your costs.",
+                savings_no_goals: "No savings goals at the moment. Click \"New Goal\" to start.",
+                savings_target_label: "Target",
+                savings_unspecified: "Unspecified",
+                alert_fill_fields: "Please fill in all fields.",
+                alert_savings_req: "Please fill in the name and target amount.",
+                coach_legal_notice: "Philia Vault provides AI-based analysis and educational support. This does not constitute professional or regulated financial advice.",
+                dash_market_tracker_title: "Financial Markets (Real-Time)",
+                dash_market_tracker_subtitle: "Live feed of global indices, key stocks, and cryptocurrencies.",
+                theme_auto: "🌗 Auto",
+                theme_dark: "🌙 Dark",
+                theme_light: "☀️ Light"
+            },
+            es: {
+                login_subtitle: "Acceda a su caja fuerte financiera segura",
+                login_email: "Dirección de Correo",
+                login_email_placeholder: "ej: alex@philia.com",
+                login_password: "Contraseña",
+                login_password_placeholder: "••••••••",
+                login_btn: "Iniciar Sesión",
+                register_btn: "Crear Cuenta",
+                or_divider: "o",
+                google_auth_btn: "Continuar con Google",
+                disclaimer_title: "Términos Legales y Condiciones",
+                disclaimer_heading: "Descargo de responsabilidad (Disclaimer):",
+                disclaimer_p1: "Esta aplicación (Philia Vault) y su coach de IA proporcionan herramientas de simulación, cálculo y seguimiento financiero únicamente con fines informativos y educativos. La información, los análisis, los índices (incluido el Índice de Independencia Financiera) y las sugerencias generadas por la IA no constituyen asesoramiento financiero, de inversión, fiscal o profesional.",
+                disclaimer_p2: "Al registrarse y utilizar esta aplicación, usted reconoce y acepta que:",
+                disclaimer_bullet1: "Usted asume toda la responsabilidad de sus decisiones y acciones financieras.",
+                disclaimer_bullet2: "La aplicación y sus creadores no serán responsables de ninguna pérdida financiera directa o indirecta que resulte del uso de la información proporcionada.",
+                disclaimer_bullet3: "Las simulaciones y los datos pasados no garantizan rendimientos futuros.",
+                disclaimer_footer: "Le recomendamos encarecidamente consultar a un asesor financiero profesional antes de tomar cualquier decisión de inversión importante.",
+                decline_btn: "Rechazar",
+                accept_btn: "Acepto y me Registro",
+                dash_independence_title: "Índice de Independencia",
+                dash_iif_score_label: "IIF SCORE",
+                dash_iif_description: "Su ratio (Ingresos Pasivos / Gastos Totales). ¡Apunte al 100% para lograr la libertad absoluta!",
+                dash_monthly_cashflow: "Cashflow Neto Mensual",
+                dash_target_suffix: "Objetivo",
+                dash_flow_engine_title: "Motor de Flujos Financieros",
+                dash_flow_engine_subtitle: "Visualización isométrica en tiempo real (Sankey-curves)",
+                dash_active_flow_badge: "Flujo Activo",
+                dash_opts_badge: "Optimizaciones Disponibles",
+                flow_node_yield: "Rendimiento Activos",
+                flow_node_assets: "Activos Gestionados",
+                flow_node_liabilities: "Gastos/Deudas",
+                dash_coach_title: "Consejo del Coach de IA",
+                dash_portfolio_distribution: "Distribución del Portafolio",
+                dash_categories_label: "Categorías",
+                dash_savings_goals_title: "Objetivos de Ahorro",
+                dash_savings_goals_subtitle: "Siga su progreso para financiar sus proyectos de vida.",
+                dash_new_goal_btn: "Nuevo Objetivo",
+                assets_title: "El Invernadero Financiero (Activos)",
+                assets_subtitle: "Siga sus activos que producen flujo de caja.",
+                assets_add_btn: "Añadir Activo",
+                assets_detailed_perf: "Rendimiento Detallado",
+                table_col_name: "Nombre",
+                table_col_category: "Categoría",
+                table_col_value: "Valor Actual",
+                table_col_yield: "Flujo de Caja Mensual",
+                table_col_actions: "Acciones",
+                liabilities_title: "Seguimiento de Pasivos",
+                liabilities_subtitle: "Controle los pasivos y suscripciones que drenan sus finanzas.",
+                liabilities_add_btn: "Añadir Pasivo",
+                liabilities_repayments_title: "Amortización Progresiva",
+                liabilities_active_subs: "SUSCRIPCIONES ACTIVAS",
+                liabilities_subs_total: "Total Mensual Suscripciones",
+                liabilities_timeline_title: "Cronograma de Pagos",
+                sim_title: "La Balanza",
+                sim_subtitle: "Simule un nuevo gasto o inversión para ver su impacto inmediato en su independencia.",
+                sim_params_title: "Parámetros del Simulador",
+                sim_name_label: "Nombre de la Compra / Inversión",
+                sim_amount_label: "Monto de la Operación (Capital)",
+                sim_cashflow_impact_label: "Impacto en el Cashflow Mensual",
+                sim_slider_min: "Pasivo (-2000$)",
+                sim_slider_max: "Activo (+2000$)",
+                sim_current_cashflow_label: "Cashflow Actual",
+                sim_new_cashflow_label: "Nuevo Cashflow",
+                sim_gauge_title: "Asset-Liability Index",
+                sim_save_btn: "Guardar en Presupuesto Real",
+                coach_premium_badge: "ESPACIO DE COACH PHILIA VAULT PREMIUM",
+                coach_welcome: "Hola, Alex.",
+                coach_subtitle: "Su coach de IA analiza continuamente su flujo de caja para acelerar su libertad.",
+                paywall_title: "Desbloquee su Coach Philia Vault Premium",
+                paywall_description: "Acceda a auditorías financieras narrativas, análisis de fugas presupuestarias y consejos personalizados para acelerar su independencia.",
+                paywall_popular: "Popular",
+                paywall_monthly_title: "Suscripción Mensual",
+                paywall_monthly_billing: "Cobrado mensualmente",
+                paywall_monthly_period: "/mes",
+                paywall_annual_title: "Suscripción Anual",
+                paywall_annual_billing: "Facturación anual",
+                paywall_annual_period: "/año",
+                paywall_subscribe_btn: "Suscribirse mediante App Store / Google Play",
+                coach_chat_title: "Diagnóstico y Auditoría de IA",
+                coach_pdf_btn: "Descargar Auditoría (PDF)",
+                coach_chat_placeholder: "Solicite una auditoría o haga una pregunta financiera...",
+                nav_dashboard: "Tablero",
+                nav_assets: "Activos",
+                nav_liabilities: "Pasivos",
+                nav_simulator: "Simulador",
+                nav_coach: "Coach",
+                modal_asset_title: "Añadir Nuevo Activo",
+                modal_asset_name: "Nombre del activo",
+                modal_asset_name_placeholder: "ej: Vanguard S&P 500 ETF",
+                modal_asset_category: "Categoría",
+                modal_asset_val: "Valor total ($)",
+                modal_asset_val_placeholder: "ej: 15000",
+                modal_asset_yield: "Ingreso pasivo mensual generado ($)",
+                modal_asset_yield_placeholder: "ej: 120",
+                modal_cancel: "Cancelar",
+                modal_asset_submit: "Crear Activo",
+                modal_lib_title: "Añadir Pasivo",
+                modal_lib_name: "Nombre del pasivo",
+                modal_lib_name_placeholder: "ej: Netflix Premium, Crédito de Auto",
+                modal_lib_category: "Categoría",
+                modal_lib_total: "Monto Inicial ($)",
+                modal_lib_total_placeholder: "ej: 12000",
+                modal_lib_remaining: "Monto restante por pagar ($)",
+                modal_lib_remaining_placeholder: "ej: 8500",
+                modal_lib_cost: "Costo Mensual ($)",
+                modal_lib_cost_placeholder: "ej: 250",
+                modal_lib_submit: "Crear Pasivo",
+                modal_savings_title: "Nuevo Objetivo de Ahorro",
+                modal_savings_name: "Nombre del proyecto / objetivo",
+                modal_savings_name_placeholder: "ej: Pago Inicial, Fondo de Emergencia",
+                modal_savings_target: "Monto Cible",
+                modal_savings_target_placeholder: "ej: 20000",
+                modal_savings_current: "Monto Actual Ahorrado",
+                modal_savings_current_placeholder: "ej: 5000",
+                modal_savings_date: "Fecha objetivo estimada",
+                modal_savings_date_placeholder: "ej: Diciembre 2026",
+                modal_savings_submit: "Crear Objetivo",
+                cat_stocks: "Bolsa (Acciones/ETFs)",
+                cat_crypto: "Criptomonedas",
+                cat_commerce: "Tienda E-Commerce",
+                cat_real_estate: "Bienes Raíces / REITs",
+                cat_precious_metals: "Metales Preciosos",
+                cat_mortgage: "Hipoteca",
+                cat_loan: "Crédito de Consumo",
+                cat_subscription: "Suscripción Mensual / Anual",
+                cat_bnpl: "Compra Ahora Paga Después (BNPL)",
+                no_data_available: "No hay datos disponibles",
+                monthly_yield_label: "Rendimiento Mensual",
+                delete_btn_label: "Eliminar",
+                remaining_label: "Restantes",
+                repaid_label: "Reembolsado",
+                year_suffix: "/año",
+                month_suffix: "/mes",
+                coach_advice_low: "Sus pasivos drenan más de la mitad de sus ingresos. Reduzca sus suscripciones o simule una adquisición de activos en La Balanza.",
+                coach_advice_mid: "¡Está a un {percent}% de la independencia! Reinvertir {amount}/mes adicionales desbloquearía su libertad financiera {months} meses antes.",
+                coach_advice_high: "¡Increíble! Su IIF supera el 100%. Está oficialmente libre financieramente. Su flujo de caja pasivo cubre todos sus costos.",
+                savings_no_goals: "Ningún objetivo de ahorro por el momento. Haga clic en \"Nuevo Objetivo\" para comenzar.",
+                savings_target_label: "Objetivo",
+                savings_unspecified: "No especificada",
+                alert_fill_fields: "Por favor, complete todos los campos.",
+                alert_savings_req: "Por favor, introduzca el nombre y el monto objetivo.",
+                coach_legal_notice: "Philia Vault proporciona análisis y apoyo educativo basados en IA. Esto no constituye un asesoramiento financiero profesional o regulado.",
+                dash_market_tracker_title: "Mercados Financieros (Tiempo Real)",
+                dash_market_tracker_subtitle: "Feed en vivo de índices globales, acciones clave y cripomonedas.",
+                theme_auto: "🌗 Auto",
+                theme_dark: "🌙 Oscuro",
+                theme_light: "☀️ Claro"
+            },
+            pt: {
+                login_subtitle: "Aceda ao seu cofre financeiro seguro",
+                login_email: "Endereço de E-mail",
+                login_email_placeholder: "ex: alex@philia.com",
+                login_password: "Senha",
+                login_password_placeholder: "••••••••",
+                login_btn: "Entrar",
+                register_btn: "Criar Conta",
+                or_divider: "ou",
+                google_auth_btn: "Continuar com Google",
+                disclaimer_title: "Termos Legais e Condições",
+                disclaimer_heading: "Declaração de Exoneração de Responsabilidade (Disclaimer):",
+                disclaimer_p1: "Esta aplicação (Philia Vault) e o seu coach de IA fornecem ferramentas de simulação, cálculo e acompanhamento financeiro apenas para fins informativos e educativos. As informações, análises, índices (incluindo o Índice de Independência Financeira) e sugestões gerados pela IA não constituem aconselhamento financeiro, de investimento, fiscal ou profissional.",
+                disclaimer_p2: "Ao registar-se e utilizar esta aplicação, você reconhece e aceita que:",
+                disclaimer_bullet1: "Assume total responsabilidade pelas suas decisões e ações financeiras.",
+                disclaimer_bullet2: "A aplicação e os seus criadores não serão responsáveis por qualquer perda financeira direta ou indireta resultante do uso das informações fornecidas.",
+                disclaimer_bullet3: "As simulações e os dados passados não garantem rendimentos futuros.",
+                disclaimer_footer: "Recomendamos vivamente que consulte um consultor financeiro profissional antes de tomar qualquer decisão de investimento importante.",
+                decline_btn: "Recusar",
+                accept_btn: "Aceito e Registo-me",
+                dash_independence_title: "Índice de Independência",
+                dash_iif_score_label: "IIF SCORE",
+                dash_iif_description: "A sua proporção (Rendimentos Passivos / Despesas Totais). Aponte para 100% para alcançar a liberdade total!",
+                dash_monthly_cashflow: "Cashflow Líquido Mensal",
+                dash_target_suffix: "Meta",
+                dash_flow_engine_title: "Motor de Fluxo Financeiro",
+                dash_flow_engine_subtitle: "Visualização isométrica en tempo real (Sankey-curves)",
+                dash_active_flow_badge: "Fluxo Ativo",
+                dash_opts_badge: "Otimizações Disponíveis",
+                flow_node_yield: "Rendimento Activos",
+                flow_node_assets: "Ativos Geridos",
+                flow_node_liabilities: "Despesas/Dívidas",
+                dash_coach_title: "Conselho do Coach de IA",
+                dash_portfolio_distribution: "Distribuição do Portfólio",
+                dash_categories_label: "Categorias",
+                dash_savings_goals_title: "Objetivos de Poupança",
+                dash_savings_goals_subtitle: "Siga o seu progresso para financiar os seus projetos de vida.",
+                dash_new_goal_btn: "Novo Objetivo",
+                assets_title: "A Estufa Financeira (Ativos)",
+                assets_subtitle: "Acompanhe os seus ativos geradores de fluxo de caixa.",
+                assets_add_btn: "Adicionar Ativo",
+                assets_detailed_perf: "Desempenho Detalhado",
+                table_col_name: "Nome",
+                table_col_category: "Categoria",
+                table_col_value: "Valor Atual",
+                table_col_yield: "Fluxo de Caixa Mensual",
+                table_col_actions: "Ações",
+                liabilities_title: "Registo de Passivos",
+                liabilities_subtitle: "Controle os passivos e subscrições que drenam as suas finanças.",
+                liabilities_add_btn: "Adicionar Passivo",
+                liabilities_repayments_title: "Amortização Progressiva",
+                liabilities_active_subs: "SUBSCRIÇÕES ATIVAS",
+                liabilities_subs_total: "Total Mensal Subscrições",
+                liabilities_timeline_title: "Calendário de Pagamentos",
+                sim_title: "A Balança",
+                sim_subtitle: "Simule uma nova despesa ou investimento para ver o seu impacto imediato na sua independência.",
+                sim_params_title: "Parâmetros do Simulador",
+                sim_name_label: "Nome da Compra / Investimento",
+                sim_amount_label: "Valor da Operação (Capital)",
+                sim_cashflow_impact_label: "Impacto no Cashflow Mensal",
+                sim_slider_min: "Passivo (-2000$)",
+                sim_slider_max: "Ativo (+2000$)",
+                sim_current_cashflow_label: "Cashflow Atual",
+                sim_new_cashflow_label: "Novo Cashflow",
+                sim_gauge_title: "Asset-Liability Index",
+                sim_save_btn: "Gravar no Orçamento Real",
+                coach_premium_badge: "ESPAÇO DE COACH IA PHILIA VAULT PREMIUM",
+                coach_welcome: "Olá, Alex.",
+                coach_subtitle: "O seu coach de IA analisa continuamente o seu fluxo de caixa para acelerar a sua liberdade.",
+                paywall_title: "Desbloqueie o seu Coach Philia Vault Premium",
+                paywall_description: "Aceda a auditorias financeiras narrativas, análise de fugas orçamentais e conselhos personalizados para acelerar a sua independência.",
+                paywall_popular: "Popular",
+                paywall_monthly_title: "Assinatura Mensal",
+                paywall_monthly_billing: "Cobrado mensalmente",
+                paywall_monthly_period: "/mês",
+                paywall_annual_title: "Assinatura Anual",
+                paywall_annual_billing: "Faturação anual",
+                paywall_annual_period: "/ano",
+                paywall_subscribe_btn: "Assinar via App Store / Google Play",
+                coach_chat_title: "Diagnóstico & Auditoria IA",
+                coach_pdf_btn: "Descarregar Auditoria (PDF)",
+                coach_chat_placeholder: "Solicite uma auditoria ou faça uma pergunta financeira...",
+                nav_dashboard: "Painel",
+                nav_assets: "Ativos",
+                nav_liabilities: "Passivos",
+                nav_simulator: "Simulador",
+                nav_coach: "Coach",
+                modal_asset_title: "Adicionar Novo Ativo",
+                modal_asset_name: "Nome do ativo",
+                modal_asset_name_placeholder: "ex: Vanguard S&P 500 ETF",
+                modal_asset_category: "Categoria",
+                modal_asset_val: "Valor total ($)",
+                modal_asset_val_placeholder: "ex: 15000",
+                modal_asset_yield: "Rendimento passivo mensal gerado ($)",
+                modal_asset_yield_placeholder: "ex: 120",
+                modal_cancel: "Cancelar",
+                modal_asset_submit: "Criar Ativo",
+                modal_lib_title: "Adicionar Passivo",
+                modal_lib_name: "Nome do passivo",
+                modal_lib_name_placeholder: "ex: Netflix Premium, Crédito Auto",
+                modal_lib_category: "Categoria",
+                modal_lib_total: "Valor Inicial ($)",
+                modal_lib_total_placeholder: "ex: 12000",
+                modal_lib_remaining: "Valor restante a reembolsar ($)",
+                modal_lib_remaining_placeholder: "ex: 8500",
+                modal_lib_cost: "Custo Mensal ($)",
+                modal_lib_cost_placeholder: "ex: 250",
+                modal_lib_submit: "Criar Passivo",
+                modal_savings_title: "Novo Objetivo de Poupança",
+                modal_savings_name: "Nome do projeto / objetivo",
+                modal_savings_name_placeholder: "ex: Entrada de Casa, Fundo de Emergência",
+                modal_savings_target: "Valor Meta",
+                modal_savings_target_placeholder: "ex: 20000",
+                modal_savings_current: "Valor Atual Poupado",
+                modal_savings_current_placeholder: "ex: 5000",
+                modal_savings_date: "Data estimada para meta",
+                modal_savings_date_placeholder: "ex: Dezembro de 2026",
+                modal_savings_submit: "Criar Objetivo",
+                cat_stocks: "Bolsa (Ações/ETFs)",
+                cat_crypto: "Criptomoedas",
+                cat_commerce: "Loja E-Commerce",
+                cat_real_estate: "Imobiliário / REITs",
+                cat_precious_metals: "Metais Preciosos",
+                cat_mortgage: "Crédito Habitação",
+                cat_loan: "Crédito de Consumo",
+                cat_subscription: "Subscrição Mensal / Anual",
+                cat_bnpl: "Compre Agora Pague Depois (BNPL)",
+                no_data_available: "Nenhum dado disponível",
+                monthly_yield_label: "Rendimento Mensal",
+                delete_btn_label: "Excluir",
+                remaining_label: "Restantes",
+                repaid_label: "Pago",
+                year_suffix: "/ano",
+                month_suffix: "/mês",
+                coach_advice_low: "Seus passivos drenam mais da metade de sua renda. Reduza suas assinaturas ou simule uma aquisição de ativos na Balança.",
+                coach_advice_mid: "Você está a {percent}% da independência! Reinvestir {amount}/mês adicionais desbloquearia sua liberdade financeira {months} meses antes.",
+                coach_advice_high: "Incrível! Seu IIF supera 100%. Você está oficialmente livre financeiramente. Seu fluxo de caixa passivo cobre todos os seus custos.",
+                savings_no_goals: "Nenhum objetivo de poupança no momento. Clique em \"Novo Objetivo\" para começar.",
+                savings_target_label: "Meta",
+                savings_unspecified: "Não especificada",
+                alert_fill_fields: "Por favor, preencha todos os campos.",
+                alert_savings_req: "Por favor, informe o nome e a meta de poupança.",
+                coach_legal_notice: "Philia Vault fornece análises e apoio educacional baseados em IA. Isto não constitui aconselhamento financeiro profissional ou regulamentado.",
+                dash_market_tracker_title: "Mercados Financeiros (Tempo Real)",
+                dash_market_tracker_subtitle: "Feed ao vivo de índices globais, ações principais et criptomoedas.",
+                theme_auto: "🌗 Auto",
+                theme_dark: "🌙 Escuro",
+                theme_light: "☀️ Claro"
+            },
+            de: {
+                login_subtitle: "Greifen Sie auf Ihren sicheren Finanztresor zu",
+                login_email: "E-Mail-Adresse",
+                login_email_placeholder: "z.B. alex@philia.com",
+                login_password: "Passwort",
+                login_password_placeholder: "••••••••",
+                login_btn: "Einloggen",
+                register_btn: "Konto erstellen",
+                or_divider: "oder",
+                google_auth_btn: "Mit Google fortfahren",
+                disclaimer_title: "Rechtliche Bedingungen & Konditionen",
+                disclaimer_heading: "Haftungsausschluss (Disclaimer):",
+                disclaimer_p1: "Diese Anwendung (Philia Vault) und ihr KI-Coach bieten Simulations-, Berechnungs- und Finanzverfolgungstools ausschließlich zu Informations- und Bildungszwecken. Die von der KI generierten Informationen, Analysen, Indizes (einschließlich des Index der finanziellen Unabhängigkeit) und Vorschläge stellen keine Finanz-, Anlage-, Steuer- oder sonstige professionelle Beratung dar.",
+                disclaimer_p2: "Mit der Registrierung und Nutzung dieser Anwendung erkennen Sie an und stimmen zu, dass:",
+                disclaimer_bullet1: "Sie tragen die alleinige Verantwortung für Ihre finanziellen Entscheidungen und Handlungen.",
+                disclaimer_bullet2: "Die Anwendung und ihre Ersteller können nicht für direkte oder indirekte finanzielle Verluste haftbar gemacht werden, die durch die Nutzung der bereitgestellten Informationen entstehen.",
+                disclaimer_bullet3: "Simulationen und Daten aus der Vergangenheit garantieren keine zukünftigen Erträge.",
+                disclaimer_footer: "Wir empfehlen Ihnen dringend, einen professionellen Finanzberater zu konsultieren, bevor Sie wichtige Anlageentscheidungen treffen.",
+                decline_btn: "Ablehnen",
+                accept_btn: "Ich stimme zu und registriere mich",
+                dash_independence_title: "Unabhängigkeitsindex",
+                dash_iif_score_label: "IIF SCORE",
+                dash_iif_description: "Ihr Verhältnis (Passives Einkommen / Gesamtausgaben). Streben Sie 100% an, um finanzielle Freiheit zu erreichen!",
+                dash_monthly_cashflow: "Monatlicher Netto-Cashflow",
+                dash_target_suffix: "Ziel",
+                dash_flow_engine_title: "Finanzfluss-Maschine",
+                dash_flow_engine_subtitle: "Isometrische Echtzeit-Visualisierung (Sankey-curves)",
+                dash_active_flow_badge: "Aktiver Fluss",
+                dash_opts_badge: "Verfügbare Optimierungen",
+                flow_node_yield: "Rendite Vermögenswerte",
+                flow_node_assets: "Verwaltetes Vermögen",
+                flow_node_liabilities: "Ausgaben/Schulden",
+                dash_coach_title: "KI-Coach Ratschlag",
+                dash_portfolio_distribution: "Portfolio-Verteilung",
+                dash_categories_label: "Kategorien",
+                dash_savings_goals_title: "Sparziele",
+                dash_savings_goals_subtitle: "Verfolgen Sie Ihre Fortschritte bei der Finanzierung Ihrer Lebensprojekte.",
+                dash_new_goal_btn: "Neues Ziel",
+                assets_title: "Das Finanzgewächshaus (Aktiva)",
+                assets_subtitle: "Verfolgen Sie Ihre cashflow-generierenden Vermögenswerte.",
+                assets_add_btn: "Vermögenswert hinzufügen",
+                assets_detailed_perf: "Detaillierte Performance",
+                table_col_name: "Name",
+                table_col_category: "Kategorie",
+                table_col_value: "Aktueller Wert",
+                table_col_yield: "Monatlicher Cashflow",
+                table_col_actions: "Aktionen",
+                liabilities_title: "Passiva-Tracker",
+                liabilities_subtitle: "Kontrollieren Sie die Verbindlichkeiten und Abonnements, die Ihre Finanzen belasten.",
+                liabilities_add_btn: "Passivum hinzufügen",
+                liabilities_repayments_title: "Progressive Tilgung",
+                liabilities_active_subs: "AKTIVE ABONNEMENTS",
+                liabilities_subs_total: "Gesamtsumme Abonnements",
+                liabilities_timeline_title: "Zahlungsplan",
+                sim_title: "Die Waage",
+                sim_subtitle: "Simulieren Sie eine neue Ausgabe oder Investition, um die sofortigen Auswirkungen auf Ihre finanzielle Unabhängigkeit zu sehen.",
+                sim_params_title: "Simulator-Parameter",
+                sim_name_label: "Name des Kaufs / der Investition",
+                sim_amount_label: "Betrag der Transaktion (Kapital)",
+                sim_cashflow_impact_label: "Monatlicher Cashflow-Effekt",
+                sim_slider_min: "Passiv (-2000$)",
+                sim_slider_max: "Aktiv (+2000$)",
+                sim_current_cashflow_label: "Aktueller Cashflow",
+                sim_new_cashflow_label: "Neuer Cashflow",
+                sim_gauge_title: "Asset-Liability Index",
+                sim_save_btn: "Im echten Budget speichern",
+                coach_premium_badge: "BEREICH PREMIUM-PHILIA-VAULT-COACH",
+                coach_welcome: "Hallo, Alex.",
+                coach_subtitle: "Ihr KI-Coach analysiert kontinuierlich Ihren Cashflow, um Ihre Freiheit zu beschleunigen.",
+                paywall_title: "Schalten Sie Ihren Philia Vault Premium Coach frei",
+                paywall_description: "Erhalten Sie Zugang zu narrativen Finanzprüfungen, Budgetlecks-Analysen und personalisierten Ratschlägen, um Ihre Unabhängigkeit zu beschleunigen.",
+                paywall_popular: "Beliebt",
+                paywall_monthly_title: "Monatliches Abonnement",
+                paywall_monthly_billing: "Monatliche Abrechnung",
+                paywall_monthly_period: "/Monat",
+                paywall_annual_title: "Jährliches Abonnement",
+                paywall_annual_billing: "Jährliche Abrechnung",
+                paywall_annual_period: "/Jahr",
+                paywall_subscribe_btn: "Über App Store / Google Play abonnieren",
+                coach_chat_title: "KI-Diagnose & Audit",
+                coach_pdf_btn: "Audit herunterladen (PDF)",
+                coach_chat_placeholder: "Bitten Sie um ein Audit oder stellen Sie eine finanzielle Frage...",
+                nav_dashboard: "Dashboard",
+                nav_assets: "Aktiva",
+                nav_liabilities: "Passiva",
+                nav_simulator: "Simulator",
+                nav_coach: "Coach",
+                modal_asset_title: "Neuen Vermögenswert hinzufügen",
+                modal_asset_name: "Name des Vermögenswerts",
+                modal_asset_name_placeholder: "z.B. Vanguard S&P 500 ETF",
+                modal_asset_category: "Kategorie",
+                modal_asset_val: "Gesamtwert ($)",
+                modal_asset_val_placeholder: "z.B. 15000",
+                modal_asset_yield: "Erzeugtes monatliches passives Einkommen ($)",
+                modal_asset_yield_placeholder: "z.B. 120",
+                modal_cancel: "Abbrechen",
+                modal_asset_submit: "Vermögenswert erstellen",
+                modal_lib_title: "Verbindlichkeit hinzufügen",
+                modal_lib_name: "Name der Verbindlichkeit",
+                modal_lib_name_placeholder: "z.B. Netflix Premium, Autokredit",
+                modal_lib_category: "Kategorie",
+                modal_lib_total: "Anfangsbetrag ($)",
+                modal_lib_total_placeholder: "z.B. 12000",
+                modal_lib_remaining: "Restbetrag zur Rückzahlung ($)",
+                modal_lib_remaining_placeholder: "z.B. 8500",
+                modal_lib_cost: "Monatliche Kosten ($)",
+                modal_lib_cost_placeholder: "z.B. 250",
+                modal_lib_submit: "Verbindlichkeit erstellen",
+                modal_savings_title: "Neues Sparziel",
+                modal_savings_name: "Projekt- / Zielname",
+                modal_savings_name_placeholder: "z.B. Anzahlung, Notgroschen",
+                modal_savings_target: "Zielbetrag",
+                modal_savings_target_placeholder: "z.B. 20000",
+                modal_savings_current: "Aktueller Sparbetrag",
+                modal_savings_current_placeholder: "z.B. 5000",
+                modal_savings_date: "Voraussichtliches Zieldatum",
+                modal_savings_date_placeholder: "z.B. Dezember 2026",
+                modal_savings_submit: "Ziel erstellen",
+                cat_stocks: "Wertpapiere (Aktien/ETFs)",
+                cat_crypto: "Kryptowährungen",
+                cat_commerce: "E-Commerce-Shop",
+                cat_real_estate: "Immobilien / REITs",
+                cat_precious_metals: "Edelmetalle",
+                cat_mortgage: "Hypothek",
+                cat_loan: "Kredit / Konsumentenkredit",
+                cat_subscription: "Monatliches / Jährliches Abo",
+                cat_bnpl: "Jetzt kaufen, später bezahlen (BNPL)",
+                no_data_available: "Keine Daten verfügbar",
+                monthly_yield_label: "Monatliche Rendite",
+                delete_btn_label: "Löschen",
+                remaining_label: "Übrig",
+                repaid_label: "Zurückgezahlt",
+                year_suffix: "/Jahr",
+                month_suffix: "/Monat",
+                coach_advice_low: "Ihre Verbindlichkeiten verschlingen mehr als die Hälfte Ihres Einkommens. Reduzieren Sie Ihre Abonnements oder simulieren Sie einen Vermögenserwerb in Die Waage.",
+                coach_advice_mid: "Sie sind zu {percent}% unabhängig! Eine zusätzliche Reinvestition von {amount}/Monat würde Ihre finanzielle Freiheit {months} Monate früher ermöglichen.",
+                coach_advice_high: "Unglaublich! Ihr IIF übersteigt 100%. Sie sind offiziell finanziell frei. Ihr passiver Cashflow deckt alle Ihre Kosten.",
+                savings_no_goals: "Derzeit keine Sparziele. Klicken Sie auf „Neues Sparziel“, um zu beginnen.",
+                savings_target_label: "Ziel",
+                savings_unspecified: "Nicht angegeben",
+                alert_fill_fields: "Bitte füllen Sie alle Felder aus.",
+                alert_savings_req: "Bitte geben Sie den Namen und den Zielbetrag an.",
+                coach_legal_notice: "Philia Vault bietet KI-basierte Analysen und pädagogische Unterstützung. Dies stellt keine professionelle oder regulierte Finanzberatung dar.",
+                dash_market_tracker_title: "Finanzmärkte (Echtzeit)",
+                dash_market_tracker_subtitle: "Live-Feed von globalen Indizes, wichtigen Aktien und Kryptowährungen.",
+                theme_auto: "🌗 Auto",
+                theme_dark: "🌙 Dunkel",
+                theme_light: "☀️ Hell"
+            }
+        };
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('philia_vault_lang', lang);
+            document.documentElement.lang = lang;
+            
+            // Sync Devise / Currency selection dynamically based on detected browser / manually switched language
+            if (!localStorage.getItem('philia_vault_currency_set')) {
+                let defaultCurr = 'USD';
+                if (lang === 'fr' || lang === 'es' || lang === 'pt' || lang === 'de') {
+                    defaultCurr = 'EUR';
+                }
+                document.getElementById('currency-select').value = defaultCurr;
+                currentCurrency = defaultCurr;
+            }
+
+            applyTranslations(lang);
+            
+            // Reload views containing dynamically formatted values or list content (like categories)
+            loadDashboard();
+            loadAssets();
+            loadLiabilities();
+            initSimulator();
+            initChat();
+        }
+
+        function applyTranslations(lang) {
+            const dictionary = TRANSLATIONS[lang] || TRANSLATIONS['en'];
+            
+            // Translate tags marked with data-i18n
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (dictionary[key]) {
+                    el.textContent = dictionary[key];
+                }
+            });
+
+            // Translate placeholders
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (dictionary[key]) {
+                    el.setAttribute('placeholder', dictionary[key]);
+                }
+            });
+        }
+
+        const CURRENCY_SYMBOLS = {
+            'USD': '$',
+            'EUR': '€',
+            'CAD': 'CA$',
+            'GBP': '£',
+            'CHF': 'CHF'
+        };
+        let currentCurrency = 'USD';
+
+        function formatCurrency(amount, includeSign = false) {
+            const symbol = CURRENCY_SYMBOLS[currentCurrency] || '$';
+            const num = parseFloat(amount) || 0;
+            const formatted = Math.abs(num).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            
+            let sign = '';
+            if (includeSign && num > 0) sign = '+';
+            if (num < 0) sign = '-';
+            
+            if (currentCurrency === 'EUR' || currentCurrency === 'CHF') {
+                return `${sign}${formatted} ${symbol}`;
+            } else {
+                return `${sign}${symbol}${formatted}`;
+            }
+        }
+
+        async function changeCurrency(val) {
+            currentCurrency = val;
+            try {
+                await fetch('/api/user/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currency: val })
+                });
+            } catch (err) {
+                console.error("Failed to save currency setting:", err);
+            }
+            loadDashboard();
+            loadAssets();
+            loadLiabilities();
+            initSimulator();
+            if (typeof loadSavingsGoals === 'function') loadSavingsGoals();
+        }
+
+        // Tab routing switcher
+        function switchTab(tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.view-pane').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+
+            // Bottom Nav styling update
+            const navIds = ['dashboard', 'assets', 'liabilities', 'simulator', 'coach'];
+            navIds.forEach(id => {
+                const navBtn = document.getElementById(`nav-${id}`);
+                if (id === tabId) {
+                    navBtn.className = "flex flex-col items-center justify-center text-primary scale-110 opacity-100 transition-all cursor-pointer";
+                    const span = navBtn.querySelector('span');
+                    if (span) span.style.fontVariationSettings = "'FILL' 1";
+                } else {
+                    navBtn.className = "flex flex-col items-center justify-center text-on-surface-variant/70 opacity-60 transition-all cursor-pointer";
+                    const span = navBtn.querySelector('span');
+                    if (span) span.style.fontVariationSettings = "'FILL' 0";
+                }
+            });
+
+            // Refetch when entering tabs to sync database changes
+            if (tabId === 'dashboard') loadDashboard();
+            else if (tabId === 'assets') loadAssets();
+            else if (tabId === 'liabilities') loadLiabilities();
+            else if (tabId === 'simulator') initSimulator();
+            else if (tabId === 'coach') {
+                checkPremium().then(() => {
+                    scrollChatBottom();
+                });
+            }
+        }
+
+        // Check Auth session
+        function checkSession() {
+            const isLoggedIn = localStorage.getItem('philia_vault_logged_in') === 'true';
+            const loginScr = document.getElementById('login-screen');
+            const appCont = document.getElementById('app-content');
+            
+            if (isLoggedIn) {
+                loginScr.classList.add('hidden');
+                appCont.classList.remove('hidden');
+                loadDashboard();
+            } else {
+                loginScr.classList.remove('hidden');
+                appCont.classList.add('hidden');
+            }
+        }
+
+        let disclaimerAccepted = false;
+
+        function acceptDisclaimer() {
+            disclaimerAccepted = true;
+            document.getElementById('disclaimer-modal').classList.add('hidden');
+            handleAuth('register');
+        }
+
+        function declineDisclaimer() {
+            disclaimerAccepted = false;
+            document.getElementById('disclaimer-modal').classList.add('hidden');
+        }
+
+        async function handleAuth(mode) {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const errEl = document.getElementById('auth-error');
+            
+            if (!email || !password) {
+                errEl.textContent = "Veuillez remplir tous les champs.";
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            if (mode === 'register' && !disclaimerAccepted) {
+                document.getElementById('disclaimer-modal').classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/auth/${mode}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    errEl.classList.add('hidden');
+                    if (mode === 'login') {
+                        localStorage.setItem('philia_vault_logged_in', 'true');
+                        checkSession();
+                    } else {
+                        alert("Compte créé avec succès ! Connectez-vous maintenant.");
+                    }
+                } else {
+                    errEl.textContent = data.error;
+                    errEl.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error(err);
+                errEl.textContent = "Erreur de connexion.";
+                errEl.classList.remove('hidden');
+            }
+        }
+
+        function handleGoogleAuth() {
+            // Mock google authentication
+            localStorage.setItem('philia_vault_logged_in', 'true');
+            checkSession();
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('philia_vault_logged_in');
+            checkSession();
+        }
+
+// On Load initialization
+        // DOMContentLoaded registered at end of script
+
+        // RevenueCat Subscriptions functions
+        async function checkPremium() {
+            try {
+                const res = await fetch('/api/user');
+                const data = await res.json();
+                if (data.success) {
+                    const isPremium = data.user.premium_status === 1;
+                    const paywall = document.getElementById('coach-paywall');
+                    const chatWin = document.getElementById('coach-chat-window');
+                    if (isPremium) {
+                        paywall.classList.add('hidden');
+                        chatWin.classList.remove('hidden');
+                    } else {
+                        paywall.classList.remove('hidden');
+                        chatWin.classList.add('hidden');
+                    }
+                }
+            } catch (err) {
+                console.error("Error checking premium status:", err);
+            }
+        }
+
+        async function simulateIAP(status) {
+            try {
+                const res = await fetch('/api/user/premium', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ premium_status: status })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(status === 1 ? "Abonnement Premium activé !" : "Retour au statut gratuit.");
+                    checkPremium();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function triggerIAPCheckout() {
+            const plan = confirm("Souhaitez-vous souscrire à cet abonnement ? (Cette action simulera la validation du reçu RevenueCat)");
+            if (plan) {
+                try {
+                    const webhookRes = await fetch('/api/webhooks/revenuecat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            event: {
+                                type: "INITIAL_PURCHASE",
+                                app_user_id: "rc_alex_user_id_mock"
+                            }
+                        })
+                    });
+                    const webhookData = await webhookRes.json();
+                    if (webhookData.success) {
+                        alert("Abonnement activé avec succès par le webhook de validation de reçu RevenueCat !");
+                        checkPremium();
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        }
+
+        // Dev Panel Drawer toggle
+        function toggleDevPanel() {
+            const panel = document.getElementById('dev-panel');
+            panel.classList.toggle('hidden');
+        }
+
+        // Trigger webhook simulation
+        async function triggerWebhook(type, storeName, monthlyProfit, value) {
+            try {
+                const response = await fetch(`/api/webhooks/${type}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        store_name: storeName,
+                        monthly_profit: monthlyProfit,
+                        value: value
+                    })
+                });
+                const res = await response.json();
+                if (res.success) {
+                    alert(`Webhook ${type.toUpperCase()} exécuté avec succès : Actif ${res.action} !`);
+                    loadDashboard();
+                } else {
+                    alert(`Erreur Webhook : ${res.error}`);
+                }
+            } catch (err) {
+                console.error("Webhook trigger error: ", err);
+            }
+        }
+
+        // Load dashboard stats
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/summary');
+                const data = await response.json();
+                if (!data.success) return;
+
+                summaryData = data;
+
+                // Circular Index gauge animation
+                const circle = document.getElementById('iif-progress');
+                const circumference = 2 * Math.PI * 88;
+                circle.style.strokeDashoffset = circumference;
+                setTimeout(() => {
+                    const progress = Math.min(data.iif_score / 100, 1.2); // max offset clamp
+                    circle.style.strokeDashoffset = circumference - (progress * circumference);
+                }, 100);
+
+                // Update text values
+                document.getElementById('dash-iif-val').textContent = `${data.iif_score}%`;
+                document.getElementById('dash-net-cashflow').textContent = formatCurrency(data.net_cashflow, true);
+                
+                // Flow nodes
+                document.getElementById('flow-yield').textContent = formatCurrency(data.total_passive_income, true);
+                document.getElementById('flow-assets').textContent = formatCurrency(data.total_assets);
+                document.getElementById('flow-liabilities').textContent = formatCurrency(data.total_liabilities);
+
+                // Target Bar
+                const targetPercentage = Math.min(Math.round((data.total_passive_income / (data.total_monthly_cost || 1)) * 100), 100);
+                document.getElementById('dash-target-bar').style.width = `${targetPercentage}%`;
+                const targetSuffix = TRANSLATIONS[currentLang]?.dash_target_suffix || 'Target';
+                document.getElementById('dash-target-text').textContent = `${targetPercentage}% ${targetSuffix}`;
+
+                // Render Bento distribution bar chart
+                const chartContainer = document.getElementById('distribution-chart');
+                chartContainer.innerHTML = '';
+                const types = Object.keys(data.asset_types);
+                const maxVal = Math.max(...Object.values(data.asset_types), 1);
+                
+                if (types.length === 0) {
+                    const noDataText = TRANSLATIONS[currentLang]?.no_data_available || "No data available";
+                    chartContainer.innerHTML = `<p class="text-xs text-outline w-full text-center">${noDataText}</p>`;
+                } else {
+                    types.forEach(t => {
+                        const heightPercent = Math.max(15, Math.round((data.asset_types[t] / maxVal) * 100));
+                        const bar = document.createElement('div');
+                        bar.className = 'flex-1 bg-primary-container/20 rounded-t-lg hover:bg-primary-container/40 transition-all cursor-pointer flex flex-col justify-end items-center pb-2 text-[10px] font-bold text-primary';
+                        bar.style.height = `${heightPercent}%`;
+                        
+                        const transKey = 'cat_' + t.toLowerCase().replace(' ', '_');
+                        const translatedName = TRANSLATIONS[currentLang]?.[transKey] || t;
+                        bar.innerHTML = `<span class="mb-1">${translatedName}</span>`;
+                        chartContainer.appendChild(bar);
+                    });
+                }
+
+                // AI coach card suggestion snippet
+                const coachText = document.getElementById('dash-coach-text');
+                if (data.iif_score < 50) {
+                    coachText.textContent = TRANSLATIONS[currentLang]?.coach_advice_low || "Vos passifs drainent plus de la moitié de vos revenus. Réduisez vos abonnements ou simulez une acquisition d'actif dans La Balance.";
+                } else if (data.iif_score < 100) {
+                    const template = TRANSLATIONS[currentLang]?.coach_advice_mid || "Vous êtes à {percent}% de l'indépendance ! Réinvestir {amount}/mois supplémentaires débloquerait votre liberté financière {months} mois plus tôt.";
+                    coachText.textContent = template
+                        .replace('{percent}', 100 - data.iif_score)
+                        .replace('{amount}', formatCurrency(400))
+                        .replace('{months}', 14);
+                } else {
+                    coachText.textContent = TRANSLATIONS[currentLang]?.coach_advice_high || "Incroyable ! Votre IIF dépasse 100%. Vous êtes officiellement libre financièrement. Votre cashflow passif couvre l'ensemble de vos coûts.";
+                }
+
+                // Load savings goals too
+                loadSavingsGoals();
+
+            } catch (err) {
+                console.error("Error loading dashboard metrics: ", err);
+            }
+        }
+
+        async function loadSavingsGoals() {
+            try {
+                const response = await fetch('/api/savings_goals');
+                const data = await response.json();
+                if (!data.success) return;
+
+                const list = document.getElementById('savings-goals-list');
+                list.innerHTML = '';
+
+                if (data.savings_goals.length === 0) {
+                    const noGoalsText = TRANSLATIONS[currentLang]?.savings_no_goals || "Aucun objectif d'épargne pour le moment. Cliquez sur \"Nouvel Objectif\" pour commencer.";
+                    list.innerHTML = `
+                        <div class="col-span-full py-6 text-center text-xs text-on-surface-variant bg-white/5 rounded-2xl border border-dashed border-white/10">
+                            ${noGoalsText}
+                        </div>
+                    `;
+                    return;
+                }
+
+                data.savings_goals.forEach(g => {
+                    const percent = Math.min(Math.round((g.current_amount / g.target_amount) * 100), 100);
+                    const card = document.createElement('div');
+                    card.className = "p-5 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between relative group hover:bg-white/10 transition-colors";
+                    
+                    const targetLabel = TRANSLATIONS[currentLang]?.savings_target_label || "Cible";
+                    const unspecifiedText = TRANSLATIONS[currentLang]?.savings_unspecified || "Non spécifiée";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="text-sm font-bold text-white">${g.name}</h4>
+                                <p class="text-[10px] text-on-surface-variant">${targetLabel} : ${g.target_date || unspecifiedText}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs font-bold text-primary">${percent}%</span>
+                            </div>
+                        </div>
+                        <div class="w-full bg-white/10 h-2 rounded-full overflow-hidden mb-3">
+                            <div class="bg-gradient-to-r from-primary to-primary-container h-full rounded-full" style="width: ${percent}%"></div>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-on-surface-variant font-medium">${formatCurrency(g.current_amount)} / ${formatCurrency(g.target_amount)}</span>
+                            <button onclick="deleteSavingsGoal(${g.id})" class="text-error opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 flex items-center gap-0.5">
+                                <span class="material-symbols-outlined text-[14px]">delete</span>
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(card);
+                });
+            } catch (err) {
+                console.error("Error loading savings goals:", err);
+            }
+        }
+
+        async function submitSavingsGoal() {
+            const name = document.getElementById('savings-name').value;
+            const target = document.getElementById('savings-target').value;
+            const current = document.getElementById('savings-current').value;
+            const date = document.getElementById('savings-date').value;
+
+            if (!name || !target) {
+                const alertReq = TRANSLATIONS[currentLang]?.alert_savings_req || "Veuillez renseigner le nom et le montant cible.";
+                alert(alertReq);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/savings_goals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, target_amount: target, current_amount: current, target_date: date })
+                });
+                const res = await response.json();
+                if (res.success) {
+                    closeModal('savings');
+                    // Reset fields
+                    document.getElementById('savings-name').value = '';
+                    document.getElementById('savings-target').value = '';
+                    document.getElementById('savings-current').value = '0';
+                    document.getElementById('savings-date').value = '';
+                    loadSavingsGoals();
+                } else {
+                    alert(res.error);
+                }
+            } catch (err) {
+                console.error("Error saving goal:", err);
+            }
+        }
+
+        async function deleteSavingsGoal(id) {
+            if (!confirm("Voulez-vous vraiment supprimer cet objectif d'épargne ?")) return;
+            try {
+                const response = await fetch(`/api/savings_goals/${id}`, { method: 'DELETE' });
+                const res = await response.json();
+                if (res.success) {
+                    loadSavingsGoals();
+                } else {
+                    alert(res.error);
+                }
+            } catch (err) {
+                console.error("Error deleting goal:", err);
+            }
+        }
+
+        // Load Assets CRUD tab
+        async function loadAssets() {
+            try {
+                const response = await fetch('/api/assets');
+                const data = await response.json();
+                if (!data.success) return;
+
+                const grid = document.getElementById('assets-grid');
+                const tableBody = document.getElementById('assets-table-body');
+                grid.innerHTML = '';
+                tableBody.innerHTML = '';
+
+                // Dynamic icon function matching mockup
+                const getIcon = (type) => {
+                    if (type === 'Stocks') return 'show_chart';
+                    if (type === 'Crypto') return 'currency_bitcoin';
+                    if (type === 'Commerce') return 'shopping_bag';
+                    return 'apartment';
+                };
+
+                const getColors = (type) => {
+                    if (type === 'Stocks') return { bg: 'bg-primary-container/20', text: 'text-primary', chart: 'text-primary-container' };
+                    if (type === 'Crypto') return { bg: 'bg-tertiary-container/20', text: 'text-tertiary', chart: 'text-tertiary-container' };
+                    if (type === 'Commerce') return { bg: 'bg-secondary-container/20', text: 'text-secondary', chart: 'text-secondary-container' };
+                    return { bg: 'bg-primary/20', text: 'text-primary', chart: 'text-primary-container' };
+                };
+
+                data.assets.forEach(a => {
+                    const design = getColors(a.type);
+                    const icon = getIcon(a.type);
+                    const transKey = 'cat_' + a.type.toLowerCase().replace(' ', '_');
+                    const translatedType = TRANSLATIONS[currentLang]?.[transKey] || a.type;
+                    const yieldLabel = TRANSLATIONS[currentLang]?.monthly_yield_label || "Rendement Mensuel";
+                    const deleteLabel = TRANSLATIONS[currentLang]?.delete_btn_label || "Supprimer";
+                    const monthSuffix = TRANSLATIONS[currentLang]?.month_suffix || "/m";
+
+                    // Render beautiful solid volt green card
+                    const card = document.createElement('div');
+                    card.className = "bg-gradient-to-br from-[#ccff00] to-[#a6e22e] text-[#0c0e12] rounded-[32px] p-6 flex flex-col justify-between relative overflow-hidden group transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_20px_50px_rgba(204,255,0,0.25)] border border-[#ddff33]/20 shadow-[0_12px_40px_rgba(204,255,0,0.12)]";
+                    card.innerHTML = `
+                        <div class="absolute -top-12 -right-12 w-32 h-32 bg-white/20 rounded-full blur-3xl group-hover:bg-white/30 transition-all"></div>
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="w-12 h-12 rounded-2xl bg-black/10 border border-black/5 flex items-center justify-center text-[#0c0e12]">
+                                <span class="material-symbols-outlined text-3xl">${icon}</span>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[10px] font-bold text-[#0c0e12]/60 mb-1 tracking-wider uppercase">${translatedType}</p>
+                                <p class="text-2xl font-bold text-[#0c0e12] tracking-tight">${formatCurrency(a.value)}</p>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <p class="text-[11px] font-medium text-[#0c0e12]/60 mb-0.5">${yieldLabel}</p>
+                            <p class="text-xl font-bold text-[#0c0e12]">${formatCurrency(a.monthly_yield, true)}</p>
+                        </div>
+                        <div class="h-10 w-full opacity-80 group-hover:opacity-100 transition-opacity">
+                            <svg class="w-full h-full" viewBox="0 0 100 30">
+                                <path class="text-[#0c0e12]/30 group-hover:text-[#0c0e12]/50 transition-colors" d="M0 25 Q 10 5, 20 20 T 40 10 T 60 25 T 80 5 T 100 15" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2.5"></path>
+                            </svg>
+                        </div>
+                        <div class="mt-4 flex gap-2 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
+                            <button onclick="deleteItem('assets', ${a.id})" class="text-[#0c0e12]/80 hover:text-red-700 hover:scale-110 transition-all"><span class="material-symbols-outlined text-sm">delete</span></button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+
+                    // Render table row
+                    const row = document.createElement('tr');
+                    row.className = "border-b border-on-surface/5 hover:bg-white/30 transition-colors";
+                    row.innerHTML = `
+                        <td class="py-3 font-semibold text-on-surface">${a.name}</td>
+                        <td class="py-3 text-on-surface-variant">${translatedType}</td>
+                        <td class="py-3 font-bold">${formatCurrency(a.value)}</td>
+                        <td class="py-3 font-bold text-primary-container">${formatCurrency(a.monthly_yield, true)}${monthSuffix}</td>
+                        <td class="py-3 text-right">
+                            <button onclick="deleteItem('assets', ${a.id})" class="text-error hover:scale-105 transition-all py-1 px-2.5 rounded bg-error/10 text-xs font-bold">${deleteLabel}</button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+            } catch (err) {
+                console.error("Error loading assets data: ", err);
+            }
+        }
+
+        // Load Liabilities CRUD tab
+        async function loadLiabilities() {
+            try {
+                const response = await fetch('/api/liabilities');
+                const data = await response.json();
+                if (!data.success) return;
+
+                const progressList = document.getElementById('liabilities-progress-list');
+                const subsGrid = document.getElementById('subs-grid');
+                progressList.innerHTML = '';
+                subsGrid.innerHTML = '';
+
+                let subTotal = 0;
+
+                data.liabilities.forEach(l => {
+                    if (l.type === 'Subscription') {
+                        subTotal += l.monthly_cost;
+                        
+                        // Icon maps
+                        let subIcon = 'subscriptions';
+                        if (l.name.toLowerCase().includes('netflix')) subIcon = 'movie';
+                        if (l.name.toLowerCase().includes('spotify')) subIcon = 'music_note';
+                        if (l.name.toLowerCase().includes('adobe')) subIcon = 'brush';
+                        if (l.name.toLowerCase().includes('klarna')) subIcon = 'shopping_bag';
+
+                        const yearSuffix = TRANSLATIONS[currentLang]?.year_suffix || "/an";
+                        const subCard = document.createElement('div');
+                        subCard.className = "flex flex-col items-center justify-center p-4 rounded-2xl bg-white/40 border border-white/20 flex-1 min-w-[100px] hover:scale-105 transition-transform cursor-pointer relative group";
+                        subCard.innerHTML = `
+                            <button onclick="deleteItem('liabilities', ${l.id})" class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity text-error hover:scale-110"><span class="material-symbols-outlined text-[14px]">close</span></button>
+                            <span class="material-symbols-outlined text-secondary mb-2">${subIcon}</span>
+                            <p class="text-xs font-semibold text-on-surface">${l.name}</p>
+                            <p class="text-[10px] text-on-surface-variant opacity-60">${formatCurrency(l.monthly_cost * 12)}${yearSuffix}</p>
+                        `;
+                        subsGrid.appendChild(subCard);
+                    } else {
+                        // Repayments progress bars
+                        const repaidPercent = Math.round(((l.total_amount - l.remaining_amount) / l.total_amount) * 100);
+                        const remainingLabel = TRANSLATIONS[currentLang]?.remaining_label || "Restants";
+                        const repaidLabel = TRANSLATIONS[currentLang]?.repaid_label || "Remboursé";
+                        const deleteLabel = TRANSLATIONS[currentLang]?.delete_btn_label || "Supprimer";
+                        
+                        const progCard = document.createElement('div');
+                        progCard.className = "pb-4 border-b border-on-surface/5 last:border-b-0";
+                        progCard.innerHTML = `
+                            <div class="flex justify-between items-end mb-2">
+                                <div>
+                                    <p class="text-xs font-semibold text-on-surface-variant">${l.name}</p>
+                                    <p class="text-headline-md font-headline-md text-on-surface">${formatCurrency(l.remaining_amount)} ${remainingLabel}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs font-bold text-secondary">${repaidPercent}% ${repaidLabel}</p>
+                                    <button onclick="deleteItem('liabilities', ${l.id})" class="text-error text-xs hover:underline flex items-center gap-1 justify-end mt-1"><span class="material-symbols-outlined text-[12px]">delete</span> ${deleteLabel}</button>
+                                </div>
+                            </div>
+                            <div class="h-4 w-full bg-secondary/10 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-secondary-container to-secondary" style="width: ${repaidPercent}%"></div>
+                            </div>
+                        `;
+                        progressList.appendChild(progCard);
+                    }
+                });
+
+                const monthSuffix = TRANSLATIONS[currentLang]?.month_suffix || "/m";
+                document.getElementById('subs-total-val').textContent = `${formatCurrency(subTotal)}${monthSuffix}`;
+
+                // Upcoming transaction timeline
+                const transRes = await fetch('/api/transactions');
+                const transData = await transRes.json();
+                if (transData.success) {
+                    const transList = document.getElementById('transactions-list');
+                    transList.innerHTML = '';
+                    transData.transactions.forEach(t => {
+                        const icon = t.type.includes('yield') ? 'trending_up' : 'trending_down';
+                        const color = t.type.includes('yield') ? 'text-primary bg-primary/10' : 'text-secondary bg-secondary/10';
+                        const amountStr = formatCurrency(t.amount, true);
+                        
+                        const row = document.createElement('div');
+                        row.className = "p-5 flex items-center justify-between hover:bg-white/40 transition-colors";
+                        row.innerHTML = `
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl ${color} flex items-center justify-center">
+                                    <span class="material-symbols-outlined">${icon}</span>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-on-surface">${t.description}</p>
+                                    <p class="text-xs text-on-surface-variant">${t.date}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-bold ${t.amount >= 0 ? 'text-primary' : 'text-secondary'}">${amountStr}</p>
+                            </div>
+                        `;
+                        transList.appendChild(row);
+                    });
+                }
+
+            } catch (err) {
+                console.error("Error loading liabilities data: ", err);
+            }
+        }
+
+        // Generic delete item helper
+        async function deleteItem(table, id) {
+            if (!confirm("Voulez-vous vraiment supprimer cet élément ?")) return;
+            try {
+                const response = await fetch(`/api/${table}/${id}`, { method: 'DELETE' });
+                const res = await response.json();
+                if (res.success) {
+                    if (table === 'assets') loadAssets();
+                    else loadLiabilities();
+                } else {
+                    alert(res.error);
+                }
+            } catch (err) {
+                console.error("Delete error: ", err);
+            }
+        }
+
+        // Modal triggers
+        function openModal(type) {
+            document.getElementById(`modal-${type}`).classList.remove('hidden');
+        }
+
+        function closeModal(type) {
+            document.getElementById(`modal-${type}`).classList.add('hidden');
+        }
+
+        // Form submissions
+        async function submitAsset() {
+            const name = document.getElementById('asset-name').value;
+            const type = document.getElementById('asset-type').value;
+            const value = document.getElementById('asset-value').value;
+            const monthly_yield = document.getElementById('asset-yield').value;
+
+            if (!name || !value || !monthly_yield) {
+                alert("Veuillez remplir tous les champs.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/assets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, type, value, monthly_yield })
+                });
+                const res = await response.json();
+                if (res.success) {
+                    closeModal('asset');
+                    loadAssets();
+                } else {
+                    alert(res.error);
+                }
+            } catch (err) {
+                console.error("Asset create error: ", err);
+            }
+        }
+
+        async function submitLiability() {
+            const name = document.getElementById('lib-name').value;
+            const type = document.getElementById('lib-type').value;
+            const total = document.getElementById('lib-total').value;
+            const remaining = document.getElementById('lib-remaining').value;
+            const cost = document.getElementById('lib-cost').value;
+
+            if (!name || !total || !remaining || !cost) {
+                alert("Veuillez remplir tous les champs.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/liabilities', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, type, total_amount: total, remaining_amount: remaining, monthly_cost: cost })
+                });
+                const res = await response.json();
+                if (res.success) {
+                    closeModal('liability');
+                    loadLiabilities();
+                } else {
+                    alert(res.error);
+                }
+            } catch (err) {
+                console.error("Liability create error: ", err);
+            }
+        }
+
+        // ==================== SIMULATOR ENGINE ====================
+        const priceSlider = document.getElementById('price-slider');
+        const monthlySlider = document.getElementById('monthly-slider');
+        const priceDisplay = document.getElementById('price-display');
+        const monthlyDisplay = document.getElementById('monthly-display');
+        const monthlyType = document.getElementById('monthly-type');
+        const gaugeFill = document.getElementById('gauge-fill');
+        const scoreText = document.getElementById('score-text');
+        const statusText = document.getElementById('status-text');
+        const afterCashflow = document.getElementById('after-cashflow');
+        const insightText = document.getElementById('insight-text');
+
+        function initSimulator() {
+            fetch('/api/summary')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('sim-current-cashflow').textContent = `${formatCurrency(data.net_cashflow)}/mois`;
+                        updateSimulator(data.net_cashflow);
+                    }
+                });
+        }
+
+        function updateSimulator(baseCashflow) {
+            const price = parseInt(priceSlider.value);
+            const monthly = parseInt(monthlySlider.value);
+            
+            // Format Displays
+            priceDisplay.textContent = formatCurrency(price);
+            monthlyDisplay.textContent = formatCurrency(monthly, true);
+            monthlyType.textContent = monthly >= 0 ? 'Revenu Actif (Gains)' : 'Coût Passif (Dépense)';
+
+            // Calculate After Cashflow
+            const newCashflowValue = (baseCashflow || 0) + monthly;
+            afterCashflow.textContent = `${formatCurrency(newCashflowValue)}/mois`;
+            
+            // Calculate Gauge Score
+            let score = 50 + (monthly / 35) - (price / 8000);
+            score = Math.max(5, Math.min(95, score)); // Clamp
+            
+            scoreText.textContent = Math.round(score);
+
+            // Update Gauge Rotation & Color
+            const rotation = -45 + (score * 1.8);
+            gaugeFill.style.transform = `rotate(${rotation}deg)`;
+
+            if (score > 60) {
+                gaugeFill.style.color = '#10b981'; // Green
+                statusText.textContent = 'ACTIF';
+                statusText.className = 'text-label-sm font-label-sm font-bold text-primary';
+                insightText.textContent = "Excellent choix ! Cet investissement génère un flux de trésorerie net positif et accélère votre indépendance.";
+            } else if (score > 40) {
+                gaugeFill.style.color = '#fd761a'; // Orange
+                statusText.textContent = 'NEUTRE';
+                statusText.className = 'text-label-sm font-label-sm font-bold text-secondary';
+                insightText.textContent = "Un impact équilibré. Ce passif est modéré et n'affectera pas gravement votre trajectoire de liberté financière.";
+            } else {
+                gaugeFill.style.color = '#ba1a1a'; // Red
+                statusText.textContent = 'PASSIF';
+                statusText.className = 'text-label-sm font-label-sm font-bold text-error';
+                insightText.textContent = "Attention : Cet achat draine lourdement votre cashflow mensuel. Assurez-vous que son utilité compense ce fardeau.";
+            }
+        }
+
+        // Simulator Event Listeners
+        priceSlider.addEventListener('input', () => {
+            const baseStr = document.getElementById('sim-current-cashflow').textContent;
+            const baseVal = parseInt(baseStr.replace(/[^\d-]/g, '')) || 0;
+            updateSimulator(baseVal);
+        });
+
+        monthlySlider.addEventListener('input', () => {
+            const baseStr = document.getElementById('sim-current-cashflow').textContent;
+            const baseVal = parseInt(baseStr.replace(/[^\d-]/g, '')) || 0;
+            updateSimulator(baseVal);
+        });
+
+        // Commit simulator values to real db
+        async function commitSimulation() {
+            const name = document.getElementById('sim-name-input').value || "Simulation enregistrée";
+            const price = parseInt(priceSlider.value);
+            const monthly = parseInt(monthlySlider.value);
+
+            try {
+                if (monthly >= 0) {
+                    // Add as asset
+                    const response = await fetch('/api/assets', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, type: 'Stocks', value: price, monthly_yield: monthly })
+                    });
+                    const res = await response.json();
+                    if (res.success) {
+                        alert("Actif simulé ajouté au budget réel !");
+                        switchTab('assets');
+                    }
+                } else {
+                    // Add as liability
+                    const response = await fetch('/api/liabilities', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, type: 'Loan', total_amount: price, remaining_amount: price, monthly_cost: Math.abs(monthly) })
+                    });
+                    const res = await response.json();
+                    if (res.success) {
+                        alert("Passif simulé ajouté au budget réel !");
+                        switchTab('liabilities');
+                    }
+                }
+            } catch (err) {
+                console.error("Simulation commit error: ", err);
+            }
+        }
+
+        async function exportAuditPDF() {
+            // Check if there is an active coach response
+            const lastCoachMessageEl = document.querySelector('#chat-thread .message-bubble-ai:last-of-type');
+            const auditText = lastCoachMessageEl ? lastCoachMessageEl.innerText : "Aucun audit récent. Demandez un 'audit de mon cashflow' au Coach IA pour générer un diagnostic personnalisé.";
+            
+            // Get database summaries
+            let summary = {
+                total_assets: 0,
+                total_passive_income: 0,
+                total_liabilities: 0,
+                total_monthly_cost: 0,
+                iif_score: 0,
+                net_cashflow: 0
+            };
+            
+            try {
+                const res = await fetch('/api/summary');
+                const data = await res.json();
+                if (data.success) {
+                    summary = data;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+            
+            // Fetch savings goals
+            let savingsText = "";
+            try {
+                const res = await fetch('/api/savings_goals');
+                const data = await res.json();
+                if (data.success && data.savings_goals.length > 0) {
+                    savingsText = `<div style="margin-top: 15px;">
+                        <h3 style="color: #6366f1; border-bottom: 1px solid #ddd; padding-bottom: 5px; font-size: 14px;">🎯 Objectifs d'Épargne</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px;">
+                            <tr style="background: #f3f4f6; text-align: left;">
+                                <th style="padding: 6px;">Projet</th>
+                                <th style="padding: 6px;">Cible</th>
+                                <th style="padding: 6px;">Actuel / Objectif</th>
+                                <th style="padding: 6px;">Progression</th>
+                            </tr>
+                            ${data.savings_goals.map(g => `
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 6px; font-weight: bold;">${g.name}</td>
+                                    <td style="padding: 6px;">${g.target_date || 'N/A'}</td>
+                                    <td style="padding: 6px;">${formatCurrency(g.current_amount)} / ${formatCurrency(g.target_amount)}</td>
+                                    <td style="padding: 6px;">${Math.min(Math.round((g.current_amount / g.target_amount) * 100), 100)}%</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>`;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+
+            // Create a styled HTML template for the PDF report
+            const element = document.createElement('div');
+            element.style.padding = '40px';
+            element.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
+            element.style.color = '#1f2937';
+            element.style.backgroundColor = '#ffffff';
+            element.style.maxWidth = '800px';
+            
+            element.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #6366f1; padding-bottom: 15px; margin-bottom: 20px;">
+                    <div>
+                        <h1 style="margin: 0; color: #111827; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">PHILIA VAULT</h1>
+                        <p style="margin: 3px 0 0 0; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Rapport de Patrimoine & Diagnostic IA</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="margin: 0; font-weight: bold; font-size: 12px;">Date : ${new Date().toLocaleDateString('fr-FR')}</p>
+                        <p style="margin: 2px 0 0 0; color: #6b7280; font-size: 10px;">Devise de référence : ${currentCurrency}</p>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 12px; text-align: center;">
+                        <span style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Indice d'Indépendance Financière (IIF)</span>
+                        <h2 style="margin: 5px 0; color: #10b981; font-size: 32px; font-weight: 800;">${summary.iif_score}%</h2>
+                        <p style="margin: 0; font-size: 11px; color: #64748b;">Objectif cible de liberté : 100%</p>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 12px; text-align: center;">
+                        <span style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Cashflow Mensuel Net</span>
+                        <h2 style="margin: 5px 0; color: #6366f1; font-size: 32px; font-weight: 800;">${formatCurrency(summary.net_cashflow, true)}</h2>
+                        <p style="margin: 0; font-size: 11px; color: #64748b;">(Revenus passifs - Dépenses fixes)</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 25px;">
+                    <h3 style="color: #6366f1; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; font-size: 14px;">📊 Récapitulatif Budgétaire</h3>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px;">
+                        <span><strong>Total Actifs :</strong> ${formatCurrency(summary.total_assets)}</span>
+                        <span><strong>Revenu Passif Mensuel :</strong> ${formatCurrency(summary.total_passive_income)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px;">
+                        <span><strong>Total Dettes (Passifs) :</strong> ${formatCurrency(summary.total_liabilities)}</span>
+                        <span><strong>Dépenses Mensuelles Fixes :</strong> ${formatCurrency(summary.total_monthly_cost)}</span>
+                    </div>
+                </div>
+
+                ${savingsText}
+
+                <div style="background: #fafafa; border-left: 4px solid #6366f1; padding: 18px; margin-top: 25px; border-radius: 4px;">
+                    <h3 style="margin-top: 0; color: #111827; font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                        🧠 Analyse & Diagnostic IA
+                    </h3>
+                    <div style="font-size: 12px; line-height: 1.6; color: #374151; white-space: pre-line;">
+                        ${auditText}
+                    </div>
+                </div>
+
+                <div style="margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 15px; font-size: 9px; color: #9ca3af;">
+                    Généré de manière sécurisée par Philia Vault. Les analyses fournies sont à titre éducatif et indicatif uniquement.
+                </div>
+            `;
+            
+            const opt = {
+                margin: 10,
+                filename: `Philia_Vault_Audit_${new Date().toISOString().slice(0,10)}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Run html2pdf download
+            // Run html2pdf download
+            html2pdf().set(opt).from(element).save();
+        }
+
+        // ==================== CHAT COACH IA ENGINE ====================
+        const chatThread = document.getElementById('chat-thread');
+        const chatInput = document.getElementById('chat-input-field');
+
+        function initChat() {
+            const greetings = {
+                fr: "Bonjour ! Je suis votre Coach Financier intelligent Philia Vault. Je peux analyser vos actifs et passifs pour créer des stratégies de croissance.<br/><br/>Tapez <strong>\"audit\"</strong> pour démarrer une analyse complète de vos flux de trésorerie.",
+                en: "Hello! I am your Philia Vault intelligent Financial Coach. I can analyze your assets and liabilities to create growth strategies.<br/><br/>Type <strong>\"audit\"</strong> to start a complete analysis of your cashflows.",
+                es: "¡Hola! Soy su Coach Financiero inteligente de Philia Vault. Puedo analizar sus activos y pasivos para crear estrategias de crecimiento.<br/><br/>Escriba <strong>\"audit\"</strong> para iniciar un análisis completo de sus flujos de efectivo.",
+                pt: "Olá! Sou o seu Coach Financeiro inteligente da Philia Vault. Posso analisar os seus ativos e passivos para criar estratégias de crescimento.<br/><br/>Digite <strong>\"audit\"</strong> para iniciar uma análise completa dos seus fluxos de caixa.",
+                de: "Hallo! Ich bin Ihr intelligenter Philia Vault Finanzcoach. Ich kann Ihre Vermögenswerte und Verbindlichkeiten analysieren, um Wachstumsstrategien zu entwickeln.<br/><br/>Geben Sie <strong>\"audit\"</strong> ein, um eine vollständige Analyse Ihrer Cashflows zu starten."
+            };
+            const text = greetings[currentLang] || greetings['en'];
+            
+            chatThread.innerHTML = `
+                <div class="flex flex-col items-start max-w-[85%]">
+                    <div class="flex items-center gap-2 mb-2 ml-1">
+                        <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-lg">
+                            <span class="material-symbols-outlined text-[14px] text-[#0c0e12]" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+                        </div>
+                        <span class="text-label-sm font-label-sm text-primary font-bold">Philia Vault IA</span>
+                    </div>
+                    <div class="message-bubble-ai px-5 py-4 rounded-2xl rounded-tl-none shadow-sm">
+                        <p class="font-body-md text-body-md text-on-surface">${text}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function sendChatMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+
+            // Render User bubble
+            const userMsg = document.createElement('div');
+            userMsg.className = "flex flex-col items-end self-end max-w-[80%]";
+            userMsg.innerHTML = `
+                <div class="message-bubble-user px-5 py-4 rounded-2xl rounded-tr-none shadow-lg text-white text-sm">
+                    <p class="font-body-md">${text}</p>
+                </div>
+            `;
+            chatThread.appendChild(userMsg);
+            chatInput.value = '';
+            scrollChatBottom();
+
+            // Store chat history
+            chatHistory.push({ role: 'user', text: text });
+
+            // Show typing indicator
+            const typing = document.createElement('div');
+            typing.id = 'typing-indicator';
+            typing.className = "flex flex-col items-start max-w-[85%] animate-pulse";
+            
+            const typingTexts = {
+                fr: "Philia Vault analyse vos comptes...",
+                en: "Philia Vault is analyzing your accounts...",
+                es: "Philia Vault está analizando sus cuentas...",
+                pt: "Philia Vault está analisando suas contas...",
+                de: "Philia Vault analysiert Ihre Konten..."
+            };
+            const typingText = typingTexts[currentLang] || typingTexts['en'];
+
+            typing.innerHTML = `
+                <div class="flex items-center gap-2 mb-2 ml-1">
+                    <span class="text-label-sm font-label-sm text-primary font-bold">Philia Vault IA</span>
+                </div>
+                <div class="message-bubble-ai px-5 py-3 rounded-2xl rounded-tl-none text-xs text-outline">
+                    ${typingText}
+                </div>
+            `;
+            chatThread.appendChild(typing);
+            scrollChatBottom();
+
+            try {
+                const response = await fetch('/api/coach/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, history: chatHistory, lang: currentLang })
+                });
+                const res = await response.json();
+                
+                // Remove typing indicator
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) indicator.remove();
+
+                if (res.success) {
+                    const aiMsg = document.createElement('div');
+                    aiMsg.className = "flex flex-col items-start max-w-[85%]";
+                    aiMsg.innerHTML = `
+                        <div class="flex items-center gap-2 mb-2 ml-1">
+                            <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-lg">
+                                <span class="material-symbols-outlined text-[14px] text-[#0c0e12]" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+                            </div>
+                            <span class="text-label-sm font-label-sm text-primary font-bold">Philia Vault IA</span>
+                        </div>
+                        <div class="message-bubble-ai px-5 py-4 rounded-2xl rounded-tl-none shadow-sm text-sm text-on-surface">
+                            <div class="whitespace-pre-line">${res.reply}</div>
+                        </div>
+                    `;
+                    chatThread.appendChild(aiMsg);
+                    chatHistory.push({ role: 'model', text: res.reply });
+                }
+                scrollChatBottom();
+            } catch (err) {
+                console.error("Chat error: ", err);
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) indicator.remove();
+            }
+        }
+
+        function scrollChatBottom() {
+            setTimeout(() => {
+                chatThread.scrollTop = chatThread.scrollHeight;
+            }, 50);
+        }
+
+        // On Load initialization with auto-language detection
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check manual language select or detect browser language
+            let savedLang = localStorage.getItem('philia_vault_lang');
+            if (!savedLang) {
+                const navLang = navigator.language.slice(0, 2).toLowerCase();
+                const supported = ['fr', 'en', 'es', 'pt', 'de'];
+                savedLang = supported.includes(navLang) ? navLang : 'en';
+            }
+            
+            // Set element value in dropdown
+            document.getElementById('lang-select').value = savedLang;
+            currentLang = savedLang;
+            document.documentElement.lang = savedLang;
+            
+            // Sync initial currency to local standard if not set manually
+            if (!localStorage.getItem('philia_vault_currency_set')) {
+                let defaultCurr = 'USD';
+                if (savedLang === 'fr' || savedLang === 'es' || savedLang === 'pt' || savedLang === 'de') {
+                    defaultCurr = 'EUR';
+                }
+                document.getElementById('currency-select').value = defaultCurr;
+                currentCurrency = defaultCurr;
+            } else {
+                currentCurrency = document.getElementById('currency-select').value || 'USD';
+            }
+
+            applyTranslations(savedLang);
+            
+            checkSession();
+            initChat();
+            checkPremium();
+        });
+    </script>
+</body>
+</html>

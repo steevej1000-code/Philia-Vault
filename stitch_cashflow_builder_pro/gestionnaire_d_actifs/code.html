@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>La Serre Financière - Assets</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .ambient-shadow-emerald {
+            box-shadow: 0 10px 30px -5px rgba(0, 108, 73, 0.1);
+        }
+        .ambient-shadow-emerald:hover {
+            box-shadow: 0 20px 40px -10px rgba(0, 108, 73, 0.15);
+        }
+        .vibrant-gradient-btn {
+            background: linear-gradient(135deg, #06b6d4 0%, #10b981 50%, #059669 100%);
+            box-shadow: 0 4px 15px -1px rgba(16, 185, 129, 0.4);
+        }
+        .sparkline-container {
+            mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#bbcabf",
+                    "tertiary-fixed-dim": "#d0bcff",
+                    "surface-container-low": "#f2f4f6",
+                    "error-container": "#ffdad6",
+                    "surface-container-highest": "#e0e3e5",
+                    "primary-fixed-dim": "#4edea3",
+                    "on-primary-container": "#00422b",
+                    "surface-container": "#eceef0",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#191c1e",
+                    "inverse-on-surface": "#eff1f3",
+                    "on-primary": "#ffffff",
+                    "secondary-container": "#fd761a",
+                    "secondary": "#9d4300",
+                    "inverse-primary": "#4edea3",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-tint": "#006c49",
+                    "primary": "#006c49",
+                    "surface-dim": "#d8dadc",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed": "#23005c",
+                    "on-primary-fixed": "#002113",
+                    "primary-container": "#10b981",
+                    "surface-container-high": "#e6e8ea",
+                    "tertiary-container": "#b090ff",
+                    "surface-variant": "#e0e3e5",
+                    "secondary-fixed-dim": "#ffb690",
+                    "surface": "#f7f9fb",
+                    "secondary-fixed": "#ffdbca",
+                    "on-primary-fixed-variant": "#005236",
+                    "on-tertiary-container": "#4600a7",
+                    "primary-fixed": "#6ffbbe",
+                    "on-secondary-fixed-variant": "#783200",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#5516be",
+                    "surface-bright": "#f7f9fb",
+                    "on-secondary-container": "#5c2400",
+                    "on-surface": "#191c1e",
+                    "inverse-surface": "#2d3133",
+                    "on-error-container": "#93000a",
+                    "background": "#f7f9fb",
+                    "outline": "#6c7a71",
+                    "tertiary": "#6d3bd7",
+                    "on-error": "#ffffff",
+                    "on-secondary-fixed": "#341100",
+                    "on-surface-variant": "#3c4a42",
+                    "tertiary-fixed": "#e9ddff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "container-padding": "24px",
+                    "card-gap": "20px",
+                    "unit": "8px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Plus Jakarta Sans"],
+                    "headline-md": ["Montserrat"],
+                    "headline-lg-mobile": ["Montserrat"],
+                    "headline-lg": ["Montserrat"],
+                    "label-sm": ["Plus Jakarta Sans"],
+                    "body-md": ["Plus Jakarta Sans"],
+                    "display": ["Montserrat"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-surface/60 dark:bg-surface-dim/60 backdrop-blur-xl text-primary dark:text-primary-fixed-dim border-b border-white/20 dark:border-outline-variant/10 shadow-sm backdrop-blur-2xl docked full-width top-0 sticky z-50 flex justify-between items-center px-container-padding py-4 w-full">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img alt="User Profile" data-alt="A professional studio portrait of a successful young entrepreneur with a warm smile, wearing a modern business-casual outfit. The lighting is soft and cinematic with a bright, high-key background that matches a clean, sophisticated financial app aesthetic. High-quality photography style with shallow depth of field." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwi557XFggbg1BQNTO5Sg4SssRtA7EDcbJJfJTs8tE5zVPuKYwuu8mlgbL-0SZbGdOyJqkGA_IAyq5Jk4O_lKNrjlfQv_yXfFt4jaOwqaMkXmf-BFXWB6-7f1KKx4WyFYNNyz0T2H9uuzCODo-Xg3hOcw-12QHr0aKz25lg995Fa_iWDQE40FnuL_MMHoraIp0u9SVt5ZhSZoMAEp4pog5ITPqcgY5uzopoSqOh1EZL4jlRRzlxkxNQXbVj8nh3vfafp6xihEe1LBh"/>
+</div>
+<h1 class="text-headline-md font-headline-md font-bold bg-gradient-to-r from-primary via-primary-container to-secondary-container bg-clip-text text-transparent">Cashflow Builder</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary p-2 rounded-full hover:bg-white/10 transition-colors active:scale-95 duration-200" data-icon="notifications">notifications</button>
+</div>
+</header>
+<main class="px-container-padding py-8 max-w-7xl mx-auto">
+<!-- Header Section -->
+<section class="mb-10">
+<h2 class="text-headline-lg font-headline-lg text-on-surface mb-2">Asset Portfolio</h2>
+<p class="text-body-md font-body-md text-on-surface-variant">Manage and track your digital greenhouses.</p>
+</section>
+<!-- Bento Grid Assets -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-card-gap">
+<!-- Stocks Card -->
+<div class="glass-card ambient-shadow-emerald rounded-[32px] p-6 flex flex-col justify-between relative overflow-hidden group">
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all"></div>
+<div class="flex justify-between items-start mb-8">
+<div class="w-12 h-12 rounded-2xl bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl" data-weight="fill">show_chart</span>
+</div>
+<div class="text-right">
+<p class="text-label-sm font-label-sm text-on-surface-variant mb-1">STOCKS</p>
+<p class="text-headline-md font-headline-md text-primary">$42,850.00</p>
+</div>
+</div>
+<div class="mb-6">
+<p class="text-label-sm font-label-sm text-on-surface-variant mb-1">Monthly Passive</p>
+<p class="text-headline-md font-headline-md text-primary-container">+$840.12</p>
+</div>
+<div class="h-16 w-full sparkline-container">
+<svg class="w-full h-full" viewbox="0 0 100 30">
+<path class="text-primary-container" d="M0 25 Q 10 5, 20 20 T 40 10 T 60 25 T 80 5 T 100 15" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Crypto Card -->
+<div class="glass-card ambient-shadow-emerald rounded-[32px] p-6 flex flex-col justify-between relative overflow-hidden group">
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-tertiary-container/10 rounded-full blur-3xl group-hover:bg-tertiary-container/20 transition-all"></div>
+<div class="flex justify-between items-start mb-8">
+<div class="w-12 h-12 rounded-2xl bg-tertiary-container/20 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-3xl" data-weight="fill">currency_bitcoin</span>
+</div>
+<div class="text-right">
+<p class="text-label-sm font-label-sm text-on-surface-variant mb-1">CRYPTO</p>
+<p class="text-headline-md font-headline-md text-tertiary">$12,305.50</p>
+</div>
+</div>
+<div class="mb-6">
+<p class="text-label-sm font-label-sm text-on-surface-variant mb-1">Monthly Staking</p>
+<p class="text-headline-md font-headline-md text-tertiary-container">+$312.45</p>
+</div>
+<div class="h-16 w-full sparkline-container">
+<svg class="w-full h-full" viewbox="0 0 100 30">
+<path class="text-tertiary-container" d="M0 10 Q 15 25, 30 10 T 60 20 T 90 5 T 100 25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- E-Commerce Card -->
+<div class="glass-card ambient-shadow-emerald rounded-[32px] p-6 flex flex-col justify-between relative overflow-hidden group">
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-secondary-container/10 rounded-full blur-3xl group-hover:bg-secondary-container/20 transition-all"></div>
+<div class="flex justify-between items-start mb-8">
+<div class="w-12 h-12 rounded-2xl bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-3xl" data-weight="fill">shopping_bag</span>
+</div>
+<div class="text-right">
+<p class="text-label-sm font-label-sm text-on-surface-variant mb-1">COMMERCE</p>
+<p class="text-headline-md font-headline-md text-secondary">$28,400.00</p>
+</div>
+</div>
+<div class="mb-6">
+<p class="text-label-sm font-label-sm text-on-surface-variant mb-1">Monthly Profit</p>
+<p class="text-headline-md font-headline-md text-secondary-container">+$4,250.00</p>
+</div>
+<div class="h-16 w-full sparkline-container">
+<svg class="w-full h-full" viewbox="0 0 100 30">
+<path class="text-secondary-container" d="M0 20 Q 20 5, 40 15 T 70 5 T 100 10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Real Estate Card -->
+<div class="glass-card ambient-shadow-emerald rounded-[32px] p-6 flex flex-col justify-between relative overflow-hidden group">
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all"></div>
+<div class="flex justify-between items-start mb-8">
+<div class="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl" data-weight="fill">apartment</span>
+</div>
+<div class="text-right">
+<p class="text-label-sm font-label-sm text-on-surface-variant mb-1">REAL ESTATE</p>
+<p class="text-headline-md font-headline-md text-primary">$350,000</p>
+</div>
+</div>
+<div class="mb-6">
+<p class="text-label-sm font-label-sm text-on-surface-variant mb-1">Monthly Rent</p>
+<p class="text-headline-md font-headline-md text-primary-container">+$1,800.00</p>
+</div>
+<div class="h-16 w-full sparkline-container">
+<svg class="w-full h-full" viewbox="0 0 100 30">
+<path class="text-primary-container opacity-50" d="M0 15 L 100 15" fill="none" stroke="currentColor" stroke-dasharray="2,2" stroke-width="2"></path>
+<path class="text-primary-container" d="M0 15 Q 50 15, 100 15" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+</div>
+</div>
+</div>
+<!-- Magic Insight Card -->
+<section class="mt-12">
+<div class="glass-card rounded-[32px] p-8 border-2 border-primary/20 relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-tertiary/5"></div>
+<div class="relative z-10 flex flex-col md:flex-row items-center gap-8">
+<div class="w-20 h-20 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center text-white shadow-lg animate-float">
+<span class="material-symbols-outlined text-4xl" data-weight="fill">auto_awesome</span>
+</div>
+<div class="flex-1 text-center md:text-left">
+<h3 class="text-headline-md font-headline-md text-primary mb-2">Growth Catalyst Detected</h3>
+<p class="text-body-md font-body-md text-on-surface-variant">Your E-commerce asset is outperforming projections by 24%. Rebalancing $1,200 of excess profit into the 'GreenTech Dividend Fund' could increase your annual passive income by $145.</p>
+</div>
+<button class="vibrant-gradient-btn px-8 py-4 rounded-full text-white font-bold text-label-sm tracking-widest active:scale-95 transition-all">
+                        EXECUTE STRATEGY
+                    </button>
+</div>
+</div>
+</section>
+<!-- Detailed Asset List (Visual Interest) -->
+<section class="mt-12">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-headline-md font-headline-md">Recent Performance</h3>
+<button class="text-primary font-bold text-label-sm">VIEW ALL</button>
+</div>
+<div class="space-y-4">
+<div class="glass-card p-4 rounded-2xl flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-surface-container-high rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="account_balance_wallet">account_balance_wallet</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Vanguard S&amp;P 500 ETF</p>
+<p class="text-label-sm text-on-surface-variant">Stock Market • 240 Units</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-bold text-primary">+$124.50</p>
+<p class="text-label-sm text-primary-container">Dividend Paid</p>
+</div>
+</div>
+<div class="glass-card p-4 rounded-2xl flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-surface-container-high rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary" data-icon="payments">payments</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Amazon FBA - Home Goods</p>
+<p class="text-label-sm text-on-surface-variant">E-Commerce • Store #1</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-bold text-primary">+$3,210.00</p>
+<p class="text-label-sm text-primary-container">Payout Received</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface/80 dark:bg-inverse-surface/80 backdrop-blur-2xl text-primary dark:text-primary-fixed-dim border-t border-white/10 dark:border-outline-variant/5 shadow-2xl fixed bottom-0 w-full z-50 rounded-t-xl flex justify-around items-center w-full px-2 pb-6 pt-3">
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-label-sm font-label-sm mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim scale-110 transition-all active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+<span class="text-label-sm font-label-sm mt-1">Assets</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="text-label-sm font-label-sm mt-1">Liabilities</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="calculate">calculate</span>
+<span class="text-label-sm font-label-sm mt-1">Simulator</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="text-label-sm font-label-sm mt-1">Coach</span>
+</a>
+</nav>
+<script>
+        // Simple interactivity for cards
+        document.querySelectorAll('.glass-card').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(0.98) translateY(0px)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = 'scale(1) translateY(-4px)';
+            });
+        });
+    </script>
+</body></html>

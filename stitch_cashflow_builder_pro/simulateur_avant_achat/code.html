@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Purchase Simulator - La Balance</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&amp;family=Plus+Jakarta+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#bbcabf",
+                    "tertiary-fixed-dim": "#d0bcff",
+                    "surface-container-low": "#f2f4f6",
+                    "error-container": "#ffdad6",
+                    "surface-container-highest": "#e0e3e5",
+                    "primary-fixed-dim": "#4edea3",
+                    "on-primary-container": "#00422b",
+                    "surface-container": "#eceef0",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#191c1e",
+                    "inverse-on-surface": "#eff1f3",
+                    "on-primary": "#ffffff",
+                    "secondary-container": "#fd761a",
+                    "secondary": "#9d4300",
+                    "inverse-primary": "#4edea3",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-tint": "#006c49",
+                    "primary": "#006c49",
+                    "surface-dim": "#d8dadc",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed": "#23005c",
+                    "on-primary-fixed": "#002113",
+                    "primary-container": "#10b981",
+                    "surface-container-high": "#e6e8ea",
+                    "tertiary-container": "#b090ff",
+                    "surface-variant": "#e0e3e5",
+                    "secondary-fixed-dim": "#ffb690",
+                    "surface": "#f7f9fb",
+                    "secondary-fixed": "#ffdbca",
+                    "on-primary-fixed-variant": "#005236",
+                    "on-tertiary-container": "#4600a7",
+                    "primary-fixed": "#6ffbbe",
+                    "on-secondary-fixed-variant": "#783200",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#5516be",
+                    "surface-bright": "#f7f9fb",
+                    "on-secondary-container": "#5c2400",
+                    "on-surface": "#191c1e",
+                    "inverse-surface": "#2d3133",
+                    "on-error-container": "#93000a",
+                    "background": "#f7f9fb",
+                    "outline": "#6c7a71",
+                    "tertiary": "#6d3bd7",
+                    "on-error": "#ffffff",
+                    "on-secondary-fixed": "#341100",
+                    "on-surface-variant": "#3c4a42",
+                    "tertiary-fixed": "#e9ddff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "container-padding": "24px",
+                    "card-gap": "20px",
+                    "unit": "8px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Plus Jakarta Sans"],
+                    "headline-md": ["Montserrat"],
+                    "headline-lg-mobile": ["Montserrat"],
+                    "headline-lg": ["Montserrat"],
+                    "label-sm": ["Plus Jakarta Sans"],
+                    "body-md": ["Plus Jakarta Sans"],
+                    "display": ["Montserrat"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 10px 30px -5px rgba(0, 108, 73, 0.05);
+        }
+        .premium-shadow {
+            box-shadow: 0 30px 60px -15px rgba(0, 108, 73, 0.15);
+        }
+        .slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #006c49;
+            border: 4px solid #ffffff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .gauge-container {
+            position: relative;
+            width: 200px;
+            height: 100px;
+            overflow: hidden;
+        }
+        .gauge-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 20px solid #eceef0;
+            clip-path: inset(0 0 50% 0);
+        }
+        .gauge-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 20px solid transparent;
+            border-top-color: currentColor;
+            border-right-color: currentColor;
+            transform: rotate(-45deg);
+            clip-path: inset(0 0 50% 0);
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.5s ease;
+        }
+        .vibrant-gradient {
+            background: linear-gradient(135deg, #06b6d4 0%, #10b981 50%, #059669 100%);
+            box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-surface/60 dark:bg-surface-dim/60 backdrop-blur-xl docked full-width top-0 sticky z-50 border-b border-white/20 dark:border-outline-variant/10 shadow-sm flex justify-between items-center px-container-padding py-4 w-full">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhW7aYirPQNr1N0--SnBDyBxqqz3zlR_BW9AdDLxVlR7x9oRutehcfRbO2h_vx1f0osaAIQ4H9UZHovi39WX7P2j8GIpTM2BkHE0xpbwF7ZuSVEywEeS-PccbXuIbzZr4bxZfReWgXQ0aeCaeEmHdPZZRfnWLdb28cs_7_37vWiM-ObcLZ-yHRkVRwOHr4aIuMX0O4XwtajyRLXaCxay97gkML7wochgWBAOS_btzAlB5G1kvW_KtHZcI6qD1-Q7Sk9rIjBK3VqD1k"/>
+</div>
+<span class="text-headline-md font-headline-md font-bold bg-gradient-to-r from-primary via-primary-container to-secondary-container bg-clip-text text-transparent">Cashflow Builder</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary" data-icon="notifications">notifications</span>
+</button>
+</header>
+<main class="max-w-4xl mx-auto px-container-padding pt-8">
+<!-- Hero Section -->
+<div class="mb-10 text-center md:text-left">
+<h1 class="text-display font-display mb-2 text-on-background">La Balance</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant max-w-xl">Simulate your next big move. Is it a wealth-building asset or a heavy liability? Let's find out.</p>
+</div>
+<!-- Simulator Core -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-card-gap">
+<!-- Left Column: Controls -->
+<div class="lg:col-span-7 space-y-card-gap">
+<section class="glass-card p-8 rounded-3xl">
+<h2 class="text-headline-md font-headline-md mb-8 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="settings_input_component">settings_input_component</span>
+                        Purchase Details
+                    </h2>
+<div class="space-y-10">
+<!-- Price Slider -->
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<label class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-widest">Purchase Price</label>
+<span class="text-headline-md font-headline-md text-primary" id="price-display">$45,000</span>
+</div>
+<input class="w-full h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer slider-thumb" id="price-slider" max="500000" min="1000" step="1000" type="range" value="45000"/>
+<div class="flex justify-between text-label-sm font-label-sm text-outline">
+<span>$1k</span>
+<span>$500k</span>
+</div>
+</div>
+<!-- Monthly Payment Slider -->
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<label class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-widest">Monthly Cost / Income</label>
+<div class="text-right">
+<span class="text-headline-md font-headline-md" id="monthly-display">-$450</span>
+<p class="text-label-sm font-label-sm text-outline" id="monthly-type">Liability Cost</p>
+</div>
+</div>
+<input class="w-full h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer slider-thumb" id="monthly-slider" max="2000" min="-2000" step="50" type="range" value="-450"/>
+<div class="flex justify-between text-label-sm font-label-sm text-outline">
+<span>Expense</span>
+<span>Income</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Comparison View -->
+<div class="grid grid-cols-2 gap-4">
+<div class="glass-card p-6 rounded-2xl border-l-4 border-outline-variant">
+<p class="text-label-sm font-label-sm text-on-surface-variant mb-1">Current Cashflow</p>
+<p class="text-headline-md font-headline-md">$2,840<span class="text-body-md font-body-md text-outline ml-1">/mo</span></p>
+</div>
+<div class="glass-card p-6 rounded-2xl border-l-4 border-primary" id="after-card">
+<p class="text-label-sm font-label-sm text-on-surface-variant mb-1">New Cashflow</p>
+<p class="text-headline-md font-headline-md text-primary" id="after-cashflow">$2,390<span class="text-body-md font-body-md text-outline ml-1">/mo</span></p>
+</div>
+</div>
+</div>
+<!-- Right Column: Visual Gauge & Analysis -->
+<div class="lg:col-span-5 space-y-card-gap">
+<section class="glass-card premium-shadow p-8 rounded-3xl flex flex-col items-center text-center">
+<h3 class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-widest mb-8">Asset-Liability Index</h3>
+<!-- IIF Gauge -->
+<div class="gauge-container mb-6">
+<div class="gauge-background"></div>
+<div class="gauge-fill text-secondary" id="gauge-fill"></div>
+<div class="absolute bottom-0 left-0 w-full flex flex-col items-center">
+<span class="text-display font-display leading-none" id="score-text">42</span>
+<span class="text-label-sm font-label-sm font-bold text-on-surface-variant" id="status-text">LIABILITY</span>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-2xl p-4 w-full mb-8">
+<p class="text-body-md font-body-md text-on-surface-variant" id="insight-text">
+                            "This purchase reduces your net wealth velocity by 16%. Consider if the utility justifies the recurring cost."
+                        </p>
+</div>
+<button class="w-full py-4 rounded-xl vibrant-gradient text-white font-headline-md active:scale-95 transition-all">
+                        Lock In Analysis
+                    </button>
+</section>
+<!-- AI Advice Card -->
+<section class="p-6 rounded-3xl border border-tertiary-container/30 bg-gradient-to-br from-tertiary-fixed to-surface relative overflow-hidden">
+<div class="absolute -right-4 -top-4 opacity-10">
+<span class="material-symbols-outlined text-8xl" data-icon="smart_toy">smart_toy</span>
+</div>
+<div class="relative z-10">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-tertiary" data-icon="auto_awesome">auto_awesome</span>
+<span class="text-label-sm font-label-sm font-bold text-tertiary uppercase">AI Optimization</span>
+</div>
+<h4 class="text-headline-md font-headline-md text-on-surface mb-2">Smart Strategy</h4>
+<p class="text-body-md font-body-md text-on-surface-variant">
+                            Increase your downpayment by <span class="font-bold text-primary">$5,000</span> to flip this into the "Balanced" zone and save $85/mo in interest.
+                        </p>
+</div>
+</section>
+</div>
+</div>
+<!-- Contextual Analysis Grid (Bento) -->
+<div class="mt-card-gap grid grid-cols-1 md:grid-cols-3 gap-card-gap">
+<div class="glass-card p-6 rounded-2xl flex items-start gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+</div>
+<div>
+<p class="text-label-sm font-label-sm text-outline">Debt Ratio</p>
+<p class="text-body-lg font-body-lg font-bold" id="debt-ratio">34.2%</p>
+</div>
+</div>
+<div class="glass-card p-6 rounded-2xl flex items-start gap-4">
+<div class="w-12 h-12 rounded-xl bg-secondary-container/10 flex items-center justify-center text-secondary shrink-0">
+<span class="material-symbols-outlined" data-icon="speed">speed</span>
+</div>
+<div>
+<p class="text-label-sm font-label-sm text-outline">FI Score Impact</p>
+<p class="text-body-lg font-body-lg font-bold" id="fi-impact">-2.4 pts</p>
+</div>
+</div>
+<div class="glass-card p-6 rounded-2xl flex items-start gap-4">
+<div class="w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary shrink-0">
+<span class="material-symbols-outlined" data-icon="event_repeat">event_repeat</span>
+</div>
+<div>
+<p class="text-label-sm font-label-sm text-outline">Recovery Time</p>
+<p class="text-body-lg font-body-lg font-bold" id="recovery-time">14 Months</p>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-surface/80 dark:bg-inverse-surface/80 backdrop-blur-2xl border-t border-white/10 dark:border-outline-variant/5 shadow-2xl flex justify-around items-center px-2 pb-6 pt-3">
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-label-sm font-label-sm">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="text-label-sm font-label-sm">Assets</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="text-label-sm font-label-sm">Liabilities</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim scale-110 transition-all active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="calculate" style="font-variation-settings: 'FILL' 1;">calculate</span>
+<span class="text-label-sm font-label-sm">Simulator</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 dark:text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity active:scale-90 duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="text-label-sm font-label-sm">Coach</span>
+</a>
+</nav>
+<script>
+        const priceSlider = document.getElementById('price-slider');
+        const monthlySlider = document.getElementById('monthly-slider');
+        const priceDisplay = document.getElementById('price-display');
+        const monthlyDisplay = document.getElementById('monthly-display');
+        const monthlyType = document.getElementById('monthly-type');
+        const gaugeFill = document.getElementById('gauge-fill');
+        const scoreText = document.getElementById('score-text');
+        const statusText = document.getElementById('status-text');
+        const afterCashflow = document.getElementById('after-cashflow');
+        const insightText = document.getElementById('insight-text');
+
+        const baseCashflow = 2840;
+
+        function updateSimulator() {
+            const price = parseInt(priceSlider.value);
+            const monthly = parseInt(monthlySlider.value);
+            
+            // Format Displays
+            priceDisplay.textContent = `$${price.toLocaleString()}`;
+            monthlyDisplay.textContent = `${monthly >= 0 ? '+' : ''}$${Math.abs(monthly).toLocaleString()}`;
+            monthlyType.textContent = monthly >= 0 ? 'Asset Income' : 'Liability Cost';
+
+            // Calculate After Cashflow
+            const newCashflowValue = baseCashflow + monthly;
+            afterCashflow.textContent = `$${newCashflowValue.toLocaleString()}/mo`;
+            
+            // Calculate Gauge Score (Simplified logic: Index of 0-100)
+            // Assets (income) boost score, liabilities (cost) and high price drop score
+            let score = 50 + (monthly / 40) - (price / 5000);
+            score = Math.max(5, Math.min(95, score)); // Clamp
+            
+            scoreText.textContent = Math.round(score);
+
+            // Update Gauge Rotation & Color
+            const rotation = -45 + (score * 1.8); // Scale 0-100 to rotation
+            gaugeFill.style.transform = `rotate(${rotation}deg)`;
+
+            if (score > 65) {
+                gaugeFill.style.color = '#10b981'; // Green (Primary-container)
+                statusText.textContent = 'ASSET';
+                statusText.className = 'text-label-sm font-label-sm font-bold text-primary';
+                insightText.textContent = "Excellent move! This purchase pays for itself and accelerates your journey to financial independence.";
+            } else if (score > 40) {
+                gaugeFill.style.color = '#fd761a'; // Orange (Secondary-container)
+                statusText.textContent = 'BALANCED';
+                statusText.className = 'text-label-sm font-label-sm font-bold text-secondary';
+                insightText.textContent = "A neutral move. It's a luxury that doesn't severely hurt your cashflow, but won't build wealth either.";
+            } else {
+                gaugeFill.style.color = '#ba1a1a'; // Red (Error)
+                statusText.textContent = 'LIABILITY';
+                statusText.className = 'text-label-sm font-label-sm font-bold text-error';
+                insightText.textContent = "Warning: This purchase significantly drains your monthly surplus. Ensure its long-term utility is worth the financial drag.";
+            }
+        }
+
+        priceSlider.addEventListener('input', updateSimulator);
+        monthlySlider.addEventListener('input', updateSimulator);
+
+        // Initial update
+        updateSimulator();
+    </script>
+</body></html>

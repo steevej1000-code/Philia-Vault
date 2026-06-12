@@ -1,0 +1,60 @@
+# Cahier des Charges UI/UX - Application "Cashflow Builder"
+*Inspiré des concepts de "Père Riche, Père Pauvre" par Robert Kiyosaki*
+
+Ce document sert de brief officiel pour la conception de l'identité visuelle, des maquettes et des prototypes de l'application mobile et web. L'objectif est de concevoir une interface magnifique, vibrante et engageante, qui rend la gestion de patrimoine visuellement stimulante et gratifiante pour l'utilisateur.
+
+---
+
+## 1. Direction Artistique & Identité Visuelle
+L'application doit casser les codes austères et ennuyeux de la finance traditionnelle. Le design doit être moderne, coloré, premium et donner envie d'y revenir tous les jours.
+
+* **Esthétique Générale :** Design moderne, interface lumineuse (avec un mode sombre élégant en option), utilisation d'effets de profondeur subtils (comme le *Glassmorphism*), ombres douces, et des éléments graphiques aux bords arrondis et accueillants.
+* **Palette de Couleurs (Vibrante et Expressive) :**
+    * **Fonds et Structure :** Des fonds clairs et éclatants, ou des teintes profondes (comme le bleu nuit) pour faire ressortir les éléments de l'interface.
+    * **La Colonne des Actifs (Le cœur de l'app) :** Des dégradés riches de verts émeraude, menthe et cyan lumineux. Visualiser ses actifs doit être une expérience gratifiante et esthétiquement plaisante.
+    * **La Colonne des Passifs & Dépenses :** Des teintes chaudes et esthétiques comme l'orange corail, le pêche ou le rose framboise. Il faut indiquer les sorties d'argent sans utiliser un rouge "alarme" anxiogène.
+    * **Éléments IA & Premium :** Des accents dorés ou violet électrique pour mettre en valeur les conseils générés par Gemini, les simulations et les réussites de l'utilisateur.
+* **Typographie :** Polices modernes, rondes et élégantes (ex: Poppins, Montserrat ou SF Pro Rounded), offrant une excellente lisibilité avec des chiffres bien mis en valeur.
+
+---
+
+## 2. Architecture de l'Application & Écrans Clés
+L'application doit s'articuler autour de 5 vues principales, pensées pour être aussi belles que fonctionnelles.
+
+### Écran 1 : Le Tableau de Bord "Cashflow" (L'Écran Waouh)
+L'élément central de cet écran doit être une véritable œuvre d'art data-visuelle qui fait comprendre immédiatement où va l'argent.
+* **Composants UI requis :**
+    * **Indice d'Indépendance Financière (IIF) :** Une jauge circulaire vibrante, avec des animations fluides. Lorsqu'elle dépasse 100%, une animation de célébration (confettis discrets, brillance) doit se déclencher.
+    * **Visualisation des Flux :** Un diagramme de flux (type Sankey) en 3D isométrique ou avec des courbes très douces, montrant l'argent coloré circuler des Revenus vers les Actifs, Dépenses et Passifs.
+    * **Cartes de Synthèse :** Des widgets en verre dépoli (glassmorphism) pour afficher le Cashflow Net.
+
+### Écran 2 : Le Gestionnaire d'Actifs (La Serre Financière)
+Cet écran est l'endroit où l'utilisateur voit son argent travailler pour lui.
+* **Composants UI requis :**
+    * **Cartes d'Actifs Riches :** Chaque investissement (Bourse, Crypto, E-commerce, Immobilier) est représenté par une belle carte colorée avec son icône, un mini-graphique de son évolution, et le rendement passif mensuel bien mis en évidence.
+    * **Catégorisation Visuelle :** Utilisation d'icônes modernes et colorées pour différencier rapidement les types de revenus.
+
+### Écran 3 : Le Tracker de Passifs (La Zone de Contrôle)
+Un espace clair pour identifier les fuites d'argent, sans culpabiliser l'utilisateur, mais en l'aidant à reprendre le contrôle.
+* **Composants UI requis :**
+    * **Jauges de Dettes :** Des barres de progression élégantes montrant le remboursement des passifs.
+    * **Cartes d'Abonnements :** Les logos des services (Netflix, Klarna, etc.) dans de petites bulles soignées, avec le coût réel annualisé affiché à côté.
+
+### Écran 4 : Le Simulateur "Avant Achat" (La Balance)
+Une interface interactive ludique pour tester l'impact d'un achat.
+* **Composants UI requis :**
+    * **Glisseurs (Sliders) Colorés :** Pour ajuster le prix ou les mensualités.
+    * **Impact Visuel Immédiat :** Une prévisualisation de la jauge IIF qui change de couleur en temps réel selon si l'achat est un Actif (renforce la jauge) ou un Passif (diminue la jauge).
+
+### Écran 5 : Le Coach Financier IA (L'Espace Gemini)
+Une interface de discussion qui ressemble à un assistant virtuel premium.
+* **Composants UI requis :**
+    * **Bulles de Chat Élégantes :** Des bulles de discussion avec des dégradés subtils.
+    * **Widgets Intégrés :** L'IA ne répond pas que par du texte, elle génère des mini-graphiques et des cartes d'analyse (ex: un graphique coloré de l'évolution des dépenses en restauration rapide) directement dans le fil de discussion.
+
+---
+
+## 3. Directives d'Expérience Utilisateur (UX)
+* **Micro-interactions :** Des animations fluides à chaque clic, des transitions douces entre les écrans.
+* **Récompenses Visuelles :** L'interface doit célébrer visuellement chaque augmentation du revenu passif pour renforcer la psychologie positive.
+* **Design Aéré :** Utiliser beaucoup d'espace blanc (ou négatif) pour que l'interface "respire", mettant en valeur les couleurs et les données financières sans surcharger l'écran.
