@@ -348,19 +348,14 @@
             <div class="lg:hidden absolute bottom-1/4 right-1/4 w-72 h-72 bg-tertiary/10 rounded-full blur-[100px] pointer-events-none"></div>
 
             <div class="w-full max-w-md space-y-8 relative z-10">
-                <!-- Mobile brand logo (visible on mobile only) -->
-                <div class="lg:hidden text-center space-y-2 mb-6">
-                    <div class="w-14 h-14 mx-auto rounded-full bg-gradient-to-tr from-primary to-[#a6e22e] flex items-center justify-center text-[#0c0e12] font-black text-lg shadow-lg shadow-primary/20">
+                <!-- Brand / Login title -->
+                <div class="text-center lg:text-left space-y-2">
+                    <div class="lg:hidden w-14 h-14 mx-auto rounded-full bg-gradient-to-tr from-primary to-[#a6e22e] flex items-center justify-center text-[#0c0e12] font-black text-lg shadow-lg shadow-primary/20 mb-2">
                         PV
                     </div>
-                    <h2 class="text-headline-md font-bold bg-gradient-to-r from-primary to-[#a6e22e] bg-clip-text text-transparent">Philia Vault</h2>
-                    <p data-i18n="login_subtitle" class="text-xs text-on-surface-variant">Accédez à votre coffre-fort financier sécurisé</p>
-                </div>
-
-                <!-- Desktop login title -->
-                <div class="hidden lg:block space-y-2">
-                    <h3 class="text-2xl font-black tracking-tight text-white">Ravi de vous revoir</h3>
-                    <p data-i18n="login_subtitle" class="text-xs text-on-surface-variant">Entrez vos identifiants pour accéder à votre coffre-fort.</p>
+                    <h2 class="lg:hidden text-headline-md font-bold bg-gradient-to-r from-primary to-[#a6e22e] bg-clip-text text-transparent">Philia Vault</h2>
+                    <h3 id="auth-title" class="text-2xl font-black tracking-tight text-white" data-i18n="login_title_text">Ravi de vous revoir</h3>
+                    <p id="auth-subtitle" class="text-xs text-on-surface-variant" data-i18n="login_subtitle">Accédez à votre coffre-fort financier sécurisé</p>
                 </div>
 
                 <!-- Form container -->
@@ -377,7 +372,7 @@
                     <p id="auth-error" class="hidden text-xs text-error text-center font-semibold"></p>
 
                     <!-- Terms agreement checkbox -->
-                    <div class="flex items-start gap-2.5 py-1">
+                    <div id="auth-terms-container" class="flex items-start gap-2.5 py-1 hidden">
                         <input id="auth-terms-checkbox" type="checkbox" class="mt-0.5 rounded border-white/10 bg-black/40 text-primary focus:ring-0 cursor-pointer w-4 h-4"/>
                         <label for="auth-terms-checkbox" class="text-[11px] text-on-surface-variant leading-tight cursor-pointer select-none">
                             <span data-i18n="accept_terms_label_prefix">J'accepte les</span>
@@ -385,9 +380,12 @@
                         </label>
                     </div>
 
-                    <div class="flex flex-col sm:flex-row gap-3 pt-2">
-                        <button onclick="handleAuth('login')" data-i18n="login_btn" class="flex-1 py-3.5 vibrant-button text-white rounded-xl text-sm font-bold active:scale-95 transition-all">Se connecter</button>
-                        <button onclick="handleAuth('register')" data-i18n="register_btn" class="flex-1 py-3.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-sm font-bold text-white active:scale-95 transition-all border border-white/5">Créer un compte</button>
+                    <div class="pt-2">
+                        <button id="auth-submit-btn" onclick="handleAuthSubmit()" data-i18n="login_btn" class="w-full py-3.5 vibrant-button text-white rounded-xl text-sm font-bold active:scale-95 transition-all">Se connecter</button>
+                    </div>
+
+                    <div id="auth-toggle-text" class="text-center text-xs text-on-surface-variant/80">
+                        Nouveau sur Philia Vault ? <a href="javascript:void(0)" onclick="setAuthMode('register')" class="text-primary hover:underline font-bold">Créer un compte</a>
                     </div>
 
                     <div class="relative flex py-2 items-center">
@@ -1300,7 +1298,12 @@
                 profile_currency: "Devise",
                 profile_save_btn: "Enregistrer",
                 profile_close_btn: "Fermer",
-                profile_update_success: "Profil mis à jour avec succès !"
+                profile_update_success: "Profil mis à jour avec succès !",
+                login_title_text: "Ravi de vous revoir",
+                register_title_text: "Créer votre compte",
+                register_subtitle_text: "Commencez votre voyage vers l'indépendance financière",
+                auth_no_account: "Nouveau sur Philia Vault ?",
+                auth_has_account: "Vous avez déjà un compte ?"
             },
             en: {
                 login_subtitle: "Access your secure financial vault",
@@ -1473,7 +1476,12 @@
                 profile_currency: "Currency",
                 profile_save_btn: "Save",
                 profile_close_btn: "Close",
-                profile_update_success: "Profile updated successfully!"
+                profile_update_success: "Profile updated successfully!",
+                login_title_text: "Welcome back",
+                register_title_text: "Create your account",
+                register_subtitle_text: "Start your journey towards financial independence",
+                auth_no_account: "New to Philia Vault?",
+                auth_has_account: "Already have an account?"
             },
             es: {
                 login_subtitle: "Acceda a su caja fuerte financiera segura",
@@ -1646,7 +1654,12 @@
                 profile_currency: "Moneda",
                 profile_save_btn: "Guardar",
                 profile_close_btn: "Cerrar",
-                profile_update_success: "¡Perfil actualizado con éxito!"
+                profile_update_success: "¡Perfil actualizado con éxito!",
+                login_title_text: "Bienvenido de nuevo",
+                register_title_text: "Crea tu cuenta",
+                register_subtitle_text: "Comience su viaje hacia la independencia financiera",
+                auth_no_account: "¿Nuevo en Philia Vault?",
+                auth_has_account: "¿Ya tienes una cuenta?"
             },
             pt: {
                 login_subtitle: "Aceda ao seu cofre financeiro seguro",
@@ -1819,7 +1832,12 @@
                 profile_currency: "Moeda",
                 profile_save_btn: "Salvar",
                 profile_close_btn: "Fechar",
-                profile_update_success: "Perfil atualizado com sucesso!"
+                profile_update_success: "Perfil atualizado com sucesso!",
+                login_title_text: "Bem-vindo de volta",
+                register_title_text: "Crie a sua conta",
+                register_subtitle_text: "Comece a sua jornada rumo à independência financeira",
+                auth_no_account: "Novo no Philia Vault?",
+                auth_has_account: "Já tem uma conta?"
             },
             de: {
                 login_subtitle: "Greifen Sie auf Ihren sicheren Finanztresor zu",
@@ -1992,7 +2010,12 @@
                 profile_currency: "Währung",
                 profile_save_btn: "Speichern",
                 profile_close_btn: "Schließen",
-                profile_update_success: "Profil erfolgreich aktualisiert!"
+                profile_update_success: "Profil erfolgreich aktualisiert!",
+                login_title_text: "Willkommen zurück",
+                register_title_text: "Konto erstellen",
+                register_subtitle_text: "Beginnen Sie Ihre Reise zur finanziellen Unabhängigkeit",
+                auth_no_account: "Neu bei Philia Vault?",
+                auth_has_account: "Haben Sie bereits ein Konto?"
             }
         };
 
@@ -2044,6 +2067,10 @@
                     el.setAttribute('placeholder', dictionary[key]);
                 }
             });
+
+            if (typeof setAuthMode === 'function') {
+                setAuthMode(currentAuthMode);
+            }
         }
 
         const CURRENCY_SYMBOLS = {
@@ -2177,6 +2204,48 @@
             document.getElementById('disclaimer-modal').classList.add('hidden');
             const checkbox = document.getElementById('auth-terms-checkbox');
             if (checkbox) checkbox.checked = false;
+        }
+
+        let currentAuthMode = 'login';
+
+        function setAuthMode(mode) {
+            currentAuthMode = mode;
+            const titleEl = document.getElementById('auth-title');
+            const subtitleEl = document.getElementById('auth-subtitle');
+            const submitBtnEl = document.getElementById('auth-submit-btn');
+            const toggleTextEl = document.getElementById('auth-toggle-text');
+            const termsContainer = document.getElementById('auth-terms-container');
+            const errEl = document.getElementById('auth-error');
+            
+            if (errEl) errEl.classList.add('hidden');
+            
+            const dictionary = TRANSLATIONS[currentLang] || TRANSLATIONS['en'];
+            
+            if (mode === 'login') {
+                if (titleEl) titleEl.textContent = dictionary.login_title_text || "Ravi de vous revoir";
+                if (subtitleEl) subtitleEl.textContent = dictionary.login_subtitle || "Accédez à votre coffre-fort financier sécurisé";
+                if (submitBtnEl) submitBtnEl.textContent = dictionary.login_btn || "Se connecter";
+                if (toggleTextEl) {
+                    const togglePrefix = dictionary.auth_no_account || "Nouveau sur Philia Vault ?";
+                    const toggleAction = dictionary.register_btn || "Créer un compte";
+                    toggleTextEl.innerHTML = `${togglePrefix} <a href="javascript:void(0)" onclick="setAuthMode('register')" class="text-primary hover:underline font-bold">${toggleAction}</a>`;
+                }
+                if (termsContainer) termsContainer.classList.add('hidden');
+            } else {
+                if (titleEl) titleEl.textContent = dictionary.register_title_text || "Créer votre compte";
+                if (subtitleEl) subtitleEl.textContent = dictionary.register_subtitle_text || "Commencez votre voyage vers l'indépendance financière";
+                if (submitBtnEl) submitBtnEl.textContent = dictionary.register_btn || "Créer un compte";
+                if (toggleTextEl) {
+                    const togglePrefix = dictionary.auth_has_account || "Vous avez déjà un compte ?";
+                    const toggleAction = dictionary.login_btn || "Se connecter";
+                    toggleTextEl.innerHTML = `${togglePrefix} <a href="javascript:void(0)" onclick="setAuthMode('login')" class="text-primary hover:underline font-bold">${toggleAction}</a>`;
+                }
+                if (termsContainer) termsContainer.classList.remove('hidden');
+            }
+        }
+
+        async function handleAuthSubmit() {
+            await handleAuth(currentAuthMode);
         }
 
         async function handleAuth(mode) {
