@@ -83,6 +83,7 @@ def init_db():
         last_name TEXT,
         custom_categories TEXT,
         avatar TEXT,
+        notifications_enabled INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -98,6 +99,7 @@ def init_db():
         ("last_name", "TEXT"),
         ("custom_categories", "TEXT"),
         ("avatar", "TEXT"),
+        ("notifications_enabled", "INTEGER DEFAULT 1"),
         ("created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
     ]:
         try:
@@ -238,6 +240,32 @@ def update_user_currency(user_id, currency):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("UPDATE users SET currency=? WHERE email=? OR id=?", (currency, user_id, user_id))
+    conn.commit()
+    conn.close()
+
+def get_user_settings(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ? OR id = ?", (user_id, user_id))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        # Fall back to defaults, creating the user row via get_user_profile
+        get_user_profile(user_id)
+        return {"currency": "EUR", "notifications_enabled": True}
+    d = dict(row)
+    return {
+        "currency": d["currency"] or "EUR",
+        "notifications_enabled": bool(d["notifications_enabled"]) if d["notifications_enabled"] is not None else True,
+    }
+
+def update_user_settings(user_id, currency=None, notifications_enabled=None):
+    conn = get_db()
+    cursor = conn.cursor()
+    if currency is not None:
+        cursor.execute("UPDATE users SET currency=? WHERE email=? OR id=?", (currency, user_id, user_id))
+    if notifications_enabled is not None:
+        cursor.execute("UPDATE users SET notifications_enabled=? WHERE email=? OR id=?", (1 if notifications_enabled else 0, user_id, user_id))
     conn.commit()
     conn.close()
 

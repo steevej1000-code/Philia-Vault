@@ -362,16 +362,25 @@ def update_profile():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route("/api/user/settings", methods=["POST"])
-def update_settings():
+@app.route("/api/user/settings", methods=["GET", "POST", "PUT"])
+def manage_settings():
     user_id = get_current_user_id()
+    if request.method == "GET":
+        try:
+            settings = database.get_user_settings(user_id)
+            return jsonify({"success": True, "settings": settings})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
     data = request.json or {}
     currency = data.get("currency")
-    if not currency:
-        return jsonify({"success": False, "error": "Devise manquante"}), 400
+    notifications_enabled = data.get("notifications_enabled")
+    if currency is None and notifications_enabled is None:
+        return jsonify({"success": False, "error": "Aucun paramètre fourni"}), 400
     try:
-        database.update_user_currency(user_id, currency)
-        return jsonify({"success": True, "message": "Devise mise à jour avec succès"})
+        database.update_user_settings(user_id, currency=currency, notifications_enabled=notifications_enabled)
+        settings = database.get_user_settings(user_id)
+        return jsonify({"success": True, "message": "Paramètres mis à jour avec succès", "settings": settings})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
