@@ -263,3 +263,17 @@ document.addEventListener('DOMContentLoaded', () => {
   updateSpotCounter();
   initStripe();
 });
+
+/* ---------- Visual mockup tab switcher ---------- */
+function switchTab(index) {
+  const tabs = document.querySelectorAll('.visual-tab-btn');
+  const panels = document.querySelectorAll('.visual-panel');
+
+  tabs.forEach((tab, i) => {
+    tab.classList.toggle('active', i === index);
+  });
+
+  panels.forEach((panel, i) => {
+    panel.classList.toggle('active', i === index);
+  });
+}
