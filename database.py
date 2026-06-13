@@ -1,6 +1,8 @@
 import sqlite3
 import os
 import base64
+import secrets
+import string
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 
@@ -64,6 +66,17 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+# Generate a unique 8-character alphanumeric referral code (program de parrainage)
+def generate_unique_referral_code(cursor):
+    alphabet = string.ascii_uppercase + string.digits
+    for _ in range(20):
+        code = ''.join(secrets.choice(alphabet) for _ in range(8))
+        cursor.execute("SELECT 1 FROM users WHERE code_parrainage = ?", (code,))
+        if not cursor.fetchone():
+            return code
+    # Extremely unlikely fallback
+    return secrets.token_hex(4).upper()
+
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
@@ -84,6 +97,8 @@ def init_db():
         custom_categories TEXT,
         avatar TEXT,
         notifications_enabled INTEGER DEFAULT 1,
+        code_parrainage TEXT UNIQUE,
+        parrain_id INTEGER,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -100,12 +115,23 @@ def init_db():
         ("custom_categories", "TEXT"),
         ("avatar", "TEXT"),
         ("notifications_enabled", "INTEGER DEFAULT 1"),
+        ("code_parrainage", "TEXT"),
+        ("parrain_id", "INTEGER"),
         ("created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
     ]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")
         except Exception:
             pass
+
+    conn.commit()
+
+    # Backfill referral codes for any existing users that don't have one yet
+    # (new users get one assigned at creation time via generate_referral_code)
+    cursor.execute("SELECT id FROM users WHERE code_parrainage IS NULL OR code_parrainage = ''")
+    for row in cursor.fetchall():
+        code = generate_unique_referral_code(cursor)
+        cursor.execute("UPDATE users SET code_parrainage=? WHERE id=?", (code, row["id"] if isinstance(row, sqlite3.Row) else row[0]))
 
     # Create assets table (with user_id)
     cursor.execute("""
@@ -183,7 +209,8 @@ def get_user_profile(user_id):
         conn = get_db()
         cursor = conn.cursor()
         try:
-            cursor.execute("INSERT INTO users (email, password) VALUES (?, '')", (user_id,))
+            code = generate_unique_referral_code(cursor)
+            cursor.execute("INSERT INTO users (email, password, code_parrainage) VALUES (?, '', ?)", (user_id, code))
             conn.commit()
         except Exception:
             pass
@@ -425,8 +452,9 @@ def create_user(email, password, first_name="", last_name=""):
     cursor = conn.cursor()
     pwd_hash = hash_password(password)
     try:
-        cursor.execute("INSERT INTO users (email, password, first_name, last_name) VALUES (?, ?, ?, ?)", 
-                       (email.lower().strip(), pwd_hash, first_name, last_name))
+        code = generate_unique_referral_code(cursor)
+        cursor.execute("INSERT INTO users (email, password, first_name, last_name, code_parrainage) VALUES (?, ?, ?, ?, ?)",
+                       (email.lower().strip(), pwd_hash, first_name, last_name, code))
         conn.commit()
         success = True
     except sqlite3.IntegrityError:
@@ -459,7 +487,8 @@ def create_or_get_google_user(email, google_id):
         return email_clean
     else:
         # Create Google user
-        cursor.execute("INSERT INTO users (email, google_id, password) VALUES (?, ?, '')", (email_clean, google_id))
+        code = generate_unique_referral_code(cursor)
+        cursor.execute("INSERT INTO users (email, google_id, password, code_parrainage) VALUES (?, ?, '', ?)", (email_clean, google_id, code))
         conn.commit()
         conn.close()
         seed_user_data(email_clean)
@@ -472,4 +501,50 @@ def get_user_by_stripe_customer_id(customer_id):
     user = cursor.fetchone()
     conn.close()
     return dict(user) if user else None
+
+# Affiliation / Referral program (Revenu Passif)
+# Commission per active premium referral. Philia Vault Premium Monthly is
+# priced at 9.99 (see price_amount in server.py /api/stripe/create-checkout-session).
+# We pay out ~30% of that monthly subscription price per active referral.
+COMMISSION_PER_REFERRAL = 3.00
+
+def get_affiliation_stats(user_id, _retry=False):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ? OR id = ?", (user_id, user_id))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        if _retry:
+            # User could not be created (e.g. race condition) - return safe defaults
+            return {
+                "code_parrainage": "",
+                "active_referrals": 0,
+                "estimated_monthly_gain": 0.0,
+                "commission_per_referral": COMMISSION_PER_REFERRAL,
+            }
+        # Ensure the user exists (and has a referral code) then retry once
+        get_user_profile(user_id)
+        return get_affiliation_stats(user_id, _retry=True)
+
+    d = dict(row)
+    code = d["code_parrainage"]
+    if not code:
+        code = generate_unique_referral_code(cursor)
+        cursor.execute("UPDATE users SET code_parrainage=? WHERE id=?", (code, d["id"]))
+        conn.commit()
+
+    cursor.execute(
+        "SELECT COUNT(*) AS cnt FROM users WHERE parrain_id = ? AND premium_status = 1",
+        (d["id"],)
+    )
+    active_referrals = cursor.fetchone()["cnt"]
+    conn.close()
+
+    return {
+        "code_parrainage": code,
+        "active_referrals": active_referrals,
+        "estimated_monthly_gain": round(active_referrals * COMMISSION_PER_REFERRAL, 2),
+        "commission_per_referral": COMMISSION_PER_REFERRAL,
+    }
 

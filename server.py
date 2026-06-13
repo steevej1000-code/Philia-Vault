@@ -8,7 +8,21 @@ from flask_cors import CORS
 
 load_dotenv()
 
+# --- Vérification des variables d'environnement critiques ---
+# ENCRYPTION_KEY est accepté en alias de DB_ENCRYPTION_KEY (nom historique
+# utilisé par database.py) : l'un des deux doit être présent.
+REQUIRED_ENV_VARS = ["GEMINI_API_KEY", "SECRET_KEY"]
+_missing = [v for v in REQUIRED_ENV_VARS if not os.environ.get(v)]
+if not os.environ.get("DB_ENCRYPTION_KEY") and not os.environ.get("ENCRYPTION_KEY"):
+    _missing.append("DB_ENCRYPTION_KEY (ou ENCRYPTION_KEY)")
+if _missing:
+    raise EnvironmentError(
+        f"Variables d'environnement manquantes : {', '.join(_missing)}. "
+        f"Vérifiez votre fichier .env (voir .env.example)."
+    )
+
 app = Flask(__name__, static_folder="static")
+app.secret_key = os.environ.get("SECRET_KEY")
 CORS(app, 
      origins="*",
      allow_headers=["Content-Type", "X-User-Email", "Authorization"],
@@ -381,6 +395,15 @@ def manage_settings():
         database.update_user_settings(user_id, currency=currency, notifications_enabled=notifications_enabled)
         settings = database.get_user_settings(user_id)
         return jsonify({"success": True, "message": "Paramètres mis à jour avec succès", "settings": settings})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/affiliation/stats", methods=["GET"])
+def affiliation_stats():
+    user_id = get_current_user_id()
+    try:
+        stats = database.get_affiliation_stats(user_id)
+        return jsonify({"success": True, **stats})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

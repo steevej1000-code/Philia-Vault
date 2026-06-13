@@ -1,7 +1,17 @@
 .env
+*.env
+.env.local
+.env.production
 cashflow.db
 __pycache__/
 *.pyc
+*.pyo
+instance/
+*.db
+*.sqlite
+*.sqlite3
+*.pem
+*.key
 .DS_Store
 .idea/
 .vscode/
