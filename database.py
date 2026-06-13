@@ -405,9 +405,13 @@ def get_liabilities(user_id):
     rows = []
     for r in cursor.fetchall():
         d = dict(r)
-        d["total_amount"] = decrypt_val(d["total_amount"])
-        d["remaining_amount"] = decrypt_val(d["remaining_amount"])
-        d["monthly_cost"] = decrypt_val(d["monthly_cost"])
+        d["total_amount"] = decrypt_val(d["total_amount"]) if d["total_amount"] is not None else 0.0
+        d["remaining_amount"] = decrypt_val(d["remaining_amount"]) if d["remaining_amount"] is not None else 0.0
+        d["monthly_cost"] = decrypt_val(d["monthly_cost"]) if d["monthly_cost"] is not None else 0.0
+        # If decryption somehow returns None, default to 0.0
+        if d["total_amount"] is None: d["total_amount"] = 0.0
+        if d["remaining_amount"] is None: d["remaining_amount"] = 0.0
+        if d["monthly_cost"] is None: d["monthly_cost"] = 0.0
         rows.append(d)
     conn.close()
     return rows
@@ -468,14 +472,25 @@ import hashlib
 def hash_password(password):
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
-def create_user(email, password, first_name="", last_name=""):
+def create_user(email, password, first_name="", last_name="", referral_code=None):
     conn = get_db()
     cursor = conn.cursor()
     pwd_hash = hash_password(password)
+    
+    # Resolve sponsor parrain_id from referral_code
+    parrain_id = None
+    if referral_code:
+        cursor.execute("SELECT id FROM users WHERE code_parrainage = ?", (referral_code.strip().upper(),))
+        row = cursor.fetchone()
+        if row:
+            parrain_id = row["id"]
+            
     try:
         code = generate_unique_referral_code(cursor)
-        cursor.execute("INSERT INTO users (email, password, first_name, last_name, code_parrainage) VALUES (?, ?, ?, ?, ?)",
-                       (email.lower().strip(), pwd_hash, first_name, last_name, code))
+        cursor.execute(
+            "INSERT INTO users (email, password, first_name, last_name, code_parrainage, parrain_id) VALUES (?, ?, ?, ?, ?, ?)",
+            (email.lower().strip(), pwd_hash, first_name, last_name, code, parrain_id)
+        )
         conn.commit()
         success = True
     except sqlite3.IntegrityError:

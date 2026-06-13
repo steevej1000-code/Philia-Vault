@@ -149,10 +149,11 @@ def auth_register():
     password = data.get("password")
     first_name = data.get("first_name", "")
     last_name = data.get("last_name", "")
+    referral_code = data.get("referral_code")
     if not email or not password:
         return jsonify({"success": False, "error": "Email et mot de passe requis"}), 400
     
-    success = database.create_user(email, password, first_name, last_name)
+    success = database.create_user(email, password, first_name, last_name, referral_code)
     if success:
         return jsonify({"success": True, "message": "Compte créé avec succès"})
     else:
