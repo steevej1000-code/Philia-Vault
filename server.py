@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, redirect
 import database
 import json
 from dotenv import load_dotenv
@@ -23,11 +23,31 @@ if _missing:
 
 app = Flask(__name__, static_folder="static")
 app.secret_key = os.environ.get("SECRET_KEY")
+allowed_origins = [
+    os.environ.get('ALLOWED_ORIGIN', 'https://philiavault.com'),
+    'https://www.philiavault.com',
+    'http://localhost:3000',
+    'http://localhost:5000',
+    'http://localhost:5001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5000',
+    'http://127.0.0.1:5001',
+    'http://localhost:8081'
+]
 CORS(app, 
-     origins="*",
+     origins=allowed_origins,
      allow_headers=["Content-Type", "X-User-Email", "Authorization"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
      supports_credentials=False)
+
+@app.before_request
+def redirect_www():
+    # Only redirect in production environments
+    if os.environ.get('FLASK_ENV') == 'production' and request.host.startswith('www.'):
+        return redirect(
+            request.url.replace('www.', '', 1),
+            code=301
+        )
 
 # Initialize DB on load
 database.init_db()
@@ -46,6 +66,13 @@ if GEMINI_KEY:
 # Static Routes
 @app.route("/")
 def serve_index():
+    # If the file landing.html doesn't exist yet, fallback to index.html gracefully
+    if os.path.exists(os.path.join("static", "landing.html")):
+        return send_from_directory("static", "landing.html")
+    return send_from_directory("static", "index.html")
+
+@app.route("/app")
+def serve_app():
     return send_from_directory("static", "index.html")
 
 @app.route("/static/<path:path>")
@@ -714,8 +741,134 @@ Que souhaitez-vous optimiser aujourd'hui ? Demandez un 'audit de mon cashflow'."
 * Your Liabilities consume **{total_cost} $** per month.
 * Your Independence Index (IIF) is at **{iif}%**.
 What would you like to optimize today? Ask for a 'cashflow audit'."""
-        
     return jsonify({"success": True, "reply": reply})
+
+# --- PRE-LAUNCH LANDING PAGE & SQUARE ENDPOINTS ---
+import uuid
+import time
+
+SQUARE_ACCESS_TOKEN = os.environ.get("SQUARE_ACCESS_TOKEN")
+SQUARE_LOCATION_ID = os.environ.get("SQUARE_LOCATION_ID")
+SQUARE_APPLICATION_ID = os.environ.get("SQUARE_APPLICATION_ID")
+
+def send_founder_email(email, name, remaining_spots):
+    subject = "Welcome to Philia Vault — Your founder spot is secured 🔒"
+    body = f"""Hi {name or email},
+
+Your founding membership is confirmed.
+
+What happens next:
+→ You'll receive a private beta invitation in July 2026
+→ Full app access launches August 2026
+→ Your $4.99/month rate is locked for life
+→ Something waiting for you inside the app. You'll see.
+
+You're one of {10 - remaining_spots} people who believed before anyone else.
+That means something.
+
+— The Philia Vault Team
+
+---
+Questions? Reply to this email.
+Cancel anytime: https://philiavault.app/cancel?email={email}
+"""
+    print("=" * 60)
+    print(f"SIMULATED EMAIL SENT TO: {email}")
+    print(f"Subject: {subject}")
+    print(body)
+    print("=" * 60)
+    try:
+        os.makedirs(os.path.join(os.path.dirname(__file__), "emails"), exist_ok=True)
+        filename = os.path.join(os.path.dirname(__file__), "emails", f"founder_confirmation_{email}_{int(time.time())}.txt")
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(f"To: {email}\nSubject: {subject}\n\n{body}")
+    except Exception as e:
+        print(f"Could not log email to file: {e}")
+
+@app.route("/api/founder/stripe-config", methods=["GET"])
+def founder_stripe_config():
+    return jsonify({
+        "publishableKey": os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
+    })
+
+@app.route("/api/founder/count", methods=["GET"])
+def founder_count():
+    count = database.get_founder_count()
+    remaining = max(0, 10 - count)
+    return jsonify({
+        "success": True,
+        "count": remaining,
+        "remaining": remaining,
+        "total": 10
+    })
+
+@app.route("/api/founder/purchase", methods=["POST"])
+def founder_purchase():
+    data = request.json or {}
+    email = data.get("email")
+    name = data.get("name")
+    source_id = data.get("source_id") # Stripe token (tok_...)
+    
+    if not email or not source_id:
+        return jsonify({"success": False, "error": "Email and payment token are required"}), 400
+
+    # Server-side validation of spots left
+    count = database.get_founder_count()
+    remaining = max(0, 10 - count)
+    if remaining <= 0:
+        return jsonify({"success": False, "error": "No founder spots remaining. Please join the waitlist."}), 400
+
+    payment_id = f"st-mock-{uuid.uuid4().hex}"
+    
+    # Process with Stripe if config exists
+    if STRIPE_SECRET_KEY:
+        try:
+            charge = stripe.Charge.create(
+                amount=499, # $4.99 USD
+                currency="usd",
+                source=source_id,
+                description=f"Philia Vault Founder Spot - {email}",
+                receipt_email=email
+            )
+            payment_id = charge["id"]
+        except Exception as e:
+            return jsonify({"success": False, "error": f"Stripe Error: {str(e)}"}), 400
+
+    # Save founder subscription in database
+    success = database.add_founder_member(email, name, payment_id)
+    if not success:
+        return jsonify({"success": False, "error": "Email already registered as a founding member"}), 400
+
+    # Re-evaluate remaining spots for email text
+    new_count = database.get_founder_count()
+    new_remaining = max(0, 10 - new_count)
+    
+    send_founder_email(email, name, new_remaining)
+
+    return jsonify({
+        "success": True,
+        "message": "Founder spot claimed successfully",
+        "payment_id": payment_id,
+        "remaining_spots": new_remaining
+    })
+
+@app.route("/api/founder/waitlist", methods=["POST"])
+def founder_waitlist():
+    data = request.json or {}
+    email = data.get("email")
+    lang = data.get("lang", "en")
+    
+    if not email:
+        return jsonify({"success": False, "error": "Email is required"}), 400
+        
+    success = database.add_founder_waitlist(email, lang)
+    if not success:
+        return jsonify({"success": False, "error": "Email already added to the waitlist"}), 400
+        
+    return jsonify({
+        "success": True,
+        "message": "Added to waitlist successfully"
+    })
 
 if __name__ == "__main__":
     # Ensure static directory exists

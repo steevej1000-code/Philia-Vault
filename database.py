@@ -184,6 +184,27 @@ def init_db():
     )
     """)
 
+    # Create founder_members table for pre-launch purchases
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS founder_members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL UNIQUE,
+        name TEXT,
+        square_payment_id TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # Create founder_waitlist table for backup email collections
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS founder_waitlist (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL UNIQUE,
+        lang TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
     # Migrate old data if any exists without user_id
     for table in ["assets", "liabilities", "transactions", "savings_goals"]:
         try:
@@ -547,4 +568,51 @@ def get_affiliation_stats(user_id, _retry=False):
         "estimated_monthly_gain": round(active_referrals * COMMISSION_PER_REFERRAL, 2),
         "commission_per_referral": COMMISSION_PER_REFERRAL,
     }
+
+def add_founder_member(email, name, payment_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO founder_members (email, name, square_payment_id) VALUES (?, ?, ?)",
+            (email, name, payment_id)
+        )
+        conn.commit()
+        success = True
+    except Exception as e:
+        print(f"Error adding founder member: {e}")
+        success = False
+    finally:
+        conn.close()
+    return success
+
+def add_founder_waitlist(email, lang):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO founder_waitlist (email, lang) VALUES (?, ?)",
+            (email, lang)
+        )
+        conn.commit()
+        success = True
+    except Exception as e:
+        print(f"Error adding to waitlist: {e}")
+        success = False
+    finally:
+        conn.close()
+    return success
+
+def get_founder_count():
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT COUNT(*) AS cnt FROM founder_members")
+        count = cursor.fetchone()["cnt"]
+    except Exception as e:
+        print(f"Error getting founder count: {e}")
+        count = 0
+    finally:
+        conn.close()
+    return count
 
