@@ -578,7 +578,7 @@ def get_affiliation_stats(user_id, _retry=False):
         conn.commit()
 
     cursor.execute(
-        "SELECT COUNT(*) AS cnt FROM users WHERE parrain_id = ? AND premium_status = 1",
+        "SELECT COUNT(*) AS cnt FROM users WHERE parrain_id = ?",
         (d["id"],)
     )
     active_referrals = cursor.fetchone()["cnt"]
