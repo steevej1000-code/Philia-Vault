@@ -175,6 +175,35 @@ def auth_login():
         return jsonify({"success": False, "error": "Email ou mot de passe incorrect"}), 401
 
 # API Summary
+def calculate_corrected_fi_indices(active_cashflow_m, fixed_expenses_m):
+    # Sécurité anti-division par zéro si les dépenses sont nulles
+    if fixed_expenses_m == 0:
+        return 0, 0, 0 # Indice 0%, Timeline 0, Gain 0
+
+    # Nouvelle Formule de l'Indice FI Standardisé
+    # (Revenus - Dépenses) / |Dépenses|
+    normalized_index = (active_cashflow_m - fixed_expenses_m) / abs(fixed_expenses_m)
+
+    # Convertir en pourcentage (e.g., -1.0 -> -100%)
+    indice_percent = round(normalized_index * 100, 2)
+
+    # Appliquer le plancher logique de l'utilisateur : L'indice ne peut pas descendre en dessous de -100%
+    if indice_percent <= -100:
+        indice_percent = -100
+
+    # ----------------------------------------------------
+    # CORRECTION DE LA LOGIQUE TIMELINE
+    # ----------------------------------------------------
+    if indice_percent <= 0:
+        timeline_years = 0 # Timeline fixé à 0 tant que le flux n'est pas inversé
+    else:
+        # L'ancienne logique de projection (à adapter selon votre méthode préférée)
+        # e.g., timeline = (Dépenses / Gains) -> exemple simplifié
+        timeline_years = round(fixed_expenses_m / (active_cashflow_m - fixed_expenses_m), 1)
+
+    return indice_percent, timeline_years, active_cashflow_m
+
+# API Summary
 @app.route("/api/summary", methods=["GET"])
 def get_summary():
     try:
@@ -188,11 +217,8 @@ def get_summary():
         total_liabilities_val = sum(l["remaining_amount"] for l in liabilities)
         total_monthly_cost = sum(l["monthly_cost"] for l in liabilities)
         
-        # Independence Index Formula: (Passive Income / Total Monthly Cost) * 100
-        if total_monthly_cost > 0:
-            iif_score = int((total_passive_income / total_monthly_cost) * 100)
-        else:
-            iif_score = 100 if total_passive_income > 0 else 0
+        # Calculate standardized index and timeline
+        iif_score, timeline_years, _ = calculate_corrected_fi_indices(total_passive_income, total_monthly_cost)
             
         net_cashflow = total_passive_income - total_monthly_cost
         
@@ -213,6 +239,7 @@ def get_summary():
             "total_liabilities": total_liabilities_val,
             "total_monthly_cost": total_monthly_cost,
             "iif_score": iif_score,
+            "timeline": timeline_years,
             "net_cashflow": net_cashflow,
             "asset_types": asset_types,
             "liability_types": liability_types
@@ -664,7 +691,7 @@ def coach_chat():
     total_passive = sum(a["monthly_yield"] for a in assets)
     total_liabilities = sum(l["remaining_amount"] for l in liabilities)
     total_cost = sum(l["monthly_cost"] for l in liabilities)
-    iif = int((total_passive / total_cost) * 100) if total_cost > 0 else 100
+    iif, _, _ = calculate_corrected_fi_indices(total_passive, total_cost)
     
     context_str = f"""
     Données financières réelles de l'utilisateur:
