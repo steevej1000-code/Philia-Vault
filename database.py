@@ -486,10 +486,13 @@ def create_user(email, password, first_name="", last_name="", referral_code=None
             parrain_id = row["id"]
             
     try:
+        from datetime import datetime, timedelta
+        # Premium status set to 1 (active) with an expiration date in 3 days
+        expires_date = (datetime.utcnow() + timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
         code = generate_unique_referral_code(cursor)
         cursor.execute(
-            "INSERT INTO users (email, password, first_name, last_name, code_parrainage, parrain_id) VALUES (?, ?, ?, ?, ?, ?)",
-            (email.lower().strip(), pwd_hash, first_name, last_name, code, parrain_id)
+            "INSERT INTO users (email, password, first_name, last_name, code_parrainage, parrain_id, premium_status, premium_expires) VALUES (?, ?, ?, ?, ?, ?, 1, ?)",
+            (email.lower().strip(), pwd_hash, first_name, last_name, code, parrain_id, expires_date)
         )
         conn.commit()
         success = True
@@ -521,10 +524,14 @@ def create_or_get_google_user(email, google_id):
             conn.commit()
         conn.close()
         return email_clean
-    else:
         # Create Google user
+        from datetime import datetime, timedelta
+        expires_date = (datetime.utcnow() + timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
         code = generate_unique_referral_code(cursor)
-        cursor.execute("INSERT INTO users (email, google_id, password, code_parrainage) VALUES (?, ?, '', ?)", (email_clean, google_id, code))
+        cursor.execute(
+            "INSERT INTO users (email, google_id, password, code_parrainage, premium_status, premium_expires) VALUES (?, ?, '', ?, 1, ?)",
+            (email_clean, google_id, code, expires_date)
+        )
         conn.commit()
         conn.close()
         seed_user_data(email_clean)
