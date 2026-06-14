@@ -48,10 +48,10 @@ function PaywallScreen({ onSubscribe, onRestore, loading }: { onSubscribe: (plan
       {/* Features */}
       <View style={pw.features}>
         {[
-          { Icon: IconSearch, t: 'Audit mensuel complet de votre patrimoine' },
-          { Icon: IconAssets, t: 'Analyse intelligente actifs / passifs' },
-          { Icon: IconTarget, t: 'Stratégies de croissance personnalisées' },
-          { Icon: IconBolt, t: 'Réponses instantanées, disponible 24h/24' },
+          { Icon: IconSearch, t: t('coach_feature_audit') },
+          { Icon: IconAssets, t: t('coach_feature_analysis') },
+          { Icon: IconTarget, t: t('coach_feature_strategy') },
+          { Icon: IconBolt, t: t('coach_feature_instant') },
         ].map((f, i) => (
           <View key={i} style={pw.feat}>
             <View style={pw.featIcon}><f.Icon size={18} color={COLORS.primary} /></View>
@@ -68,9 +68,9 @@ function PaywallScreen({ onSubscribe, onRestore, loading }: { onSubscribe: (plan
           activeOpacity={0.8}
         >
           {plan === 'monthly' && <View style={pw.planCheck}><Text style={{ fontSize: 10, color: '#0c0e12', fontWeight: '900' }}>✓</Text></View>}
-          <Text style={pw.planPeriod}>Mensuel</Text>
+          <Text style={pw.planPeriod}>{t('coach_plan_monthly')}</Text>
           <Text style={pw.planPrice}>$9.99</Text>
-          <Text style={pw.planUnit}>/mois</Text>
+          <Text style={pw.planUnit}>{t('coach_plan_per_month')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -78,12 +78,12 @@ function PaywallScreen({ onSubscribe, onRestore, loading }: { onSubscribe: (plan
           onPress={() => setPlan('annual')}
           activeOpacity={0.8}
         >
-          <View style={pw.badge}><Text style={pw.badgeText}>-33%</Text></View>
+          <View style={pw.badge}><Text style={pw.badgeText}>{t('coach_plan_discount')}</Text></View>
           {plan === 'annual' && <View style={pw.planCheck}><Text style={{ fontSize: 10, color: '#0c0e12', fontWeight: '900' }}>✓</Text></View>}
-          <Text style={pw.planPeriod}>Annuel</Text>
+          <Text style={pw.planPeriod}>{t('coach_plan_annual')}</Text>
           <Text style={pw.planPrice}>$79.99</Text>
-          <Text style={pw.planUnit}>/an</Text>
-          <Text style={pw.planSave}>= $6.67/mois</Text>
+          <Text style={pw.planUnit}>{t('coach_plan_per_year')}</Text>
+          <Text style={pw.planSave}>{t('coach_plan_equivalent')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -98,16 +98,16 @@ function PaywallScreen({ onSubscribe, onRestore, loading }: { onSubscribe: (plan
           {loading
             ? <ActivityIndicator color="#0c0e12" />
             : <Text style={pw.subText}>
-                S'abonner — {plan === 'monthly' ? '$9.99/mois' : '$79.99/an'}
+                {t('coach_subscribe').replace('{price}', plan === 'monthly' ? `$9.99${t('coach_plan_per_month')}` : `$79.99${t('coach_plan_per_year')}`)}
               </Text>
           }
         </LinearGradient>
       </TouchableOpacity>
 
-      <Text style={pw.legal}>Annulable à tout moment · Sans engagement</Text>
+      <Text style={pw.legal}>{t('coach_legal')}</Text>
 
       <TouchableOpacity onPress={onRestore} disabled={loading} style={{ marginTop: 12 }}>
-        <Text style={pw.restoreLink}>Restaurer mes achats</Text>
+        <Text style={pw.restoreLink}>{t('coach_restore')}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -149,7 +149,7 @@ export default function CoachScreen() {
   const [messages, setMessages] = useState<Message[]>([{
     id: '0',
     role: 'assistant',
-    content: 'Bonjour ! 👋 Je suis votre Coach Financier IA Philia Vault.\n\nJe peux analyser votre patrimoine en temps réel et vous donner des conseils personnalisés.\n\nTapez **"audit"** pour démarrer une analyse complète.',
+    content: t('coach_welcome_default'),
   }]);
 
   // Replace the static welcome message with a personalized one based on the
@@ -166,12 +166,15 @@ export default function CoachScreen() {
         const cashflow = result.net_cashflow ?? 0;
 
         const cashflowLine = cashflow > 0
-          ? `Votre cashflow mensuel est positif (+${cashflow.toFixed(0)}$) — voyons comment l'optimiser.`
+          ? t('coach_cashflow_positive').replace('{amount}', cashflow.toFixed(0))
           : cashflow < 0
-            ? `Votre cashflow mensuel est négatif (${cashflow.toFixed(0)}$) — analysons ça ensemble.`
-            : `Votre cashflow mensuel est à l'équilibre.`;
+            ? t('coach_cashflow_negative').replace('{amount}', cashflow.toFixed(0))
+            : t('coach_cashflow_balanced');
 
-        const greeting = `Bonjour ${firstName} ! 👋 Je suis votre Coach Financier IA Philia Vault.\n\nVotre score IIF actuel est de ${iif}%. ${cashflowLine}\n\nTapez **"audit"** pour démarrer une analyse complète.`;
+        const greeting = t('coach_welcome_personalized')
+          .replace('{name}', firstName)
+          .replace('{iif}', String(iif))
+          .replace('{cashflowLine}', cashflowLine);
 
         setMessages(prev =>
           prev.length === 1 && prev[0].id === '0'
@@ -180,7 +183,7 @@ export default function CoachScreen() {
         );
       } catch (e) {
         // Keep the static fallback welcome message if the summary can't be loaded.
-        console.warn('Coach: impossible de personnaliser le message d\'accueil', e);
+        console.warn('Coach: failed to personalize welcome message', e);
       }
     })();
   }, []);
@@ -203,7 +206,7 @@ export default function CoachScreen() {
       const offlineMsg: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: "📡 Le Coach IA n'est pas disponible hors ligne. Reconnectez-vous à internet pour reprendre la conversation.",
+        content: t('coach_offline_reply'),
       };
       setMessages(prev => [...prev, { id: (Date.now() - 1).toString(), role: 'user', content: msgText }, offlineMsg]);
       setInput('');
@@ -225,7 +228,7 @@ export default function CoachScreen() {
     try {
       const result = await api.sendChatMessage(msgText, newHistory.slice(-10));
       // The Flask server returns "reply" field
-      const reply = result.reply || result.response || result.message || 'Désolé, pas de réponse.';
+      const reply = result.reply || result.response || result.message || t('coach_no_reply');
 
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -239,7 +242,7 @@ export default function CoachScreen() {
       const errMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `❌ ${e.message || 'Erreur réseau. Vérifiez que le serveur est lancé.'}`,
+        content: `❌ ${e.message || t('coach_network_error')}`,
       };
       setMessages(prev => prev.filter(m => m.id !== 'loading').concat(errMsg));
     } finally {
@@ -262,12 +265,12 @@ export default function CoachScreen() {
         // webhooks also update server-side via /api/webhooks/revenuecat).
         await api.setPremiumStatus(1).catch(() => {});
         setPremium(true);
-        Alert.alert('🎉 Premium activé !', 'Bienvenue dans le Club Premium Philia Vault !');
+        Alert.alert(t('coach_premium_activated_title'), t('coach_premium_activated_message'));
       } else {
-        Alert.alert('Info', 'Achat effectué mais l\'accès Premium n\'est pas encore actif. Réessayez dans quelques instants.');
+        Alert.alert(t('coach_short_title'), t('coach_premium_pending'));
       }
     } catch (e: any) {
-      Alert.alert('Erreur', e.message || 'Achat impossible pour le moment.');
+      Alert.alert(t('error'), e.message || t('coach_purchase_error'));
     } finally {
       setSubscribing(false);
     }
@@ -280,12 +283,12 @@ export default function CoachScreen() {
       if (hasCoachEntitlement(customerInfo)) {
         await api.setPremiumStatus(1).catch(() => {});
         setPremium(true);
-        Alert.alert('✅ Restauré', 'Votre abonnement Premium a été restauré.');
+        Alert.alert(t('coach_restore_success_title'), t('coach_restore_success_message'));
       } else {
-        Alert.alert('Info', 'Aucun abonnement actif trouvé pour ce compte.');
+        Alert.alert(t('coach_short_title'), t('coach_restore_none'));
       }
     } catch (e: any) {
-      Alert.alert('Erreur', e.message || 'Restauration impossible.');
+      Alert.alert(t('error'), e.message || t('coach_restore_error'));
     } finally {
       setSubscribing(false);
     }
@@ -304,7 +307,7 @@ export default function CoachScreen() {
           {item.loading ? (
             <View style={chat.typingRow}>
               <ActivityIndicator size="small" color={COLORS.tertiary} />
-              <Text style={chat.typingText}>En train d'analyser...</Text>
+              <Text style={chat.typingText}>{t('coach_typing')}</Text>
             </View>
           ) : (
             <Text style={[chat.bubbleText, isUser && chat.bubbleTextUser]}>
@@ -320,16 +323,15 @@ export default function CoachScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
-          <Text style={styles.title}>Coach IA</Text>
+          <Text style={styles.title}>{t('coach_short_title')}</Text>
         </View>
         <View style={offline.wrap}>
           <View style={offline.iconCircle}>
             <IconCoach size={32} color={COLORS.onSurfaceVariant} />
           </View>
-          <Text style={offline.title}>Coach IA indisponible hors ligne</Text>
+          <Text style={offline.title}>{t('coach_offline_unavailable')}</Text>
           <Text style={offline.subtitle}>
-            Le Coach Financier IA nécessite une connexion internet pour analyser votre patrimoine en temps réel.{'\n\n'}
-            Reconnectez-vous pour continuer la conversation.
+            {t('coach_offline_message')}
           </Text>
         </View>
       </View>
@@ -340,9 +342,9 @@ export default function CoachScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
-          <Text style={styles.title}>Coach IA</Text>
+          <Text style={styles.title}>{t('coach_short_title')}</Text>
           <View style={styles.premiumBadge}>
-            <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+            <Text style={styles.premiumBadgeText}>{t('coach_premium_badge')}</Text>
           </View>
         </View>
         <PaywallScreen onSubscribe={handleSubscribe} onRestore={handleRestore} loading={subscribing} />
@@ -363,10 +365,10 @@ export default function CoachScreen() {
             <IconCoach size={18} color={COLORS.primary} />
           </View>
           <View>
-            <Text style={styles.title}>Coach Philia Vault</Text>
+            <Text style={styles.title}>{t('coach_header_name')}</Text>
             <View style={styles.onlineBadge}>
               <View style={styles.onlineDot} />
-              <Text style={styles.onlineText}>Gemini AI • En ligne</Text>
+              <Text style={styles.onlineText}>{t('coach_online_status')}</Text>
             </View>
           </View>
         </View>
@@ -411,7 +413,7 @@ export default function CoachScreen() {
           style={chat.input}
           value={input}
           onChangeText={setInput}
-          placeholder="Posez votre question financière..."
+          placeholder={t('coach_input_placeholder')}
           placeholderTextColor={COLORS.outline}
           multiline
           maxLength={1000}

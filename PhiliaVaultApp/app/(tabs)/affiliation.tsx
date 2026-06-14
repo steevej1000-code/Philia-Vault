@@ -6,6 +6,7 @@ import api from '../../services/api';
 import { COLORS, RADIUS } from '../../constants/colors';
 import { GlassCard } from '../../components/GlassCard';
 import { IconGift, IconTrendUp, IconAssets } from '../../components/icons/Icons';
+import { useUserPreferences } from '../../context/UserPreferencesContext';
 
 interface AffiliationStats {
   code_parrainage: string;
@@ -17,6 +18,7 @@ const fmtEUR = (v: number) => `${v.toFixed(2).replace('.', ',')} €`;
 
 export default function AffiliationScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useUserPreferences();
   const [stats, setStats] = useState<AffiliationStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,8 +56,8 @@ export default function AffiliationScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Revenu Passif</Text>
-          <Text style={styles.subtitle}>Votre Actif Philia Vault (Revenu Passif)</Text>
+          <Text style={styles.title}>{t('affiliation_title')}</Text>
+          <Text style={styles.subtitle}>{t('affiliation_subtitle')}</Text>
         </View>
       </View>
 
@@ -71,25 +73,25 @@ export default function AffiliationScreen() {
             <View style={styles.gainIcon}>
               <IconTrendUp size={22} color={COLORS.primary} />
             </View>
-            <Text style={styles.gainLabel}>Gain Passif Mensuel Estimé</Text>
+            <Text style={styles.gainLabel}>{t('estimated_monthly_gain')}</Text>
             <Text style={styles.gainValue}>
-              {fmtEUR(stats?.estimated_monthly_gain ?? 0)} / mois
+              {fmtEUR(stats?.estimated_monthly_gain ?? 0)} {t('per_month')}
             </Text>
           </GlassCard>
 
           <GlassCard style={styles.codeCard}>
             <View style={styles.codeRow}>
               <IconGift size={20} color={COLORS.tertiary} />
-              <Text style={styles.codeLabel}>Votre Code de Parrainage</Text>
+              <Text style={styles.codeLabel}>{t('referral_code_label')}</Text>
             </View>
             <View style={styles.codeBox}>
               <Text style={styles.codeText}>{stats?.code_parrainage ?? '—'}</Text>
               <TouchableOpacity style={styles.copyBtn} onPress={handleCopy}>
-                <Text style={styles.copyBtnText}>{copied ? 'Copié !' : 'Copier'}</Text>
+                <Text style={styles.copyBtnText}>{copied ? t('copied') : t('copy')}</Text>
               </TouchableOpacity>
             </View>
             <Text style={styles.codeHint}>
-              Partagez ce code : chaque ami Premium grâce à vous augmente votre revenu passif.
+              {t('referral_hint')}
             </Text>
           </GlassCard>
 
@@ -98,8 +100,8 @@ export default function AffiliationScreen() {
               <IconAssets size={20} color={COLORS.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.statLabel}>Filleuls Actifs</Text>
-              <Text style={styles.statSubtitle}>Personnes Premium grâce à vous</Text>
+              <Text style={styles.statLabel}>{t('active_referrals')}</Text>
+              <Text style={styles.statSubtitle}>{t('active_referrals_subtitle')}</Text>
             </View>
             <Text style={styles.statValue}>{stats?.active_referrals ?? 0}</Text>
           </GlassCard>

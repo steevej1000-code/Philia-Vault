@@ -1,9 +1,30 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import * as Localization from 'expo-localization';
 import { storage } from '../services/storage';
 import api from '../services/api';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { Language, translate } from '../constants/translations';
 import { CURRENCY_MAP } from '../constants/currencies';
+
+const SUPPORTED_LANGUAGES: Language[] = ['en', 'fr', 'es', 'pt'];
+
+function detectDeviceLanguage(): Language {
+  try {
+    const locales = Localization.getLocales?.();
+    const candidates = locales && locales.length > 0
+      ? locales.map((l) => l.languageCode)
+      : [];
+
+    for (const code of candidates) {
+      if (code && (SUPPORTED_LANGUAGES as string[]).includes(code)) {
+        return code as Language;
+      }
+    }
+  } catch (e) {
+    console.warn('UserPreferences: failed to detect device language', e);
+  }
+  return 'en';
+}
 
 const LANGUAGE_KEY = '@philia_prefs:language';
 const CURRENCY_KEY = '@philia_prefs:currency';
@@ -33,7 +54,7 @@ const defaultPrefs: UserPreferences = {
 const UserPreferencesContext = createContext<UserPreferences>(defaultPrefs);
 
 export function UserPreferencesProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('en');
+  const [language, setLanguageState] = useState<Language>(() => detectDeviceLanguage());
   const [currency, setCurrencyState] = useState<string>('USD');
   const [loading, setLoading] = useState(true);
   const { isOnline } = useNetworkStatus();

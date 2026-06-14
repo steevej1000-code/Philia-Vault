@@ -100,7 +100,7 @@ export default function ProfileScreen() {
     try {
       await api.updateSettings({ notifications_enabled: value });
     } catch (e: any) {
-      Alert.alert('Erreur', e.message || 'Impossible de mettre à jour les notifications.');
+      Alert.alert(t('error'), e.message || t('notifications_update_error'));
       setNotificationsEnabled(!value);
     } finally {
       setSavingSettings(false);
@@ -114,12 +114,12 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     Alert.alert(
-      'Déconnexion',
-      'Êtes-vous sûr de vouloir vous déconnecter ?',
+      t('logout_confirm_title'),
+      t('logout_confirm_message'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Se déconnecter',
+          text: t('logout'),
           style: 'destructive',
           onPress: async () => {
             setLoggingOut(true);
@@ -127,7 +127,7 @@ export default function ProfileScreen() {
               await logout();
               router.replace('/(auth)/login');
             } catch (e: any) {
-              Alert.alert('Erreur', e.message || 'Impossible de se déconnecter.');
+              Alert.alert(t('error'), e.message || t('logout_error'));
             } finally {
               setLoggingOut(false);
             }
@@ -137,7 +137,7 @@ export default function ProfileScreen() {
     );
   };
 
-  const name = user ? `${user.first_name} ${user.last_name}` : 'Utilisateur Philia Vault';
+  const name = user ? `${user.first_name} ${user.last_name}` : t('default_user_name');
   const email = user?.email || 'test@philiavault.com';
   const avatarLetter = user?.first_name ? user.first_name[0].toUpperCase() : 'P';
 
@@ -212,7 +212,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.optionRow}>
               <Text style={styles.optionLabel}>{t('security')}</Text>
-              <Text style={styles.optionValue}>Chiffrement AES-256</Text>
+              <Text style={styles.optionValue}>{t('security_value')}</Text>
             </View>
             <View style={[styles.optionRow, { borderBottomWidth: 0 }]}>
               <Text style={styles.optionLabel}>{t('app_version')}</Text>

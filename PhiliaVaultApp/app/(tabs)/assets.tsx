@@ -9,6 +9,7 @@ import api from '../../services/api';
 import { COLORS, RADIUS } from '../../constants/colors';
 import Svg, { Path } from 'react-native-svg';
 import { IconTrendUp, IconCoin, IconBag, IconBuilding, IconBriefcase, IconTrash, IconSeedling, IconClose, IconProps } from '../../components/icons/Icons';
+import { useUserPreferences } from '../../context/UserPreferencesContext';
 
 interface Asset {
   id: number;
@@ -21,16 +22,33 @@ interface Asset {
 const ASSET_TYPES = ['Stocks', 'Crypto', 'Commerce', 'Real Estate', 'Other'];
 
 // Type translations for display matching user screenshot
-const TYPE_TRANSLATIONS: Record<string, { label: string; subLabel: string; Icon: React.ComponentType<IconProps> }> = {
-  Stocks: { label: 'BOURSE', subLabel: '(ACTIONS/ETFS)', Icon: IconTrendUp },
-  Crypto: { label: 'CRYPTOMONNAIES', subLabel: '(CRYPTO)', Icon: IconCoin },
-  Commerce: { label: 'BOUTIQUE E-COMMERCE', subLabel: '(COMMERCE)', Icon: IconBag },
-  'Real Estate': { label: 'IMMOBILIER', subLabel: '(REAL ESTATE)', Icon: IconBuilding },
-  Other: { label: 'AUTRES ACTIFS', subLabel: '(AUTRES)', Icon: IconBriefcase },
+const TYPE_ICONS: Record<string, React.ComponentType<IconProps>> = {
+  Stocks: IconTrendUp,
+  Crypto: IconCoin,
+  Commerce: IconBag,
+  'Real Estate': IconBuilding,
+  Other: IconBriefcase,
+};
+
+const TYPE_LABEL_KEYS: Record<string, { label: string; subLabel: string }> = {
+  Stocks: { label: 'asset_type_stocks', subLabel: 'asset_type_stocks_sub' },
+  Crypto: { label: 'asset_type_crypto', subLabel: 'asset_type_crypto_sub' },
+  Commerce: { label: 'asset_type_commerce', subLabel: 'asset_type_commerce_sub' },
+  'Real Estate': { label: 'asset_type_real_estate', subLabel: 'asset_type_real_estate_sub' },
+  Other: { label: 'asset_type_other', subLabel: 'asset_type_other_sub' },
+};
+
+const ASSET_TYPE_LABEL_KEYS: Record<string, string> = {
+  Stocks: 'asset_type_stocks_short',
+  Crypto: 'asset_type_crypto_short',
+  Commerce: 'asset_type_commerce_short',
+  'Real Estate': 'asset_type_real_estate_short',
+  Other: 'asset_type_other_short',
 };
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useUserPreferences();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,7 +100,7 @@ export default function AssetsScreen() {
 
   const handleSave = async () => {
     if (!name.trim() || value.trim() === '' || yield_.trim() === '') {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
+      Alert.alert(t('error'), t('fill_all_fields'));
       return;
     }
     setSaving(true);
@@ -107,7 +125,7 @@ export default function AssetsScreen() {
       setEditingAssetId(null);
       load();
     } catch (e: any) {
-      Alert.alert('Erreur', e.message);
+      Alert.alert(t('error'), e.message);
     } finally {
       setSaving(false);
     }
@@ -115,18 +133,18 @@ export default function AssetsScreen() {
 
   const handleDelete = (id: number, name: string) => {
     Alert.alert(
-      'Supprimer',
-      `Supprimer l'actif "${name}" ?`,
+      t('delete_title'),
+      t('delete_asset_confirm').replace('{name}', name),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Supprimer', style: 'destructive',
+          text: t('delete_title'), style: 'destructive',
           onPress: async () => {
             try {
               await api.deleteAsset(id);
               load();
             } catch (e: any) {
-              Alert.alert('Erreur', e.message);
+              Alert.alert(t('error'), e.message);
             }
           }
         }
@@ -158,11 +176,11 @@ export default function AssetsScreen() {
       {/* Title Header */}
       <View style={styles.header}>
         <View style={{ flex: 1, marginRight: 12 }}>
-          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>La Serre Financière (Actifs) ✎</Text>
-          <Text style={styles.subtitle}>Suivez vos actifs productifs de trésorerie.</Text>
+          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>{t('assets_title')}</Text>
+          <Text style={styles.subtitle}>{t('assets_subtitle')}</Text>
         </View>
         <TouchableOpacity style={styles.addBtn} onPress={handleOpenAdd}>
-          <Text style={styles.addBtnText}>+ Ajouter</Text>
+          <Text style={styles.addBtnText}>{t('add_button')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -177,24 +195,25 @@ export default function AssetsScreen() {
           {/* Neon Grid of Assets */}
           <View style={styles.grid}>
             {assets.map((item) => {
-              const display = TYPE_TRANSLATIONS[item.type] || TYPE_TRANSLATIONS.Other;
+              const Icon = TYPE_ICONS[item.type] || TYPE_ICONS.Other;
+              const labelKeys = TYPE_LABEL_KEYS[item.type] || TYPE_LABEL_KEYS.Other;
               return (
                 <View key={item.id} style={styles.gridCard}>
                   {/* Top line with Icon and category info */}
                   <View style={styles.cardHeader}>
                     <View style={styles.categoryIconWrapper}>
-                      <display.Icon size={20} color={COLORS.primary} />
+                      <Icon size={20} color={COLORS.primary} />
                     </View>
                     <View style={styles.categoryMeta}>
-                      <Text style={styles.categoryLabel}>{display.label}</Text>
-                      <Text style={styles.categorySubLabel}>{display.subLabel}</Text>
+                      <Text style={styles.categoryLabel}>{t(labelKeys.label)}</Text>
+                      <Text style={styles.categorySubLabel}>{t(labelKeys.subLabel)}</Text>
                       <Text style={styles.cardValue}>{formatEuro(item.value)}</Text>
                     </View>
                   </View>
 
                   {/* Middle part: Yield info */}
                   <View style={styles.yieldContainer}>
-                    <Text style={styles.yieldLabel}>Rendement Mensuel</Text>
+                    <Text style={styles.yieldLabel}>{t('monthly_yield')}</Text>
                     <Text style={styles.yieldValue}>+{formatEuro(item.monthly_yield)}</Text>
                   </View>
 
@@ -218,15 +237,15 @@ export default function AssetsScreen() {
           {/* Performance Détaillée section */}
           {assets.length > 0 && (
             <View style={styles.performanceContainer}>
-              <Text style={styles.perfTitle}>Performance Détaillée</Text>
+              <Text style={styles.perfTitle}>{t('detailed_performance')}</Text>
 
               {/* Table headers */}
               <View style={styles.tableRowHeader}>
-                <Text style={[styles.colHeader, { flex: 1.5 }]}>Nom</Text>
-                <Text style={[styles.colHeader, { flex: 1.5 }]}>Catégorie</Text>
-                <Text style={[styles.colHeader, { flex: 1.2, textAlign: 'right' }]}>Valeur Actuelle</Text>
-                <Text style={[styles.colHeader, { flex: 1.2, textAlign: 'right' }]}>Cashflow Mensuel</Text>
-                <Text style={[styles.colHeader, { flex: 1.0, textAlign: 'center' }]}>Act.</Text>
+                <Text style={[styles.colHeader, { flex: 1.5 }]}>{t('col_name')}</Text>
+                <Text style={[styles.colHeader, { flex: 1.5 }]}>{t('col_category')}</Text>
+                <Text style={[styles.colHeader, { flex: 1.2, textAlign: 'right' }]}>{t('col_current_value')}</Text>
+                <Text style={[styles.colHeader, { flex: 1.2, textAlign: 'right' }]}>{t('col_monthly_cashflow')}</Text>
+                <Text style={[styles.colHeader, { flex: 1.0, textAlign: 'center' }]}>{t('col_actions')}</Text>
               </View>
 
               {/* Table items */}
@@ -236,7 +255,7 @@ export default function AssetsScreen() {
                     {item.name}
                   </Text>
                   <Text style={[styles.colText, { flex: 1.5, color: '#8e8e93' }]} numberOfLines={1}>
-                    {item.type}
+                    {t(ASSET_TYPE_LABEL_KEYS[item.type] || ASSET_TYPE_LABEL_KEYS.Other)}
                   </Text>
                   <Text style={[styles.colText, { flex: 1.2, textAlign: 'right', fontWeight: '600' }]}>
                     {formatEuro(item.value).split(',')[0]} €
@@ -260,8 +279,8 @@ export default function AssetsScreen() {
           {assets.length === 0 && (
             <View style={styles.emptyContainer}>
               <IconSeedling size={32} color={COLORS.primary} />
-              <Text style={styles.emptyText}>Votre serre est encore vide.</Text>
-              <Text style={styles.emptySubText}>Ajoutez un actif productif ci-dessus pour commencer.</Text>
+              <Text style={styles.emptyText}>{t('assets_empty_title')}</Text>
+              <Text style={styles.emptySubText}>{t('assets_empty_subtitle')}</Text>
             </View>
           )}
         </ScrollView>
@@ -275,7 +294,7 @@ export default function AssetsScreen() {
         >
           <ScrollView contentContainerStyle={styles.modalScroll} showsVerticalScrollIndicator={false}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{editingAssetId ? "Modifier l'Actif" : 'Ajouter un Actif'}</Text>
+              <Text style={styles.modalTitle}>{editingAssetId ? t('edit_asset_title') : t('add_asset_title')}</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
                 <IconClose size={20} color={COLORS.onSurfaceVariant} />
               </TouchableOpacity>
@@ -283,27 +302,27 @@ export default function AssetsScreen() {
 
             <View style={styles.form}>
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Nom de l'actif</Text>
+                <Text style={styles.label}>{t('asset_name_label')}</Text>
                 <TextInput
                   style={styles.input}
                   value={name}
                   onChangeText={setName}
-                  placeholder="ex: Actions Apple, Crypto..."
+                  placeholder={t('asset_name_placeholder')}
                   placeholderTextColor="#48484a"
                 />
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Catégorie</Text>
+                <Text style={styles.label}>{t('category_label')}</Text>
                 <View style={styles.typeGrid}>
-                  {ASSET_TYPES.map((t) => (
+                  {ASSET_TYPES.map((assetType) => (
                     <TouchableOpacity
-                      key={t}
-                      style={[styles.typeBtn, type === t && styles.typeBtnActive]}
-                      onPress={() => setType(t)}
+                      key={assetType}
+                      style={[styles.typeBtn, type === assetType && styles.typeBtnActive]}
+                      onPress={() => setType(assetType)}
                     >
-                      <Text style={[styles.typeBtnText, type === t && styles.typeBtnTextActive]}>
-                        {t}
+                      <Text style={[styles.typeBtnText, type === assetType && styles.typeBtnTextActive]}>
+                        {t(ASSET_TYPE_LABEL_KEYS[assetType] || ASSET_TYPE_LABEL_KEYS.Other)}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -311,7 +330,7 @@ export default function AssetsScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Valeur Actuelle ($)</Text>
+                <Text style={styles.label}>{t('current_value_label')}</Text>
                 <TextInput
                   style={styles.input}
                   value={value}
@@ -323,7 +342,7 @@ export default function AssetsScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Rendement Mensuel ($)</Text>
+                <Text style={styles.label}>{t('monthly_yield_label')}</Text>
                 <TextInput
                   style={styles.input}
                   value={yield_}
@@ -338,12 +357,12 @@ export default function AssetsScreen() {
                 {saving ? (
                   <ActivityIndicator color="#0c0e12" size="small" />
                 ) : (
-                  <Text style={styles.submitBtnText}>{editingAssetId ? 'Enregistrer les Modifications' : "Ajouter l'Actif"}</Text>
+                  <Text style={styles.submitBtnText}>{editingAssetId ? t('save_changes') : t('add_asset')}</Text>
                 )}
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowModal(false)}>
-                <Text style={styles.cancelBtnText}>Annuler</Text>
+                <Text style={styles.cancelBtnText}>{t('cancel')}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>

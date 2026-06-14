@@ -80,7 +80,11 @@ export default function DashboardScreen() {
   };
 
   const hour = new Date().getHours();
-  const greeting = hour >= 18 || hour < 6 ? t('greeting_evening') : t('greeting_morning');
+  const greeting = hour >= 18 || hour < 6
+    ? t('greeting_evening')
+    : hour >= 12
+      ? t('greeting_afternoon')
+      : t('greeting_morning');
   const firstName = user?.first_name || 'Steven';
 
   // Extract variables with exact fallback to match backend responses
@@ -120,14 +124,14 @@ export default function DashboardScreen() {
           <>
             {/* Dribbble Style Hero Recommendation Card */}
             <View style={styles.heroCard}>
-              <Text style={styles.heroLabel}>Simulation Summary</Text>
+              <Text style={styles.heroLabel}>{t('simulation_summary')}</Text>
               
-              <Text style={styles.heroSubText}>Indice d'Indépendance Financière</Text>
+              <Text style={styles.heroSubText}>{t('iif_full_name')}</Text>
               <Text style={styles.heroValue}>
                 {iifScore.toFixed(0)}%
               </Text>
               <Text style={styles.heroHelperText}>
-                Objectif de liberté totale : 100%
+                {t('iif_goal')}
               </Text>
 
               {/* Internal metrics inside hero */}
@@ -140,14 +144,14 @@ export default function DashboardScreen() {
                 </View>
                 <View style={styles.metricDivider} />
                 <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>Timeline</Text>
+                  <Text style={styles.metricLabel}>{t('timeline')}</Text>
                   <Text style={styles.metricVal}>
-                    {data?.timeline !== undefined ? `${data.timeline} years` : '0 years'}
+                    {data?.timeline !== undefined ? `${data.timeline} ${t('years_suffix')}` : `0 ${t('years_suffix')}`}
                   </Text>
                 </View>
                 <View style={styles.metricDivider} />
                 <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>Portefeuille</Text>
+                  <Text style={styles.metricLabel}>{t('portfolio')}</Text>
                   <Text style={styles.metricVal}>{formatLargeAmount(totalAssets)}</Text>
                 </View>
               </View>
@@ -155,7 +159,7 @@ export default function DashboardScreen() {
 
             {/* AI Insights - Dribbble Style */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>AI Insights</Text>
+              <Text style={styles.sectionTitle}>{t('ai_insights')}</Text>
             </View>
 
             <TouchableOpacity 
@@ -167,16 +171,16 @@ export default function DashboardScreen() {
                 <View style={styles.insightIconWrapper}>
                   <IconCoach size={18} color={COLORS.primary} />
                 </View>
-                <Text style={styles.insightTitle}>Optimisation Recommandée</Text>
+                <Text style={styles.insightTitle}>{t('recommended_optimization')}</Text>
               </View>
               <Text style={styles.insightBody}>
                 {netCashflow > 0 
-                  ? `Votre cashflow mensuel de ${formatLargeAmount(netCashflow)} peut être réinvesti dans des actifs pour accélérer votre indépendance de 1.4 ans.`
-                  : "Ajoutez des actifs à rendement mensuel ou réduisez vos passifs pour générer des flux et commencer à recevoir des recommandations."
+                  ? t('insight_positive_cashflow').replace('{amount}', formatLargeAmount(netCashflow))
+                  : t('insight_no_cashflow')
                 }
               </Text>
               <View style={styles.insightFooter}>
-                <Text style={styles.insightLink}>Analyser avec le Coach</Text>
+                <Text style={styles.insightLink}>{t('analyze_with_coach')}</Text>
                 <Text style={styles.insightArrow}>→</Text>
               </View>
             </TouchableOpacity>
@@ -184,13 +188,13 @@ export default function DashboardScreen() {
             {/* Sub Stats Row */}
             <View style={styles.subStatsContainer}>
               <View style={styles.statBox}>
-                <Text style={styles.statBoxLabel}>{t('passive_income')} /m</Text>
+                <Text style={styles.statBoxLabel}>{t('passive_income')} {t('per_month_suffix')}</Text>
                 <Text style={[styles.statBoxVal, { color: '#ccff00' }]}>
                   {formatLargeAmount(totalPassiveIncome)}
                 </Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statBoxLabel}>{t('monthly_cost')} /m</Text>
+                <Text style={styles.statBoxLabel}>{t('monthly_cost')} {t('per_month_suffix')}</Text>
                 <Text style={[styles.statBoxVal, { color: '#ff3b30' }]}>
                   -{formatLargeAmount(totalMonthlyCost)}
                 </Text>
@@ -200,10 +204,10 @@ export default function DashboardScreen() {
             {/* Quick Navigation grid */}
             <View style={styles.gridContainer}>
               {[
-                { label: 'Actifs', Icon: IconAssets, route: '/assets' },
-                { label: 'Passifs', Icon: IconLiabilities, route: '/liabilities' },
-                { label: 'Simulateur', Icon: IconScale, route: '/simulator' },
-                { label: 'Coach IA', Icon: IconCoach, route: '/coach' },
+                { label: t('nav_assets'), Icon: IconAssets, route: '/assets' },
+                { label: t('nav_liabilities'), Icon: IconLiabilities, route: '/liabilities' },
+                { label: t('nav_simulator'), Icon: IconScale, route: '/simulator' },
+                { label: t('nav_coach_ai'), Icon: IconCoach, route: '/coach' },
               ].map((item) => (
                 <TouchableOpacity
                   key={item.route}
@@ -220,7 +224,7 @@ export default function DashboardScreen() {
             <View style={styles.footerRow}>
               <IconShield size={14} color={COLORS.onSurfaceVariant} />
               <Text style={styles.footer}>
-                Cryptage AES-256 de niveau bancaire
+                {t('bank_grade_encryption')}
               </Text>
             </View>
           </>

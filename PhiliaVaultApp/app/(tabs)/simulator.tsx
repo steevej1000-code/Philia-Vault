@@ -11,6 +11,7 @@ import { GlassCard } from '../../components/GlassCard';
 import api from '../../services/api';
 import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop, Circle } from 'react-native-svg';
 import { IconTrendUp, IconClock, IconWallet, IconTarget } from '../../components/icons/Icons';
+import { useUserPreferences } from '../../context/UserPreferencesContext';
 
 const fmtCurrency = (v: number) => {
   const prefix = v >= 0 ? '+' : '';
@@ -19,7 +20,7 @@ const fmtCurrency = (v: number) => {
   return `${prefix}$${v.toFixed(0)}`;
 };
 
-function BalanceGauge({ netCashflow }: { netCashflow: number }) {
+function BalanceGauge({ netCashflow, netLabel }: { netCashflow: number; netLabel: string }) {
   const max = 5000;
   const clamped = Math.max(-max, Math.min(max, netCashflow));
   const pct = (clamped + max) / (2 * max); // 0 = full negative, 0.5 = break-even, 1 = full positive
@@ -58,7 +59,7 @@ function BalanceGauge({ netCashflow }: { netCashflow: number }) {
       </Svg>
       <View style={gaugeStyles.center}>
         <Text style={[gaugeStyles.value, { color }]}>{fmtCurrency(netCashflow)}</Text>
-        <Text style={gaugeStyles.label}>Net / mois</Text>
+        <Text style={gaugeStyles.label}>{netLabel}</Text>
       </View>
     </View>
   );
@@ -73,11 +74,12 @@ const gaugeStyles = StyleSheet.create({
 
 export default function SimulatorScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useUserPreferences();
 
   const [capital, setCapital] = useState('45000');
   const [monthlyReturn, setMonthlyReturn] = useState('500');
   const [monthlyExpense, setMonthlyExpense] = useState('2000');
-  const [investmentName, setInvestmentName] = useState('Nouvelle Acquisition');
+  const [investmentName, setInvestmentName] = useState(t('new_acquisition'));
   const [prefilled, setPrefilled] = useState(false);
 
   // Pre-fill the simulator with the user's real portfolio totals the first
@@ -96,7 +98,7 @@ export default function SimulatorScreen() {
           if (result.total_passive_income) setMonthlyReturn(String(result.total_passive_income));
           if (result.total_monthly_cost) setMonthlyExpense(String(result.total_monthly_cost));
         } catch (e) {
-          console.warn('Simulateur: impossible de charger les données du portefeuille', e);
+          console.warn(t('portfolio_load_error'), e);
         } finally {
           if (!cancelled) setPrefilled(true);
         }
@@ -116,34 +118,34 @@ export default function SimulatorScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>La Balance</Text>
-          <Text style={styles.subtitle}>Simulateur Financier</Text>
+          <Text style={styles.title}>{t('simulator_title')}</Text>
+          <Text style={styles.subtitle}>{t('simulator_subtitle')}</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Gauge */}
         <GlassCard style={styles.gaugeCard}>
-          <Text style={styles.sectionTitle}>{investmentName || 'Simulation'}</Text>
-          <BalanceGauge netCashflow={netCashflow} />
+          <Text style={styles.sectionTitle}>{investmentName || t('simulation_label')}</Text>
+          <BalanceGauge netCashflow={netCashflow} netLabel={t('net_per_month')} />
           <View style={styles.gaugeRow}>
             <View style={styles.gaugeLabel}>
               <View style={[styles.dot, { backgroundColor: COLORS.error }]} />
-              <Text style={styles.gaugeLabelText}>Dépenses</Text>
+              <Text style={styles.gaugeLabelText}>{t('expenses_label')}</Text>
             </View>
             <View style={styles.gaugeLabel}>
               <View style={[styles.dot, { backgroundColor: COLORS.primary }]} />
-              <Text style={styles.gaugeLabelText}>Revenus</Text>
+              <Text style={styles.gaugeLabelText}>{t('income_label')}</Text>
             </View>
           </View>
         </GlassCard>
 
         {/* Inputs */}
         <GlassCard>
-          <Text style={styles.sectionTitle}>Paramètres</Text>
+          <Text style={styles.sectionTitle}>{t('parameters')}</Text>
           <View style={styles.form}>
             <View>
-              <Text style={styles.label}>Nom de l'investissement</Text>
+              <Text style={styles.label}>{t('investment_name_label')}</Text>
               <TextInput
                 style={styles.input}
                 value={investmentName}
@@ -152,7 +154,7 @@ export default function SimulatorScreen() {
               />
             </View>
             <View>
-              <Text style={styles.label}>Capital Investi ($)</Text>
+              <Text style={styles.label}>{t('invested_capital_label')}</Text>
               <TextInput
                 style={styles.input}
                 value={capital}
@@ -162,7 +164,7 @@ export default function SimulatorScreen() {
               />
             </View>
             <View>
-              <Text style={styles.label}>Rendement Mensuel ($)</Text>
+              <Text style={styles.label}>{t('monthly_return_label')}</Text>
               <TextInput
                 style={[styles.input, { borderColor: 'rgba(204,255,0,0.3)' }]}
                 value={monthlyReturn}
@@ -172,7 +174,7 @@ export default function SimulatorScreen() {
               />
             </View>
             <View>
-              <Text style={styles.label}>Dépenses Mensuelles ($)</Text>
+              <Text style={styles.label}>{t('monthly_expenses_label')}</Text>
               <TextInput
                 style={[styles.input, { borderColor: 'rgba(239,68,68,0.3)' }]}
                 value={monthlyExpense}
@@ -186,33 +188,33 @@ export default function SimulatorScreen() {
 
         {/* Results */}
         <GlassCard>
-          <Text style={styles.sectionTitle}>Résultats de la Simulation</Text>
+          <Text style={styles.sectionTitle}>{t('simulation_results')}</Text>
           <View style={styles.resultsGrid}>
             <View style={[styles.resultCard, { backgroundColor: 'rgba(204,255,0,0.08)', borderColor: 'rgba(204,255,0,0.2)' }]}>
               <IconTrendUp size={26} color={COLORS.primary} />
               <Text style={styles.resultValue} numberOfLines={1}>{roi.toFixed(1)}%</Text>
-              <Text style={styles.resultLabel}>ROI Annuel</Text>
+              <Text style={styles.resultLabel}>{t('annual_roi')}</Text>
             </View>
             <View style={[styles.resultCard, { backgroundColor: 'rgba(6,182,212,0.08)', borderColor: 'rgba(6,182,212,0.2)' }]}>
               <IconClock size={26} color="#06b6d4" />
               <Text style={styles.resultValue} numberOfLines={1}>
                 {isFinite(breakEvenMonths) ? `${breakEvenMonths}m` : '∞'}
               </Text>
-              <Text style={styles.resultLabel}>Seuil Rentabilité</Text>
+              <Text style={styles.resultLabel}>{t('breakeven_point')}</Text>
             </View>
             <View style={[styles.resultCard, { backgroundColor: netCashflow >= 0 ? 'rgba(204,255,0,0.08)' : 'rgba(239,68,68,0.08)', borderColor: netCashflow >= 0 ? 'rgba(204,255,0,0.2)' : 'rgba(239,68,68,0.2)' }]}>
               <IconWallet size={26} color={netCashflow >= 0 ? COLORS.primary : COLORS.error} />
               <Text style={[styles.resultValue, { color: netCashflow >= 0 ? COLORS.primary : COLORS.error }]} numberOfLines={1}>
                 {fmtCurrency(netCashflow)}
               </Text>
-              <Text style={styles.resultLabel}>Cashflow Net</Text>
+              <Text style={styles.resultLabel}>{t('net_cashflow_result')}</Text>
             </View>
             <View style={[styles.resultCard, { backgroundColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.2)' }]}>
               <IconTarget size={26} color={COLORS.tertiary} />
               <Text style={[styles.resultValue, { color: COLORS.tertiary }]} numberOfLines={1}>
                 {fmtCurrency(yieldNum * 12)}
               </Text>
-              <Text style={styles.resultLabel}>Revenu Annuel</Text>
+              <Text style={styles.resultLabel}>{t('annual_income')}</Text>
             </View>
           </View>
         </GlassCard>

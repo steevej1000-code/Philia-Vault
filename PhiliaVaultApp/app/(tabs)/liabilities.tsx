@@ -11,6 +11,7 @@ import { GlassCard } from '../../components/GlassCard';
 import { PremiumButton } from '../../components/PremiumButton';
 import { StatCard } from '../../components/StatCard';
 import { IconBank, IconHouse, IconRefresh, IconCard, IconList, IconLiabilities, IconClose, IconProps } from '../../components/icons/Icons';
+import { useUserPreferences } from '../../context/UserPreferencesContext';
 
 interface Liability {
   id: number;
@@ -21,6 +22,14 @@ interface Liability {
 }
 
 const LIABILITY_TYPES = ['Loan', 'Mortgage', 'Subscription', 'Credit Card', 'Other'];
+
+const LIABILITY_TYPE_LABEL_KEYS: Record<string, string> = {
+  Loan: 'liability_type_loan',
+  Mortgage: 'liability_type_mortgage',
+  Subscription: 'liability_type_subscription',
+  'Credit Card': 'liability_type_credit_card',
+  Other: 'liability_type_other',
+};
 
 const TYPE_CONFIG: Record<string, { Icon: React.ComponentType<IconProps>; color: string }> = {
   Loan: { Icon: IconBank, color: COLORS.error },
@@ -34,6 +43,7 @@ const fmtK = (v: number) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toF
 
 export default function LiabilitiesScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useUserPreferences();
   const [liabilities, setLiabilities] = useState<Liability[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,7 +92,7 @@ export default function LiabilitiesScreen() {
 
   const handleSave = async () => {
     if (!name.trim() || monthCost.trim() === '') {
-      Alert.alert('Erreur', 'Remplissez tous les champs.');
+      Alert.alert(t('error'), t('fill_all_fields_short'));
       return;
     }
     setSaving(true);
@@ -107,23 +117,23 @@ export default function LiabilitiesScreen() {
       setEditingLiabilityId(null);
       load();
     } catch (e: any) {
-      Alert.alert('Erreur', e.message);
+      Alert.alert(t('error'), e.message);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = (id: number, name: string) => {
-    Alert.alert('Supprimer', `Supprimer "${name}" ?`, [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t('delete_title'), t('delete_liability_confirm').replace('{name}', name), [
+      { text: t('cancel'), style: 'cancel' },
       {
-        text: 'Supprimer', style: 'destructive',
+        text: t('delete_title'), style: 'destructive',
         onPress: async () => {
           try {
             await api.deleteLiability(id);
             load();
           } catch (e: any) {
-            Alert.alert('Erreur', e.message);
+            Alert.alert(t('error'), e.message);
           }
         }
       }
@@ -143,11 +153,11 @@ export default function LiabilitiesScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Passifs ✎</Text>
-          <Text style={styles.subtitle}>Tracker de Dettes & Abonnements</Text>
+          <Text style={styles.title}>{t('liabilities_title')}</Text>
+          <Text style={styles.subtitle}>{t('liabilities_subtitle')}</Text>
         </View>
         <TouchableOpacity style={styles.addBtn} onPress={handleOpenAdd}>
-          <Text style={styles.addBtnText}>+ Ajouter</Text>
+          <Text style={styles.addBtnText}>{t('add_button')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -162,33 +172,33 @@ export default function LiabilitiesScreen() {
             <View style={styles.statsSection}>
               <View style={styles.statsRow}>
                 <StatCard
-                  label="Charges / mois"
+                  label={t('monthly_charges')}
                   value={fmtK(totalMonthly)}
                   color={COLORS.rose}
                   style={{ flex: 1 }}
                 />
                 <View style={{ width: 12 }} />
                 <StatCard
-                  label="Dette Totale"
+                  label={t('total_debt')}
                   value={fmtK(totalDebtSum)}
                   color={COLORS.onSurface}
                   style={{ flex: 1 }}
                 />
               </View>
               <Text style={styles.listHeader}>
-                {liabilities.length} PASSIF{liabilities.length !== 1 ? 'S' : ''}
+                {liabilities.length} {liabilities.length !== 1 ? t('liabilities_count_label_plural') : t('liabilities_count_label')}
               </Text>
             </View>
           }
           ListEmptyComponent={
             <GlassCard style={styles.emptyCard}>
               <IconLiabilities size={32} color={COLORS.primary} />
-              <Text style={styles.emptyTitle}>Aucun passif</Text>
+              <Text style={styles.emptyTitle}>{t('liabilities_empty_title')}</Text>
               <Text style={styles.emptySubtitle}>
-                Ajoutez vos dettes ou abonnements mensuels pour obtenir un calcul précis de votre cashflow.
+                {t('liabilities_empty_subtitle')}
               </Text>
               <PremiumButton
-                title="+ Ajouter un Passif"
+                title={t('add_liability')}
                 onPress={handleOpenAdd}
                 style={{ marginTop: 16 }}
               />
@@ -204,14 +214,14 @@ export default function LiabilitiesScreen() {
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={styles.liabName}>{item.name}</Text>
                   <Text style={styles.liabMeta}>
-                    {item.type} {item.total_debt > 0 && `· Dette: $${item.total_debt.toLocaleString()}`}
+                    {t(LIABILITY_TYPE_LABEL_KEYS[item.type] || LIABILITY_TYPE_LABEL_KEYS.Other)} {item.total_debt > 0 && `· ${t('debt_label')}: $${item.total_debt.toLocaleString()}`}
                   </Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                   <View style={{ alignItems: 'flex-end', gap: 4 }}>
                     <Text style={styles.liabCost}>-${item.monthly_cost}/m</Text>
                     <TouchableOpacity onPress={() => handleDelete(item.id, item.name)}>
-                      <Text style={styles.deleteLink}>Supprimer</Text>
+                      <Text style={styles.deleteLink}>{t('delete_link')}</Text>
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity onPress={() => handleOpenEdit(item)} style={styles.editBtnAction}>
@@ -233,7 +243,7 @@ export default function LiabilitiesScreen() {
         >
           <ScrollView contentContainerStyle={styles.modalScroll} showsVerticalScrollIndicator={false}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{editingLiabilityId ? 'Modifier le Passif' : 'Ajouter un Passif'}</Text>
+              <Text style={styles.modalTitle}>{editingLiabilityId ? t('edit_liability_title') : t('add_liability_title')}</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
                 <IconClose size={20} color={COLORS.onSurfaceVariant} />
               </TouchableOpacity>
@@ -241,27 +251,27 @@ export default function LiabilitiesScreen() {
 
             <View style={styles.form}>
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Nom</Text>
+                <Text style={styles.label}>{t('name_label')}</Text>
                 <TextInput
                   style={styles.input}
                   value={name}
                   onChangeText={setName}
-                  placeholder="ex: Prêt Auto, Netflix..."
+                  placeholder={t('liability_name_placeholder')}
                   placeholderTextColor={COLORS.outline}
                 />
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Type</Text>
+                <Text style={styles.label}>{t('type_label')}</Text>
                 <View style={styles.typeGrid}>
-                  {LIABILITY_TYPES.map((t) => (
+                  {LIABILITY_TYPES.map((liabType) => (
                     <TouchableOpacity
-                      key={t}
-                      style={[styles.typeBtn, type === t && styles.typeBtnActive]}
-                      onPress={() => setType(t)}
+                      key={liabType}
+                      style={[styles.typeBtn, type === liabType && styles.typeBtnActive]}
+                      onPress={() => setType(liabType)}
                     >
-                      <Text style={[styles.typeBtnText, type === t && styles.typeBtnTextActive]}>
-                        {t}
+                      <Text style={[styles.typeBtnText, type === liabType && styles.typeBtnTextActive]}>
+                        {t(LIABILITY_TYPE_LABEL_KEYS[liabType] || LIABILITY_TYPE_LABEL_KEYS.Other)}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -269,7 +279,7 @@ export default function LiabilitiesScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Coût Mensuel ($)</Text>
+                <Text style={styles.label}>{t('monthly_cost_label')}</Text>
                 <TextInput
                   style={styles.input}
                   value={monthCost}
@@ -281,7 +291,7 @@ export default function LiabilitiesScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Dette Totale Restante (Optionnel)</Text>
+                <Text style={styles.label}>{t('total_debt_optional_label')}</Text>
                 <TextInput
                   style={styles.input}
                   value={totalDebt}
@@ -293,14 +303,14 @@ export default function LiabilitiesScreen() {
               </View>
 
               <PremiumButton
-                title={editingLiabilityId ? 'Enregistrer les Modifications' : 'Ajouter le Passif'}
+                title={editingLiabilityId ? t('save_changes') : t('add_liability')}
                 onPress={handleSave}
                 loading={saving}
                 style={{ marginTop: 8 }}
               />
 
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowModal(false)}>
-                <Text style={styles.cancelBtnText}>Annuler</Text>
+                <Text style={styles.cancelBtnText}>{t('cancel')}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
