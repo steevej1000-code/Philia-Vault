@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
-  TouchableOpacity, ActivityIndicator
+  TouchableOpacity, ActivityIndicator, Modal
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +9,8 @@ import { useAuthStore } from '../../store/authStore';
 import api from '../../services/api';
 import { COLORS, RADIUS } from '../../constants/colors';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { IconAssets, IconLiabilities, IconScale, IconCoach, IconShield } from '../../components/icons/Icons';
+import { IconAssets, IconLiabilities, IconScale, IconCoach, IconShield, IconClose } from '../../components/icons/Icons';
+import { SimulatorContent } from '../../components/SimulatorContent';
 import { OfflineBanner } from '../../components/OfflineBanner';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { getLastSync } from '../../services/offlineCache';
@@ -36,6 +37,7 @@ export default function DashboardScreen() {
   const [fromCache, setFromCache] = useState(false);
   const { isOnline } = useNetworkStatus();
   const { t, formatAmount } = useUserPreferences();
+  const [showSimulator, setShowSimulator] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -206,13 +208,13 @@ export default function DashboardScreen() {
               {[
                 { label: t('nav_assets'), Icon: IconAssets, route: '/assets' },
                 { label: t('nav_liabilities'), Icon: IconLiabilities, route: '/liabilities' },
-                { label: t('nav_simulator'), Icon: IconScale, route: '/simulator' },
+                { label: t('nav_simulator'), Icon: IconScale, route: null },
                 { label: t('nav_coach_ai'), Icon: IconCoach, route: '/coach' },
               ].map((item) => (
                 <TouchableOpacity
-                  key={item.route}
+                  key={item.label}
                   style={styles.gridBtn}
-                  onPress={() => router.push(item.route as any)}
+                  onPress={() => item.route ? router.push(item.route as any) : setShowSimulator(true)}
                 >
                   <item.Icon size={22} color={COLORS.primary} />
                   <Text style={styles.gridLabel}>{item.label}</Text>
@@ -230,6 +232,22 @@ export default function DashboardScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Simulator Modal */}
+      <Modal visible={showSimulator} animationType="slide" presentationStyle="pageSheet">
+        <View style={[styles.simModalContainer, { paddingTop: insets.top }]}>
+          <View style={styles.simModalHeader}>
+            <View>
+              <Text style={styles.simModalTitle}>{t('simulator_title')}</Text>
+              <Text style={styles.simModalSubtitle}>{t('simulator_subtitle')}</Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowSimulator(false)}>
+              <IconClose size={20} color={COLORS.onSurfaceVariant} />
+            </TouchableOpacity>
+          </View>
+          <SimulatorContent />
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -239,6 +257,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
+  simModalContainer: { flex: 1, backgroundColor: COLORS.background },
+  simModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glassBorder,
+    backgroundColor: 'rgba(12,14,18,0.8)',
+  },
+  simModalTitle: { fontSize: 22, fontWeight: '800', color: COLORS.onSurface },
+  simModalSubtitle: { fontSize: 13, color: COLORS.onSurfaceVariant, marginTop: 2 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

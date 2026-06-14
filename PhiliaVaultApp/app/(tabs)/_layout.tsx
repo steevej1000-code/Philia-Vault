@@ -34,6 +34,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
+        tabBarItemStyle: styles.tabBarItem,
         tabBarShowLabel: false,
       }}
     >
@@ -84,6 +85,10 @@ const styles = StyleSheet.create({
     height: 85,
     paddingBottom: 20,
     paddingTop: 8,
+    paddingHorizontal: 8,
+  },
+  tabBarItem: {
+    paddingVertical: 2,
   },
   iconWrapper: {
     alignItems: 'center',
