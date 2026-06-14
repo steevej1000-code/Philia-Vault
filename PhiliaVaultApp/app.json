@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Philia Vault",
+    "slug": "philia-vault",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "philiavault",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.philia.vault"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#000000"
+      },
+      "package": "com.philia.vault"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-font",
+        {
+          "fonts": []
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
