@@ -132,4 +132,172 @@ document.addEventListener('DOMContentLoaded', () => {
   initFaq();
   initWaitlist();
   updateSpotCounter();
+  initTracking();
 });
+
+/* ============================================
+   PHILIA VAULT — GA4 / META / TIKTOK TRACKING
+   ============================================ */
+function trackEvent(eventName, params = {}) {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', eventName, {
+      ...params,
+      page_language: (window.__philiaLang || detectLang()),
+      timestamp: new Date().toISOString()
+    });
+  }
+}
+
+function trackMeta(event, params = {}) {
+  if (typeof fbq !== 'undefined') {
+    fbq('track', event, params);
+  }
+}
+
+function trackTikTok(event, params = {}) {
+  if (typeof ttq !== 'undefined') {
+    ttq.track(event, params);
+  }
+}
+
+function initTracking() {
+  // 1. CTA Stripe clicks
+  document.querySelectorAll('a[href*="stripe"], a[href*="buy.stripe"]').forEach((btn) => {
+    btn.addEventListener('click', function () {
+      trackEvent('cta_click_stripe', {
+        event_category: 'conversion',
+        event_label: 'founder_spot_purchase',
+        value: 4.99,
+        currency: 'USD',
+        button_text: this.textContent.trim().substring(0, 50)
+      });
+      trackMeta('InitiateCheckout', {
+        value: 4.99,
+        currency: 'USD',
+        content_name: 'Philia Vault Founder Spot',
+        num_items: 1
+      });
+      trackTikTok('InitiateCheckout', {
+        value: 4.99,
+        currency: 'USD',
+        content_id: 'philia_vault_founder',
+        content_type: 'product'
+      });
+    });
+  });
+
+  // 2. Sticky cart reserve button
+  const stickyBtn = document.querySelector('.sticky-btn, #sticky-cart a');
+  if (stickyBtn) {
+    stickyBtn.addEventListener('click', function () {
+      trackEvent('sticky_cta_click', {
+        event_category: 'conversion',
+        event_label: 'sticky_reserve_button',
+        value: 4.99,
+        currency: 'USD'
+      });
+    });
+  }
+
+  // 3. Scroll depth tracking
+  const scrollMilestones = { 25: false, 50: false, 75: false, 90: false };
+  window.addEventListener('scroll', function () {
+    const scrollPct = Math.round(
+      (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100
+    );
+    [25, 50, 75, 90].forEach((milestone) => {
+      if (scrollPct >= milestone && !scrollMilestones[milestone]) {
+        scrollMilestones[milestone] = true;
+        trackEvent('scroll_depth', {
+          event_category: 'engagement',
+          event_label: `scrolled_${milestone}_percent`,
+          scroll_percentage: milestone
+        });
+      }
+    });
+  }, { passive: true });
+
+  // 4. Language switch
+  document.querySelectorAll('.lang-switch button').forEach((btn) => {
+    btn.addEventListener('click', function () {
+      trackEvent('language_switch', {
+        event_category: 'engagement',
+        event_label: 'language_changed',
+        selected_language: this.dataset.setLang || this.textContent.trim()
+      });
+    });
+  });
+
+  // 5. Time on page
+  let timeOnPage = 0;
+  const timeIntervals = [30, 60, 120, 180];
+  const trackedTimes = new Set();
+  setInterval(() => {
+    timeOnPage += 10;
+    timeIntervals.forEach((t) => {
+      if (timeOnPage >= t && !trackedTimes.has(t)) {
+        trackedTimes.add(t);
+        trackEvent('time_on_page', {
+          event_category: 'engagement',
+          event_label: `${t}_seconds`,
+          seconds: t
+        });
+      }
+    });
+  }, 10000);
+
+  // 6. FAQ clicks
+  document.querySelectorAll('.faq-question').forEach((item, index) => {
+    item.addEventListener('click', function () {
+      trackEvent('faq_click', {
+        event_category: 'engagement',
+        event_label: 'faq_opened',
+        faq_index: index + 1
+      });
+    });
+  });
+
+  // 7. Passive income section viewed
+  const passiveSection = document.querySelector('.passive-section, #passive, section[id*="passive"]');
+  if (passiveSection) {
+    const passiveObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          trackEvent('passive_section_viewed', {
+            event_category: 'engagement',
+            event_label: 'passive_income_section_visible'
+          });
+          passiveObserver.disconnect();
+        }
+      });
+    }, { threshold: 0.5 });
+    passiveObserver.observe(passiveSection);
+  }
+
+  // 8. Subscribe to unlock clicks
+  document.querySelectorAll('a[href="#offer"], .subscribe-unlock-btn').forEach((btn) => {
+    btn.addEventListener('click', function () {
+      trackEvent('subscribe_unlock_click', {
+        event_category: 'engagement',
+        event_label: 'passive_income_cta'
+      });
+    });
+  });
+
+  // 9. Exit intent
+  let exitTracked = false;
+  document.addEventListener('mouseleave', function (e) {
+    if (e.clientY < 0 && !exitTracked) {
+      exitTracked = true;
+      trackEvent('exit_intent', {
+        event_category: 'engagement',
+        event_label: 'user_about_to_leave',
+        scroll_percentage: Math.round(
+          (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100
+        )
+      });
+    }
+  });
+
+  console.log('[Philia Vault] GA4/Meta/TikTok tracking initialized ✓');
+}
