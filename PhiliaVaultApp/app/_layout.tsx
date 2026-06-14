@@ -10,6 +10,7 @@ import { COLORS } from '../constants/colors';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { configurePurchases } from '../services/purchases';
 import api from '../services/api';
+import { UserPreferencesProvider } from '../context/UserPreferencesContext';
 
 function AuthGuard() {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -69,12 +70,14 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="light" />
-      <AuthGuard />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.background } }}>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      <UserPreferencesProvider>
+        <StatusBar style="light" />
+        <AuthGuard />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.background } }}>
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+      </UserPreferencesProvider>
     </GestureHandlerRootView>
   );
 }

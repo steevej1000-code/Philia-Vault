@@ -13,6 +13,9 @@ import api from '../services/api';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { getLastSync } from '../services/offlineCache';
+import { useUserPreferences } from '../context/UserPreferencesContext';
+import { PreferencesSelectorModal, SelectorType } from '../components/PreferencesSelectorModal';
+import { LANGUAGES } from '../constants/translations';
 
 interface Transaction {
   id: number;
@@ -29,7 +32,6 @@ export default function ProfileScreen() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingTx, setLoadingTx] = useState(true);
-  const [currency, setCurrency] = useState('EUR');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -37,9 +39,9 @@ export default function ProfileScreen() {
   const [fromCache, setFromCache] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const { isOnline } = useNetworkStatus();
+  const { t, formatAmount, language, currency } = useUserPreferences();
+  const [selectorType, setSelectorType] = useState<SelectorType | null>(null);
 
-  const CURRENCIES = ['EUR', 'USD', 'GBP'];
-  const CURRENCY_SYMBOLS: Record<string, string> = { EUR: '€', USD: '$', GBP: '£' };
 
   const load = useCallback(async () => {
     const online = await api.isOnline();
@@ -59,7 +61,6 @@ export default function ProfileScreen() {
       try {
         const result = await api.getSettings();
         if (result?.success && result.settings) {
-          setCurrency(result.settings.currency || 'EUR');
           setNotificationsEnabled(result.settings.notifications_enabled !== false);
         }
       } catch (e) {
@@ -93,20 +94,6 @@ export default function ProfileScreen() {
     load();
   }, [load]);
 
-  const handleCurrencyChange = async () => {
-    const next = CURRENCIES[(CURRENCIES.indexOf(currency) + 1) % CURRENCIES.length];
-    setCurrency(next);
-    setSavingSettings(true);
-    try {
-      await api.updateSettings({ currency: next });
-    } catch (e: any) {
-      Alert.alert('Erreur', e.message || 'Impossible de mettre à jour la devise.');
-      setCurrency(currency);
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
   const handleNotificationsToggle = async (value: boolean) => {
     setNotificationsEnabled(value);
     setSavingSettings(true);
@@ -122,7 +109,7 @@ export default function ProfileScreen() {
 
   const fmtAmount = (v: number) => {
     const sign = v >= 0 ? '+' : '';
-    return `${sign}$${v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return `${sign}${formatAmount(v)}`;
   };
 
   const handleLogout = () => {
@@ -160,9 +147,9 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
           <IconClose size={14} color={COLORS.onSurfaceVariant} />
-          <Text style={styles.backText}>Fermer</Text>
+          <Text style={styles.backText}>{t('close')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mon Profil</Text>
+        <Text style={styles.headerTitle}>{t('profile_title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -185,26 +172,32 @@ export default function ProfileScreen() {
           <View style={[styles.badge, isPremium ? styles.badgePremium : styles.badgeFree, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
             {isPremium && <IconStar size={12} color={COLORS.primary} />}
             <Text style={[styles.badgeText, isPremium ? styles.badgeTextPremium : styles.badgeTextFree]}>
-              {isPremium ? 'MEMBRE PREMIUM' : 'COMPTE GRATUIT'}
+              {isPremium ? t('premium_member') : t('free_account')}
             </Text>
           </View>
         </View>
 
         {/* Account Settings options */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Paramètres du Compte</Text>
+          <Text style={styles.sectionTitle}>{t('account_settings')}</Text>
           
           <View style={styles.optionsList}>
-            <TouchableOpacity style={styles.optionRow} onPress={handleCurrencyChange} disabled={loadingSettings || savingSettings}>
-              <Text style={styles.optionLabel}>Devise</Text>
+            <TouchableOpacity style={styles.optionRow} onPress={() => setSelectorType('currency')} disabled={loadingSettings || savingSettings}>
+              <Text style={styles.optionLabel}>{t('currency')}</Text>
               {loadingSettings ? (
                 <ActivityIndicator color={COLORS.primary} size="small" />
               ) : (
-                <Text style={styles.optionValue}>{currency} ({CURRENCY_SYMBOLS[currency] || currency})</Text>
+                <Text style={styles.optionValue}>{currency}</Text>
               )}
             </TouchableOpacity>
+            <TouchableOpacity style={styles.optionRow} onPress={() => setSelectorType('language')}>
+              <Text style={styles.optionLabel}>{t('language')}</Text>
+              <Text style={styles.optionValue}>
+                {LANGUAGES.find((l) => l.code === language)?.flag} {LANGUAGES.find((l) => l.code === language)?.label}
+              </Text>
+            </TouchableOpacity>
             <View style={styles.optionRow}>
-              <Text style={styles.optionLabel}>Notifications</Text>
+              <Text style={styles.optionLabel}>{t('notifications')}</Text>
               {loadingSettings ? (
                 <ActivityIndicator color={COLORS.primary} size="small" />
               ) : (
@@ -218,11 +211,11 @@ export default function ProfileScreen() {
               )}
             </View>
             <View style={styles.optionRow}>
-              <Text style={styles.optionLabel}>Sécurité</Text>
+              <Text style={styles.optionLabel}>{t('security')}</Text>
               <Text style={styles.optionValue}>Chiffrement AES-256</Text>
             </View>
             <View style={[styles.optionRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.optionLabel}>Version de l'application</Text>
+              <Text style={styles.optionLabel}>{t('app_version')}</Text>
               <Text style={styles.optionValue}>1.0.0 (Expo)</Text>
             </View>
           </View>
@@ -230,14 +223,14 @@ export default function ProfileScreen() {
 
         {/* Recent Transactions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Transactions Récentes</Text>
+          <Text style={styles.sectionTitle}>{t('recent_transactions')}</Text>
 
           {loadingTx ? (
             <ActivityIndicator color={COLORS.primary} size="small" style={{ marginTop: 12 }} />
           ) : transactions.length === 0 ? (
             <View style={styles.optionsList}>
               <View style={[styles.optionRow, { borderBottomWidth: 0 }]}>
-                <Text style={styles.optionValue}>Aucune transaction pour le moment.</Text>
+                <Text style={styles.optionValue}>{t('no_transactions')}</Text>
               </View>
             </View>
           ) : (
@@ -270,10 +263,16 @@ export default function ProfileScreen() {
           {loggingOut ? (
             <ActivityIndicator color="#ff3b30" size="small" />
           ) : (
-            <Text style={styles.logoutText}>Se déconnecter</Text>
+            <Text style={styles.logoutText}>{t('logout')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      <PreferencesSelectorModal
+        visible={selectorType !== null}
+        type={selectorType}
+        onClose={() => setSelectorType(null)}
+      />
     </View>
   );
 }

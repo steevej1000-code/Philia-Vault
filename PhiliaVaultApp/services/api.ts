@@ -165,6 +165,17 @@ class ApiClient {
     });
   }
 
+  async getPreferences() {
+    return this.request(ENDPOINTS.preferences);
+  }
+
+  async updatePreferences(data: { language?: string; currency?: string; currency_symbol?: string }) {
+    return this.request(ENDPOINTS.preferences, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   async setPremiumStatus(status: number) {
     return this.request(ENDPOINTS.premium, {
       method: 'POST',

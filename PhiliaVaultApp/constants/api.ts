@@ -22,6 +22,7 @@ export const ENDPOINTS = {
   user:           '/api/user',
   premium:        '/api/user/premium',
   profile:        '/api/user/profile',
+  preferences:    '/api/profile/preferences',
   settings:       '/api/user/settings',
 
   // Financial data

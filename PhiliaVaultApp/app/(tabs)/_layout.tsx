@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, RADIUS } from '../../constants/colors';
 import { IconAssets, IconLiabilities, IconGift, IconCoach, IconProps } from '../../components/icons/Icons';
+import { useUserPreferences } from '../../context/UserPreferencesContext';
 
 interface TabIconProps {
   focused: boolean;
@@ -27,6 +28,7 @@ function TabIcon({ focused, Icon, emoji, label }: TabIconProps) {
 }
 
 export default function TabsLayout() {
+  const { t } = useUserPreferences();
   return (
     <Tabs
       screenOptions={{
@@ -38,36 +40,36 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Tableau',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} emoji="◎" label="Tableau" />,
+          title: t('tab_dashboard'),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} emoji="◎" label={t('tab_dashboard')} />,
         }}
       />
       <Tabs.Screen
         name="assets"
         options={{
-          title: 'Actifs ✎',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconAssets} label="Actifs ✎" />,
+          title: t('tab_assets') + ' ✎',
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconAssets} label={t('tab_assets') + ' ✎'} />,
         }}
       />
       <Tabs.Screen
         name="liabilities"
         options={{
-          title: 'Passifs ✎',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconLiabilities} label="Passifs ✎" />,
+          title: t('tab_liabilities') + ' ✎',
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconLiabilities} label={t('tab_liabilities') + ' ✎'} />,
         }}
       />
       <Tabs.Screen
         name="affiliation"
         options={{
-          title: 'Affiliation',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconGift} label="Affiliation" />,
+          title: t('tab_affiliation'),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconGift} label={t('tab_affiliation')} />,
         }}
       />
       <Tabs.Screen
         name="coach"
         options={{
-          title: 'Coach',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconCoach} label="Coach" />,
+          title: t('tab_coach'),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconCoach} label={t('tab_coach')} />,
         }}
       />
     </Tabs>

@@ -117,7 +117,9 @@ def init_db():
         ("notifications_enabled", "INTEGER DEFAULT 1"),
         ("code_parrainage", "TEXT"),
         ("parrain_id", "INTEGER"),
-        ("created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ("created_at", "TEXT DEFAULT CURRENT_TIMESTAMP"),
+        ("language", "TEXT DEFAULT 'en'"),
+        ("currency_symbol", "TEXT DEFAULT '$'")
     ]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")
@@ -314,6 +316,35 @@ def update_user_settings(user_id, currency=None, notifications_enabled=None):
         cursor.execute("UPDATE users SET currency=? WHERE email=? OR id=?", (currency, user_id, user_id))
     if notifications_enabled is not None:
         cursor.execute("UPDATE users SET notifications_enabled=? WHERE email=? OR id=?", (1 if notifications_enabled else 0, user_id, user_id))
+    conn.commit()
+    conn.close()
+
+# Profile preferences (language / currency) helpers
+def get_user_preferences(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ? OR id = ?", (user_id, user_id))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        get_user_profile(user_id)
+        return {"language": "en", "currency": "EUR", "currency_symbol": "\u20ac"}
+    d = dict(row)
+    return {
+        "language": d.get("language") or "en",
+        "currency": d.get("currency") or "EUR",
+        "currency_symbol": d.get("currency_symbol") or "$",
+    }
+
+def update_user_preferences(user_id, language=None, currency=None, currency_symbol=None):
+    conn = get_db()
+    cursor = conn.cursor()
+    if language is not None:
+        cursor.execute("UPDATE users SET language=? WHERE email=? OR id=?", (language, user_id, user_id))
+    if currency is not None:
+        cursor.execute("UPDATE users SET currency=? WHERE email=? OR id=?", (currency, user_id, user_id))
+    if currency_symbol is not None:
+        cursor.execute("UPDATE users SET currency_symbol=? WHERE email=? OR id=?", (currency_symbol, user_id, user_id))
     conn.commit()
     conn.close()
 

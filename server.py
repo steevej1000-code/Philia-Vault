@@ -453,6 +453,29 @@ def manage_settings():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route("/api/profile/preferences", methods=["GET", "PUT"])
+def manage_preferences():
+    user_id = get_current_user_id()
+    if request.method == "GET":
+        try:
+            prefs = database.get_user_preferences(user_id)
+            return jsonify({"success": True, "preferences": prefs})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    data = request.json or {}
+    language = data.get("language")
+    currency = data.get("currency")
+    currency_symbol = data.get("currency_symbol")
+    if language is None and currency is None and currency_symbol is None:
+        return jsonify({"success": False, "error": "Aucun parametre fourni"}), 400
+    try:
+        database.update_user_preferences(user_id, language=language, currency=currency, currency_symbol=currency_symbol)
+        prefs = database.get_user_preferences(user_id)
+        return jsonify({"success": True, "message": "Preferences mises a jour avec succes", "preferences": prefs})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route("/api/affiliation/stats", methods=["GET"])
 def affiliation_stats():
     user_id = get_current_user_id()

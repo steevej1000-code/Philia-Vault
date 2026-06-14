@@ -13,6 +13,7 @@ import { IconAssets, IconLiabilities, IconScale, IconCoach, IconShield } from '.
 import { OfflineBanner } from '../../components/OfflineBanner';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { getLastSync } from '../../services/offlineCache';
+import { useUserPreferences } from '../../context/UserPreferencesContext';
 
 interface DashboardData {
   total_assets: number;
@@ -34,6 +35,7 @@ export default function DashboardScreen() {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [fromCache, setFromCache] = useState(false);
   const { isOnline } = useNetworkStatus();
+  const { t, formatAmount } = useUserPreferences();
 
   const load = useCallback(async () => {
     try {
@@ -74,11 +76,11 @@ export default function DashboardScreen() {
   };
 
   const formatLargeAmount = (v: number) => {
-    return `$${v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return formatAmount(v);
   };
 
   const hour = new Date().getHours();
-  const greeting = hour >= 18 || hour < 6 ? 'Bonsoir' : 'Bonjour';
+  const greeting = hour >= 18 || hour < 6 ? t('greeting_evening') : t('greeting_morning');
   const firstName = user?.first_name || 'Steven';
 
   // Extract variables with exact fallback to match backend responses
@@ -94,7 +96,7 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>{greeting}, {firstName} 👋</Text>
-          <Text style={styles.subGreeting}>Votre liberté financière en direct</Text>
+          <Text style={styles.subGreeting}>{t('dashboard_subtitle')}</Text>
         </View>
         <TouchableOpacity style={styles.avatarBtn} onPress={() => router.push('/profile')}>
           <LinearGradient colors={['#ccff00', '#a3e635']} style={styles.avatar}>
@@ -131,7 +133,7 @@ export default function DashboardScreen() {
               {/* Internal metrics inside hero */}
               <View style={styles.heroMetrics}>
                 <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>Monthly Cost</Text>
+                  <Text style={styles.metricLabel}>{t('monthly_cost')}</Text>
                   <Text style={styles.metricVal}>
                     {formatLargeAmount(totalMonthlyCost)}
                   </Text>
@@ -182,13 +184,13 @@ export default function DashboardScreen() {
             {/* Sub Stats Row */}
             <View style={styles.subStatsContainer}>
               <View style={styles.statBox}>
-                <Text style={styles.statBoxLabel}>Revenus Passifs /m</Text>
+                <Text style={styles.statBoxLabel}>{t('passive_income')} /m</Text>
                 <Text style={[styles.statBoxVal, { color: '#ccff00' }]}>
                   {formatLargeAmount(totalPassiveIncome)}
                 </Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statBoxLabel}>Dépenses Fixes /m</Text>
+                <Text style={styles.statBoxLabel}>{t('monthly_cost')} /m</Text>
                 <Text style={[styles.statBoxVal, { color: '#ff3b30' }]}>
                   -{formatLargeAmount(totalMonthlyCost)}
                 </Text>

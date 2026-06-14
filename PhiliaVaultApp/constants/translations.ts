@@ -1,0 +1,188 @@
+// Lightweight i18n dictionaries for Philia Vault.
+// Covers visible chrome / labels across navigation, dashboard, profile and coach screens.
+
+export type Language = 'en' | 'fr' | 'es' | 'pt';
+
+export const LANGUAGES: { code: Language; label: string; flag: string }[] = [
+  { code: 'en', label: 'English', flag: '🇬🇧' },
+  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'es', label: 'Español', flag: '🇪🇸' },
+  { code: 'pt', label: 'Português', flag: '🇵🇹' },
+];
+
+type Dict = Record<string, string>;
+
+export const translations: Record<Language, Dict> = {
+  en: {
+    // Tabs
+    tab_dashboard: 'Dashboard',
+    tab_assets: 'Assets',
+    tab_liabilities: 'Liabilities',
+    tab_affiliation: 'Affiliation',
+    tab_coach: 'Coach',
+
+    // Dashboard
+    greeting_morning: 'Good morning',
+    greeting_evening: 'Good evening',
+    dashboard_subtitle: 'Your financial freedom, live',
+    total_assets: 'Total Assets',
+    passive_income: 'Passive Income',
+    total_liabilities: 'Total Liabilities',
+    monthly_cost: 'Monthly Cost',
+    net_cashflow: 'Net Cashflow',
+    iif_score: 'IIF Score',
+
+    // Profile
+    profile_title: 'My Profile',
+    close: 'Close',
+    account_settings: 'Account Settings',
+    currency: 'Currency',
+    language: 'Language',
+    notifications: 'Notifications',
+    security: 'Security',
+    app_version: 'App Version',
+    recent_transactions: 'Recent Transactions',
+    no_transactions: 'No transactions yet.',
+    logout: 'Log Out',
+    premium_member: 'PREMIUM MEMBER',
+    free_account: 'FREE ACCOUNT',
+    save: 'Save',
+    cancel: 'Cancel',
+    preferences_saved: 'Preferences saved',
+
+    // Coach
+    coach_title: 'AI Financial Coach',
+    coach_subtitle: 'Your personal financial advisor powered by Gemini AI',
+    coach_audit: 'Full audit',
+    coach_optimize: 'Optimize my cashflow',
+    coach_strategy: 'Investment strategy',
+    coach_analyze: 'Analyze my IIF',
+  },
+  fr: {
+    tab_dashboard: 'Tableau',
+    tab_assets: 'Actifs',
+    tab_liabilities: 'Passifs',
+    tab_affiliation: 'Affiliation',
+    tab_coach: 'Coach',
+
+    greeting_morning: 'Bonjour',
+    greeting_evening: 'Bonsoir',
+    dashboard_subtitle: 'Votre liberté financière en direct',
+    total_assets: 'Total des Actifs',
+    passive_income: 'Revenu Passif',
+    total_liabilities: 'Total des Passifs',
+    monthly_cost: 'Coût Mensuel',
+    net_cashflow: 'Cashflow Net',
+    iif_score: 'Score IIF',
+
+    profile_title: 'Mon Profil',
+    close: 'Fermer',
+    account_settings: 'Paramètres du Compte',
+    currency: 'Devise',
+    language: 'Langue',
+    notifications: 'Notifications',
+    security: 'Sécurité',
+    app_version: "Version de l'application",
+    recent_transactions: 'Transactions Récentes',
+    no_transactions: 'Aucune transaction pour le moment.',
+    logout: 'Se déconnecter',
+    premium_member: 'MEMBRE PREMIUM',
+    free_account: 'COMPTE GRATUIT',
+    save: 'Enregistrer',
+    cancel: 'Annuler',
+    preferences_saved: 'Préférences enregistrées',
+
+    coach_title: 'Coach Financier IA',
+    coach_subtitle: 'Votre conseiller financier personnel alimenté par Gemini AI',
+    coach_audit: 'Audit complet',
+    coach_optimize: 'Optimiser mon cashflow',
+    coach_strategy: 'Stratégie investissement',
+    coach_analyze: 'Analyser mon IIF',
+  },
+  es: {
+    tab_dashboard: 'Panel',
+    tab_assets: 'Activos',
+    tab_liabilities: 'Pasivos',
+    tab_affiliation: 'Afiliación',
+    tab_coach: 'Coach',
+
+    greeting_morning: 'Buenos días',
+    greeting_evening: 'Buenas noches',
+    dashboard_subtitle: 'Tu libertad financiera en vivo',
+    total_assets: 'Activos Totales',
+    passive_income: 'Ingreso Pasivo',
+    total_liabilities: 'Pasivos Totales',
+    monthly_cost: 'Costo Mensual',
+    net_cashflow: 'Flujo de Caja Neto',
+    iif_score: 'Puntaje IIF',
+
+    profile_title: 'Mi Perfil',
+    close: 'Cerrar',
+    account_settings: 'Configuración de la Cuenta',
+    currency: 'Moneda',
+    language: 'Idioma',
+    notifications: 'Notificaciones',
+    security: 'Seguridad',
+    app_version: 'Versión de la aplicación',
+    recent_transactions: 'Transacciones Recientes',
+    no_transactions: 'Aún no hay transacciones.',
+    logout: 'Cerrar sesión',
+    premium_member: 'MIEMBRO PREMIUM',
+    free_account: 'CUENTA GRATUITA',
+    save: 'Guardar',
+    cancel: 'Cancelar',
+    preferences_saved: 'Preferencias guardadas',
+
+    coach_title: 'Coach Financiero IA',
+    coach_subtitle: 'Tu asesor financiero personal impulsado por Gemini AI',
+    coach_audit: 'Auditoría completa',
+    coach_optimize: 'Optimizar mi flujo de caja',
+    coach_strategy: 'Estrategia de inversión',
+    coach_analyze: 'Analizar mi IIF',
+  },
+  pt: {
+    tab_dashboard: 'Painel',
+    tab_assets: 'Ativos',
+    tab_liabilities: 'Passivos',
+    tab_affiliation: 'Afiliação',
+    tab_coach: 'Coach',
+
+    greeting_morning: 'Bom dia',
+    greeting_evening: 'Boa noite',
+    dashboard_subtitle: 'Sua liberdade financeira em tempo real',
+    total_assets: 'Total de Ativos',
+    passive_income: 'Renda Passiva',
+    total_liabilities: 'Total de Passivos',
+    monthly_cost: 'Custo Mensal',
+    net_cashflow: 'Fluxo de Caixa Líquido',
+    iif_score: 'Pontuação IIF',
+
+    profile_title: 'Meu Perfil',
+    close: 'Fechar',
+    account_settings: 'Configurações da Conta',
+    currency: 'Moeda',
+    language: 'Idioma',
+    notifications: 'Notificações',
+    security: 'Segurança',
+    app_version: 'Versão do aplicativo',
+    recent_transactions: 'Transações Recentes',
+    no_transactions: 'Nenhuma transação ainda.',
+    logout: 'Sair',
+    premium_member: 'MEMBRO PREMIUM',
+    free_account: 'CONTA GRATUITA',
+    save: 'Salvar',
+    cancel: 'Cancelar',
+    preferences_saved: 'Preferências salvas',
+
+    coach_title: 'Coach Financeiro IA',
+    coach_subtitle: 'Seu consultor financeiro pessoal alimentado por Gemini AI',
+    coach_audit: 'Auditoria completa',
+    coach_optimize: 'Otimizar meu fluxo de caixa',
+    coach_strategy: 'Estratégia de investimento',
+    coach_analyze: 'Analisar meu IIF',
+  },
+};
+
+export function translate(lang: Language, key: string): string {
+  return translations[lang]?.[key] ?? translations.en[key] ?? key;
+}

@@ -12,6 +12,7 @@ import { useAuthStore } from '../../store/authStore';
 import { COLORS, RADIUS } from '../../constants/colors';
 import { IconCoach, IconSearch, IconAssets, IconTarget, IconBolt, IconProps } from '../../components/icons/Icons';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { useUserPreferences } from '../../context/UserPreferencesContext';
 
 interface Message {
   id: string;
@@ -20,11 +21,12 @@ interface Message {
   loading?: boolean;
 }
 
-const QUICK_PROMPTS = ['Audit complet', 'Optimiser mon cashflow', 'Stratégie investissement', 'Analyser mon IIF'];
+const QUICK_PROMPT_KEYS = ['coach_audit', 'coach_optimize', 'coach_strategy', 'coach_analyze'];
 
 /* ─── Paywall ──────────────────────────────────────────────────────────────── */
 function PaywallScreen({ onSubscribe, onRestore, loading }: { onSubscribe: (plan: 'monthly' | 'annual') => void; onRestore: () => void; loading: boolean }) {
   const [plan, setPlan] = useState<'monthly' | 'annual'>('annual');
+  const { t } = useUserPreferences();
 
   return (
     <ScrollView
@@ -39,8 +41,8 @@ function PaywallScreen({ onSubscribe, onRestore, loading }: { onSubscribe: (plan
         <View style={pw.heroIcon}>
           <IconCoach size={36} color={COLORS.primary} />
         </View>
-        <Text style={pw.heroTitle}>Coach Financier IA</Text>
-        <Text style={pw.heroSub}>Votre conseiller financier personnel alimenté par Gemini AI</Text>
+        <Text style={pw.heroTitle}>{t('coach_title')}</Text>
+        <Text style={pw.heroSub}>{t('coach_subtitle')}</Text>
       </LinearGradient>
 
       {/* Features */}
@@ -143,6 +145,7 @@ export default function CoachScreen() {
   const insets = useSafeAreaInsets();
   const { isPremium, setPremium, user } = useAuthStore();
   const { isOnline } = useNetworkStatus();
+  const { t } = useUserPreferences();
   const [messages, setMessages] = useState<Message[]>([{
     id: '0',
     role: 'assistant',
@@ -389,14 +392,14 @@ export default function CoachScreen() {
           contentContainerStyle={chat.quickRow}
           style={chat.quickContainer}
         >
-          {QUICK_PROMPTS.map(q => (
+          {QUICK_PROMPT_KEYS.map(qKey => (
             <TouchableOpacity
-              key={q}
+              key={qKey}
               style={chat.quickBtn}
-              onPress={() => handleSend(q)}
+              onPress={() => handleSend(t(qKey))}
               activeOpacity={0.7}
             >
-              <Text style={chat.quickText}>{q}</Text>
+              <Text style={chat.quickText}>{t(qKey)}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
