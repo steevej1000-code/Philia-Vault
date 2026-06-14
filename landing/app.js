@@ -2,11 +2,8 @@
    PHILIA VAULT — LANDING PAGE LOGIC (V2)
    ============================================================ */
 
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:5001'
-  : 'https://philia-vault-api.onrender.com';
-
-let STRIPE_PUBLISHABLE_KEY = '';
+const SQUARE_APP_ID = 'YOUR_SQUARE_APP_ID';
+const SQUARE_LOCATION_ID = 'YOUR_SQUARE_LOCATION_ID';
 
 /* ---------- Language detection & switching ---------- */
 function detectLang() {
@@ -76,7 +73,7 @@ function initFaq() {
 /* ---------- Founder spot counter ---------- */
 async function updateSpotCounter() {
   try {
-    const res = await fetch(`${API_BASE}/api/founder/count`);
+    const res = await fetch('/api/founder/count');
     if (!res.ok) throw new Error('bad response');
     const data = await res.json();
     const remaining = Math.max(0, data.remaining);
@@ -114,7 +111,7 @@ function initWaitlist() {
     if (!email) return;
 
     try {
-      const res = await fetch(`${API_BASE}/api/founder/waitlist`, {
+      const res = await fetch('/api/founder/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, lang: window.__philiaLang || detectLang() })
@@ -130,60 +127,40 @@ function initWaitlist() {
   });
 }
 
-/* ---------- Stripe checkout ---------- */
-let stripe = null;
-let cardElement = null;
+/* ---------- Square checkout ---------- */
+let squareCard = null;
 
-async function initStripe() {
+async function initSquare() {
   const container = document.getElementById('card-container');
   const button = document.getElementById('card-button');
   if (!container || !button) return;
-
-  // Fetch Stripe config dynamically from backend
-  try {
-    const configRes = await fetch(`${API_BASE}/api/founder/stripe-config`);
-    if (configRes.ok) {
-      const configData = await configRes.json();
-      STRIPE_PUBLISHABLE_KEY = configData.publishableKey;
-    }
-  } catch (err) {
-    console.error("Failed to fetch Stripe config:", err);
-  }
-
-  if (!STRIPE_PUBLISHABLE_KEY) {
-    button.disabled = true;
-    return;
-  }
-
-  if (!window.Stripe) {
+  if (!window.Square) {
     button.disabled = true;
     return;
   }
 
   try {
-    stripe = window.Stripe(STRIPE_PUBLISHABLE_KEY);
-    const elements = stripe.elements();
-    
-    // Style matches the dark theme and neon details of Philia Vault
-    const style = {
-      base: {
-        color: '#FFFFFF',
-        fontFamily: '"Space Mono", monospace',
-        fontSmoothing: 'antialiased',
-        fontSize: '14px',
-        '::placeholder': {
-          color: '#A0A0A0',
+    const payments = window.Square.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
+    squareCard = await payments.card({
+      style: {
+        input: {
+          color: '#FFFFFF',
+          backgroundColor: '#0D0D14',
+          fontSize: '14px',
         },
-        backgroundColor: '#0D0D14',
+        '.input-container': {
+          borderColor: 'rgba(139,0,255,0.4)',
+          borderRadius: '10px',
+        },
+        '.input-container.is-focus': {
+          borderColor: '#8B00FF',
+        },
+        '.message-text': {
+          color: '#FF4444',
+        },
       },
-      invalid: {
-        color: '#FF4444',
-        iconColor: '#FF4444',
-      },
-    };
-
-    cardElement = elements.create('card', { style });
-    cardElement.mount('#card-container');
+    });
+    await squareCard.attach('#card-container');
   } catch (err) {
     button.disabled = true;
   }
@@ -200,7 +177,7 @@ async function initStripe() {
       statusEl.className = 'error';
       return;
     }
-    if (!stripe || !cardElement) {
+    if (!squareCard) {
       statusEl.textContent = 'Payment form is unavailable right now.';
       statusEl.className = 'error';
       return;
@@ -211,19 +188,16 @@ async function initStripe() {
     statusEl.className = '';
 
     try {
-      const { token, error } = await stripe.createToken(cardElement, {
-        name: nameEl ? nameEl.value.trim() : undefined,
-      });
-
-      if (error) {
-        throw new Error(error.message);
+      const result = await squareCard.tokenize();
+      if (result.status !== 'OK') {
+        throw new Error(result.errors ? result.errors[0].message : 'Tokenization failed');
       }
 
-      const res = await fetch(`${API_BASE}/api/founder/purchase`, {
+      const res = await fetch('/api/founder/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          source_id: token.id,
+          token: result.token,
           email,
           name: nameEl ? nameEl.value.trim() : '',
           lang: window.__philiaLang || detectLang(),
@@ -237,7 +211,7 @@ async function initStripe() {
 
       statusEl.textContent = '';
       const memberNumEl = document.getElementById('member-number');
-      if (memberNumEl) memberNumEl.textContent = '#' + (data.member_number || data.payment_id.slice(-6).toUpperCase());
+      if (memberNumEl) memberNumEl.textContent = '#' + data.member_number;
 
       document.getElementById('checkout-block').style.display = 'none';
       const waitlist = document.getElementById('waitlist-block');
@@ -261,19 +235,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initFaq();
   initWaitlist();
   updateSpotCounter();
-  initStripe();
+  initSquare();
 });
-
-/* ---------- Visual mockup tab switcher ---------- */
-function switchTab(index) {
-  const tabs = document.querySelectorAll('.visual-tab-btn');
-  const panels = document.querySelectorAll('.visual-panel');
-
-  tabs.forEach((tab, i) => {
-    tab.classList.toggle('active', i === index);
-  });
-
-  panels.forEach((panel, i) => {
-    panel.classList.toggle('active', i === index);
-  });
-}
