@@ -1036,6 +1036,12 @@ a[href*="buy.stripe"] {
   font-size: 13px;
 }
 
+.validation-stars {
+  color: #C8FF00;
+  letter-spacing: 2px;
+  font-size: 0.95em;
+}
+
 @media (max-width: 640px) {
   .sticky-cart { padding: 10px 16px; }
   .sticky-price { font-size: 20px; }
