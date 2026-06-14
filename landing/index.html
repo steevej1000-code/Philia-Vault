@@ -63,16 +63,14 @@
       <span class="validation-badge inline" data-lang="pt">✓ Testado em privado por mais de 1.700 pessoas — avaliado 4,8/5</span>
     </div>
 
-    <div class="hero-cta">
-      <a href="#offer" class="btn-primary">
-        <span data-lang="en" class="inline">Claim your founder spot — $4.99/mo →</span>
-        <span data-lang="fr" class="inline">Rejoindre en accès fondateur — 4,99$/mois →</span>
-        <span data-lang="es" class="inline">Unirme como miembro fundador — $4.99/mes →</span>
-        <span data-lang="pt" class="inline">Entrar como membro fundador — $4,99/mês →</span>
-      </a>
-    </div>
+    <a href="https://buy.stripe.com/6oUfZh4Xd4i83oydmc9MY00" target="_blank" class="btn-cta-hero">
+      <span data-lang="en" class="inline">CLAIM YOUR FOUNDER SPOT — $4.99/MO →</span>
+      <span data-lang="fr" class="inline">REJOINDRE EN ACCÈS FONDATEUR — 4,99$/MOIS →</span>
+      <span data-lang="es" class="inline">UNIRME COMO MIEMBRO FUNDADOR — $4.99/MES →</span>
+      <span data-lang="pt" class="inline">ENTRAR COMO MEMBRO FUNDADOR — $4,99/MÊS →</span>
+    </a>
 
-    <p class="hero-sub-cta">
+    <p class="hero-subcta">
       <span data-lang="en" class="inline">Only 10 spots. Your rate is locked for life.</span>
       <span data-lang="fr" class="inline">10 places seulement. Ton tarif est garanti à vie.</span>
       <span data-lang="es" class="inline">Solo 10 lugares. Tu tarifa queda fija de por vida.</span>
@@ -497,36 +495,36 @@
 
       <!-- Checkout block -->
       <div id="checkout-block">
-        <div class="field">
-          <label data-lang="en" class="block">Name</label>
-          <label data-lang="fr" class="block">Nom</label>
-          <label data-lang="es" class="block">Nombre</label>
-          <label data-lang="pt" class="block">Nome</label>
-          <input type="text" id="founder-name" placeholder="John Doe">
-        </div>
-        <div class="field">
-          <label data-lang="en" class="block">Email address</label>
-          <label data-lang="fr" class="block">Adresse email</label>
-          <label data-lang="es" class="block">Correo electrónico</label>
-          <label data-lang="pt" class="block">Endereço de email</label>
-          <input type="email" id="founder-email" placeholder="john@example.com">
-        </div>
-        <div class="field">
-          <label data-lang="en" class="block">Card</label>
-          <label data-lang="fr" class="block">Carte bancaire</label>
-          <label data-lang="es" class="block">Tarjeta</label>
-          <label data-lang="pt" class="block">Cartão</label>
-          <div id="card-container"></div>
-        </div>
+        <a href="https://buy.stripe.com/6oUfZh4Xd4i83oydmc9MY00" target="_blank" class="btn-cta-main">
+          <span data-lang="en" class="inline">CLAIM MY SPOT — $4.99/MO →</span>
+          <span data-lang="fr" class="inline">RÉSERVER MA PLACE — 4,99$/MOIS →</span>
+          <span data-lang="es" class="inline">RESERVAR MI LUGAR — $4.99/MES →</span>
+          <span data-lang="pt" class="inline">GARANTIR MINHA VAGA — $4,99/MÊS →</span>
+        </a>
 
-        <button id="card-button" class="btn-primary">
-          <span data-lang="en" class="inline">Claim my spot now →</span>
-          <span data-lang="fr" class="inline">Réserver ma place maintenant →</span>
-          <span data-lang="es" class="inline">Reservar mi lugar ahora →</span>
-          <span data-lang="pt" class="inline">Garantir minha vaga agora →</span>
-        </button>
-
-        <div id="payment-status-message"></div>
+        <div class="security-badges">
+          <div class="badge-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#C8FF00"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+            <span data-lang="en" class="inline">Secured by Stripe</span>
+            <span data-lang="fr" class="inline">Sécurisé par Stripe</span>
+            <span data-lang="es" class="inline">Asegurado por Stripe</span>
+            <span data-lang="pt" class="inline">Protegido pelo Stripe</span>
+          </div>
+          <div class="badge-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#C8FF00"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            <span data-lang="en" class="inline">Cancel anytime</span>
+            <span data-lang="fr" class="inline">Annulation à tout moment</span>
+            <span data-lang="es" class="inline">Cancela cuando quieras</span>
+            <span data-lang="pt" class="inline">Cancele quando quiser</span>
+          </div>
+          <div class="badge-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#C8FF00"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/></svg>
+            <span data-lang="en" class="inline">Rate locked for life</span>
+            <span data-lang="fr" class="inline">Tarif garanti à vie</span>
+            <span data-lang="es" class="inline">Tarifa fija de por vida</span>
+            <span data-lang="pt" class="inline">Taxa garantida para sempre</span>
+          </div>
+        </div>
 
         <p class="offer-cta-note">
           <span data-lang="en" class="inline">Secure today. Access August 2026. Cancel anytime before launch.</span>
@@ -717,7 +715,25 @@
   </div>
 </footer>
 
-<script src="https://web.squarecdn.com/v1/square.js"></script>
+<!-- ============ STICKY CART ============ -->
+<div class="sticky-cart" id="sticky-cart">
+  <div class="sticky-left">
+    <span class="sticky-price">$4.99<span>/mo</span></span>
+    <span class="sticky-label">
+      <span data-lang="en" class="inline">Founder rate — locked for life</span>
+      <span data-lang="fr" class="inline">Tarif fondateur — garanti à vie</span>
+      <span data-lang="es" class="inline">Tarifa fundador — fija de por vida</span>
+      <span data-lang="pt" class="inline">Taxa fundador — garantida para sempre</span>
+    </span>
+  </div>
+  <a href="https://buy.stripe.com/6oUfZh4Xd4i83oydmc9MY00" target="_blank" class="sticky-btn">
+    <span data-lang="en" class="inline">RESERVE →</span>
+    <span data-lang="fr" class="inline">RÉSERVER →</span>
+    <span data-lang="es" class="inline">RESERVAR →</span>
+    <span data-lang="pt" class="inline">GARANTIR →</span>
+  </a>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>

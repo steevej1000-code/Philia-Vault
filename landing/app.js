@@ -2,9 +2,6 @@
    PHILIA VAULT — LANDING PAGE LOGIC (V2)
    ============================================================ */
 
-const SQUARE_APP_ID = 'YOUR_SQUARE_APP_ID';
-const SQUARE_LOCATION_ID = 'YOUR_SQUARE_LOCATION_ID';
-
 /* ---------- Language detection & switching ---------- */
 function detectLang() {
   const saved = window.__philiaLang;
@@ -127,106 +124,6 @@ function initWaitlist() {
   });
 }
 
-/* ---------- Square checkout ---------- */
-let squareCard = null;
-
-async function initSquare() {
-  const container = document.getElementById('card-container');
-  const button = document.getElementById('card-button');
-  if (!container || !button) return;
-  if (!window.Square) {
-    button.disabled = true;
-    return;
-  }
-
-  try {
-    const payments = window.Square.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
-    squareCard = await payments.card({
-      style: {
-        input: {
-          color: '#FFFFFF',
-          backgroundColor: '#0D0D14',
-          fontSize: '14px',
-        },
-        '.input-container': {
-          borderColor: 'rgba(139,0,255,0.4)',
-          borderRadius: '10px',
-        },
-        '.input-container.is-focus': {
-          borderColor: '#8B00FF',
-        },
-        '.message-text': {
-          color: '#FF4444',
-        },
-      },
-    });
-    await squareCard.attach('#card-container');
-  } catch (err) {
-    button.disabled = true;
-  }
-
-  button.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const statusEl = document.getElementById('payment-status-message');
-    const nameEl = document.getElementById('founder-name');
-    const emailEl = document.getElementById('founder-email');
-    const email = emailEl ? emailEl.value.trim() : '';
-
-    if (!email) {
-      statusEl.textContent = 'Please enter your email address.';
-      statusEl.className = 'error';
-      return;
-    }
-    if (!squareCard) {
-      statusEl.textContent = 'Payment form is unavailable right now.';
-      statusEl.className = 'error';
-      return;
-    }
-
-    button.disabled = true;
-    statusEl.textContent = 'Processing...';
-    statusEl.className = '';
-
-    try {
-      const result = await squareCard.tokenize();
-      if (result.status !== 'OK') {
-        throw new Error(result.errors ? result.errors[0].message : 'Tokenization failed');
-      }
-
-      const res = await fetch('/api/founder/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: result.token,
-          email,
-          name: nameEl ? nameEl.value.trim() : '',
-          lang: window.__philiaLang || detectLang(),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Purchase failed');
-      }
-
-      statusEl.textContent = '';
-      const memberNumEl = document.getElementById('member-number');
-      if (memberNumEl) memberNumEl.textContent = '#' + data.member_number;
-
-      document.getElementById('checkout-block').style.display = 'none';
-      const waitlist = document.getElementById('waitlist-block');
-      if (waitlist) waitlist.style.display = 'none';
-      document.getElementById('success-screen').style.display = 'block';
-
-      updateSpotCounter();
-    } catch (err) {
-      statusEl.textContent = err.message || 'Something went wrong. Please try again.';
-      statusEl.className = 'error';
-      button.disabled = false;
-    }
-  });
-}
-
 /* ---------- Init ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   applyLang(detectLang());
@@ -235,5 +132,4 @@ document.addEventListener('DOMContentLoaded', () => {
   initFaq();
   initWaitlist();
   updateSpotCounter();
-  initSquare();
 });
