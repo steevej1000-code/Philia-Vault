@@ -779,8 +779,7 @@ Applique ce comportement immédiatement.
             
             model_with_sys = genai.GenerativeModel('gemini-2.5-flash', system_instruction=sys_prompt)
             response = model_with_sys.generate_content(
-                contents,
-                generation_config={"max_output_tokens": 100}
+                contents
             )
             return jsonify({"success": True, "reply": response.text})
         except Exception as e:
