@@ -415,15 +415,7 @@ export default function CoachScreen() {
             {messages[0]?.content || t('coach_welcome_default')}
           </Text>
 
-          {/* Dribbble mockup search bar shortcut */}
-          <TouchableOpacity
-            style={styles.searchBarMock}
-            onPress={() => inputRef.current?.focus()}
-            activeOpacity={0.8}
-          >
-            <IconSearch size={18} color="#8e8e93" />
-            <Text style={styles.searchBarPlaceholder}>Rechercher une question ou un sujet...</Text>
-          </TouchableOpacity>
+
 
           {/* 2x2 grid shortcut cards with perfect circle icons */}
           <View style={styles.grid}>
@@ -554,8 +546,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.glassBorder,
-    backgroundColor: 'rgba(12,14,18,0.95)',
+    borderBottomColor: '#000000',
+    backgroundColor: '#000000',
   },
   headerInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   coachAvatar: {
