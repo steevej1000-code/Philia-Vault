@@ -10,7 +10,10 @@ import api from '../../services/api';
 import { purchasePlan, restorePurchases, hasCoachEntitlement } from '../../services/purchases';
 import { useAuthStore } from '../../store/authStore';
 import { COLORS, RADIUS } from '../../constants/colors';
-import { IconCoach, IconSearch, IconAssets, IconTarget, IconBolt, IconProps } from '../../components/icons/Icons';
+import {
+  IconCoach, IconSearch, IconAssets, IconTarget, IconBolt,
+  IconClose, IconProps
+} from '../../components/icons/Icons';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
 
@@ -21,7 +24,12 @@ interface Message {
   loading?: boolean;
 }
 
-const QUICK_PROMPT_KEYS = ['coach_audit', 'coach_optimize', 'coach_strategy', 'coach_analyze'];
+const QUICK_PROMPTS_DATA = [
+  { key: 'coach_audit', Icon: IconSearch },
+  { key: 'coach_optimize', Icon: IconAssets },
+  { key: 'coach_strategy', Icon: IconTarget },
+  { key: 'coach_analyze', Icon: IconBolt },
+];
 
 /* ─── Paywall ──────────────────────────────────────────────────────────────── */
 function PaywallScreen({ onSubscribe, onRestore, loading }: { onSubscribe: (plan: 'monthly' | 'annual') => void; onRestore: () => void; loading: boolean }) {
@@ -35,11 +43,11 @@ function PaywallScreen({ onSubscribe, onRestore, loading }: { onSubscribe: (plan
     >
       {/* Hero */}
       <LinearGradient
-        colors={['rgba(139,92,246,0.2)', 'rgba(12,14,18,0)']}
+        colors={['rgba(204,255,0,0.12)', 'rgba(12,14,18,0)']}
         style={pw.hero}
       >
         <View style={pw.heroIcon}>
-          <IconCoach size={36} color={COLORS.primary} />
+          <IconCoach size={36} color="#ccff00" />
         </View>
         <Text style={pw.heroTitle}>{t('coach_title')}</Text>
         <Text style={pw.heroSub}>{t('coach_subtitle')}</Text>
@@ -54,7 +62,7 @@ function PaywallScreen({ onSubscribe, onRestore, loading }: { onSubscribe: (plan
           { Icon: IconBolt, t: t('coach_feature_instant') },
         ].map((f, i) => (
           <View key={i} style={pw.feat}>
-            <View style={pw.featIcon}><f.Icon size={18} color={COLORS.primary} /></View>
+            <View style={pw.featIcon}><f.Icon size={18} color="#ccff00" /></View>
             <Text style={pw.featText}>{f.t}</Text>
           </View>
         ))}
@@ -121,18 +129,18 @@ const pw = StyleSheet.create({
   heroSub: { fontSize: 14, color: COLORS.onSurfaceVariant, textAlign: 'center', lineHeight: 22, marginTop: 8, maxWidth: 300 },
   features: { paddingHorizontal: 20, gap: 10, marginBottom: 24 },
   feat: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: COLORS.surfaceContainer, padding: 14, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.glassBorder },
-  featIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(139,92,246,0.15)', alignItems: 'center', justifyContent: 'center' },
+  featIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(204,255,0,0.15)', alignItems: 'center', justifyContent: 'center' },
   featText: { fontSize: 14, fontWeight: '500', color: COLORS.onSurface, flex: 1 },
   plans: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 20 },
   planCard: { flex: 1, backgroundColor: COLORS.surfaceContainer, borderRadius: RADIUS.xl, padding: 16, borderWidth: 2, borderColor: COLORS.glassBorder, alignItems: 'center', gap: 2, minHeight: 110, justifyContent: 'center', position: 'relative' },
-  planActive: { borderColor: COLORS.primary, backgroundColor: 'rgba(204,255,0,0.08)' },
-  planCheck: { position: 'absolute', top: 8, right: 8, width: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  badge: { position: 'absolute', top: -10, left: '50%', transform: [{ translateX: -20 }], backgroundColor: COLORS.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99 },
+  planActive: { borderColor: '#ccff00', backgroundColor: 'rgba(204,255,0,0.08)' },
+  planCheck: { position: 'absolute', top: 8, right: 8, width: 18, height: 18, borderRadius: 9, backgroundColor: '#ccff00', alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: -10, left: '50%', transform: [{ translateX: -20 }], backgroundColor: '#ccff00', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99 },
   badgeText: { fontSize: 10, fontWeight: '900', color: '#0c0e12' },
   planPeriod: { fontSize: 12, fontWeight: '600', color: COLORS.onSurfaceVariant },
   planPrice: { fontSize: 22, fontWeight: '900', color: COLORS.onSurface, marginTop: 4 },
   planUnit: { fontSize: 12, color: COLORS.onSurfaceVariant },
-  planSave: { fontSize: 11, color: COLORS.primary, fontWeight: '700', marginTop: 2 },
+  planSave: { fontSize: 11, color: '#ccff00', fontWeight: '700', marginTop: 2 },
   subBtn: { marginHorizontal: 20, borderRadius: RADIUS.full, overflow: 'hidden', shadowColor: '#ccff00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6 },
   subGrad: { paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
   subText: { fontSize: 15, fontWeight: '800', color: '#0c0e12' },
@@ -146,14 +154,14 @@ export default function CoachScreen() {
   const { isPremium, setPremium, user } = useAuthStore();
   const { isOnline } = useNetworkStatus();
   const { t } = useUserPreferences();
+  
   const [messages, setMessages] = useState<Message[]>([{
     id: '0',
     role: 'assistant',
     content: t('coach_welcome_default'),
   }]);
 
-  // Replace the static welcome message with a personalized one based on the
-  // user's real portfolio data as soon as it's available.
+  // Replace welcome message with personalized one based on real user data
   useEffect(() => {
     (async () => {
       try {
@@ -182,7 +190,6 @@ export default function CoachScreen() {
             : prev
         );
       } catch (e) {
-        // Keep the static fallback welcome message if the summary can't be loaded.
         console.warn('Coach: failed to personalize welcome message', e);
       }
     })();
@@ -192,7 +199,9 @@ export default function CoachScreen() {
   const [sending, setSending] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
   const [history, setHistory] = useState<{ role: string; text: string }[]>([]);
+  
   const listRef = useRef<FlatList>(null);
+  const inputRef = useRef<TextInput>(null);
 
   const scrollToBottom = () => {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
@@ -227,7 +236,6 @@ export default function CoachScreen() {
 
     try {
       const result = await api.sendChatMessage(msgText, newHistory.slice(-10));
-      // The Flask server returns "reply" field
       const reply = result.reply || result.response || result.message || t('coach_no_reply');
 
       const aiMsg: Message = {
@@ -254,15 +262,10 @@ export default function CoachScreen() {
   const handleSubscribe = async (plan: 'monthly' | 'annual') => {
     setSubscribing(true);
     try {
-      // RevenueCat handles the native App Store / Play Store purchase flow.
       const customerInfo = await purchasePlan(plan === 'annual' ? 'yearly' : 'monthly');
-      if (!customerInfo) {
-        // User cancelled the purchase sheet — nothing to do.
-        return;
-      }
+      if (!customerInfo) return;
+
       if (hasCoachEntitlement(customerInfo)) {
-        // Sync premium status to the Flask backend (which RevenueCat
-        // webhooks also update server-side via /api/webhooks/revenuecat).
         await api.setPremiumStatus(1).catch(() => {});
         setPremium(true);
         Alert.alert(t('coach_premium_activated_title'), t('coach_premium_activated_message'));
@@ -298,23 +301,41 @@ export default function CoachScreen() {
     const isUser = item.role === 'user';
     return (
       <View style={[chat.row, isUser && chat.rowUser]}>
-        {!isUser && (
-          <View style={chat.avatar}>
-            <IconCoach size={14} color={COLORS.primary} />
+        {isUser ? (
+          <LinearGradient
+            colors={['#ccff00', '#a3e635']}
+            style={[chat.bubble, chat.bubbleUser]}
+          >
+            <View style={chat.avatarInBubbleUser}>
+              <Text style={chat.avatarInBubbleTextUser}>
+                {user?.first_name?.charAt(0).toUpperCase() || 'S'}
+              </Text>
+            </View>
+            <View style={{ flexShrink: 1 }}>
+              <Text style={[chat.bubbleText, chat.bubbleTextUser]}>
+                {item.content}
+              </Text>
+            </View>
+          </LinearGradient>
+        ) : (
+          <View style={[chat.bubble, chat.bubbleAI]}>
+            <View style={chat.avatarInBubbleAI}>
+              <IconCoach size={11} color="#0c0e12" />
+            </View>
+            <View style={{ flexShrink: 1 }}>
+              {item.loading ? (
+                <View style={chat.typingRow}>
+                  <ActivityIndicator size="small" color="#ccff00" />
+                  <Text style={chat.typingText}>{t('coach_typing')}</Text>
+                </View>
+              ) : (
+                <Text style={[chat.bubbleText, { color: '#ffffff' }]}>
+                  {item.content}
+                </Text>
+              )}
+            </View>
           </View>
         )}
-        <View style={[chat.bubble, isUser ? chat.bubbleUser : chat.bubbleAI]}>
-          {item.loading ? (
-            <View style={chat.typingRow}>
-              <ActivityIndicator size="small" color={COLORS.tertiary} />
-              <Text style={chat.typingText}>{t('coach_typing')}</Text>
-            </View>
-          ) : (
-            <Text style={[chat.bubbleText, isUser && chat.bubbleTextUser]}>
-              {item.content}
-            </Text>
-          )}
-        </View>
       </View>
     );
   };
@@ -358,11 +379,21 @@ export default function CoachScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={insets.top}
     >
+      {/* Background glow neon mesh blob (Landing screen only) */}
+      {messages.length <= 1 && (
+        <View style={styles.glowContainer}>
+          <LinearGradient
+            colors={['rgba(204,255,0,0.12)', 'rgba(0,0,0,0)']}
+            style={styles.glowBlob}
+          />
+        </View>
+      )}
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
           <View style={styles.coachAvatar}>
-            <IconCoach size={18} color={COLORS.primary} />
+            <IconCoach size={18} color="#ccff00" />
           </View>
           <View>
             <Text style={styles.title}>{t('coach_header_name')}</Text>
@@ -374,42 +405,87 @@ export default function CoachScreen() {
         </View>
       </View>
 
-      {/* Messages */}
-      <FlatList
-        ref={listRef}
-        data={messages}
-        keyExtractor={m => m.id}
-        renderItem={renderMessage}
-        contentContainerStyle={chat.list}
-        showsVerticalScrollIndicator={false}
-        keyboardDismissMode="interactive"
-        onContentSizeChange={scrollToBottom}
-      />
+      {messages.length <= 1 ? (
+        <ScrollView contentContainerStyle={styles.landingContainer} showsVerticalScrollIndicator={false}>
+          {/* Headline */}
+          <Text style={styles.landingTitle} numberOfLines={2} adjustsFontSizeToFit>{t('coach_title')}</Text>
+          
+          {/* Personalized welcome introduction text */}
+          <Text style={styles.landingSubtitle}>
+            {messages[0]?.content || t('coach_welcome_default')}
+          </Text>
 
-      {/* Quick Prompts */}
-      {messages.length <= 2 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={chat.quickRow}
-          style={chat.quickContainer}
-        >
-          {QUICK_PROMPT_KEYS.map(qKey => (
-            <TouchableOpacity
-              key={qKey}
-              style={chat.quickBtn}
-              onPress={() => handleSend(t(qKey))}
-              activeOpacity={0.7}
-            >
-              <Text style={chat.quickText}>{t(qKey)}</Text>
-            </TouchableOpacity>
-          ))}
+          {/* Dribbble mockup search bar shortcut */}
+          <TouchableOpacity
+            style={styles.searchBarMock}
+            onPress={() => inputRef.current?.focus()}
+            activeOpacity={0.8}
+          >
+            <IconSearch size={18} color="#8e8e93" />
+            <Text style={styles.searchBarPlaceholder}>Rechercher une question ou un sujet...</Text>
+          </TouchableOpacity>
+
+          {/* 2x2 grid shortcut cards with perfect circle icons */}
+          <View style={styles.grid}>
+            {QUICK_PROMPTS_DATA.map((item) => (
+              <TouchableOpacity
+                key={item.key}
+                style={styles.quickPromptCard}
+                onPress={() => handleSend(t(item.key))}
+                activeOpacity={0.8}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View style={styles.quickPromptIconWrapper}>
+                    <item.Icon size={16} color="#ccff00" />
+                  </View>
+                  <Text style={styles.quickPromptArrow}>↗</Text>
+                </View>
+                <Text style={styles.quickPromptText} numberOfLines={2}>
+                  {t(item.key)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </ScrollView>
+      ) : (
+        <FlatList
+          ref={listRef}
+          data={messages}
+          keyExtractor={m => m.id}
+          renderItem={renderMessage}
+          contentContainerStyle={chat.list}
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="interactive"
+          onContentSizeChange={scrollToBottom}
+        />
       )}
 
-      {/* Input Bar */}
+      {/* Suggestion Chips above input (Visible during active chat only) */}
+      {messages.length > 1 && (
+        <View style={chat.suggestionScroll}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={chat.suggestionContainer}
+          >
+            {['Faire un audit', 'Analyser mes passifs', 'Optimiser cashflow', 'Plus de détails'].map((s, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={chat.suggestionChip}
+                onPress={() => handleSend(s)}
+                activeOpacity={0.8}
+              >
+                <Text style={chat.suggestionText}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Dribbble styled rounded input bar (No microphone icon) */}
       <View style={[chat.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TextInput
+          ref={inputRef}
           style={chat.input}
           value={input}
           onChangeText={setInput}
@@ -421,6 +497,7 @@ export default function CoachScreen() {
           onSubmitEditing={() => handleSend()}
           blurOnSubmit
         />
+        
         <TouchableOpacity
           onPress={() => handleSend()}
           disabled={!input.trim() || sending}
@@ -469,7 +546,7 @@ const offline = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#000000' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -483,8 +560,8 @@ const styles = StyleSheet.create({
   headerInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   coachAvatar: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(139,92,246,0.2)',
-    borderWidth: 1, borderColor: 'rgba(139,92,246,0.35)',
+    backgroundColor: 'rgba(204,255,0,0.12)',
+    borderWidth: 1, borderColor: 'rgba(204,255,0,0.25)',
     alignItems: 'center', justifyContent: 'center',
   },
   title: { fontSize: 16, fontWeight: '800', color: COLORS.onSurface },
@@ -496,46 +573,181 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(204,255,0,0.3)',
     paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99,
   },
-  premiumBadgeText: { fontSize: 10, fontWeight: '800', color: COLORS.primary, letterSpacing: 0.8 },
+  premiumBadgeText: { fontSize: 10, fontWeight: '800', color: '#ccff00', letterSpacing: 0.8 },
+
+  // Background blur glow blob
+  glowContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: '100%',
+    height: 400,
+    overflow: 'hidden',
+    zIndex: 0,
+  },
+  glowBlob: {
+    position: 'absolute',
+    top: -150,
+    right: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+  },
+
+  // Landing Welcome screen
+  landingContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 40,
+    gap: 16,
+  },
+  landingTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: -1,
+    lineHeight: 38,
+  },
+  landingSubtitle: {
+    fontSize: 14,
+    color: '#8e8e93',
+    lineHeight: 22,
+    fontWeight: '500',
+  },
+  searchBarMock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+    marginTop: 8,
+  },
+  searchBarPlaceholder: {
+    fontSize: 14,
+    color: '#8e8e93',
+  },
+
+  // Grid cards
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 12,
+  },
+  quickPromptCard: {
+    width: '48%',
+    height: 114,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 24,
+    padding: 14,
+    justifyContent: 'space-between',
+  },
+  quickPromptIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 16, // Perfect circle icons for quick prompts
+    backgroundColor: 'rgba(204,255,0,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickPromptText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffff',
+    lineHeight: 16,
+  },
+  quickPromptArrow: {
+    fontSize: 14,
+    color: '#ccff00',
+    fontWeight: '900',
+    alignSelf: 'flex-end',
+  },
 });
 
 const chat = StyleSheet.create({
-  list: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, gap: 12 },
-  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  rowUser: { flexDirection: 'row-reverse' },
-  avatar: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: 'rgba(139,92,246,0.15)',
-    borderWidth: 1, borderColor: 'rgba(139,92,246,0.2)',
-    alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0, marginBottom: 2,
-  },
-  bubble: { maxWidth: '80%', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 12 },
+  list: { paddingVertical: 16, gap: 12 },
+  row: { flexDirection: 'row', justifyContent: 'flex-start', width: '100%', paddingHorizontal: 16, marginBottom: 8 },
+  rowUser: { justifyContent: 'flex-end' },
+  bubble: { maxWidth: '85%', borderRadius: 24, paddingHorizontal: 16, paddingVertical: 12 },
   bubbleAI: {
-    backgroundColor: 'rgba(26,32,44,0.95)',
-    borderWidth: 1, borderColor: 'rgba(139,92,246,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
     borderBottomLeftRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
   },
   bubbleUser: {
-    backgroundColor: COLORS.primary,
     borderBottomRightRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
   },
-  bubbleText: { fontSize: 14, lineHeight: 22, color: COLORS.onSurface },
-  bubbleTextUser: { color: '#0c0e12', fontWeight: '600' },
+  bubbleText: { fontSize: 14, lineHeight: 22, color: '#ffffff' },
+  bubbleTextUser: { color: '#0c0e12', fontWeight: '700' },
   typingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   typingText: { fontSize: 13, color: COLORS.onSurfaceVariant, fontStyle: 'italic' },
-  quickContainer: { maxHeight: 48, marginBottom: 4 },
-  quickRow: { paddingHorizontal: 16, gap: 8, paddingVertical: 4 },
-  quickBtn: {
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 99,
-    backgroundColor: COLORS.surfaceContainerHigh,
-    borderWidth: 1, borderColor: COLORS.glassBorder,
+  
+  avatarInBubbleUser: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#0c0e12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
   },
-  quickText: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
+  avatarInBubbleTextUser: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#ffffff',
+  },
+  avatarInBubbleAI: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#ccff00',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+
+  // Suggestion Chips
+  suggestionScroll: {
+    paddingVertical: 6,
+    maxHeight: 44,
+    backgroundColor: 'transparent',
+  },
+  suggestionContainer: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  suggestionChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 99,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  suggestionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ccff00',
+  },
+
+  // Input Bar
   inputBar: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 10,
     gap: 10,
@@ -547,19 +759,19 @@ const chat = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: COLORS.glassBorder,
-    borderRadius: 20,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 22,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
     fontSize: 15,
     color: COLORS.onSurface,
     maxHeight: 100,
-    minHeight: 46,
+    minHeight: 44,
   },
-  sendBtn: { flexShrink: 0, marginBottom: 0 },
+  sendBtn: { flexShrink: 0 },
   sendGrad: {
-    width: 46, height: 46, borderRadius: 23,
+    width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#ccff00', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.4, shadowRadius: 8,
   },

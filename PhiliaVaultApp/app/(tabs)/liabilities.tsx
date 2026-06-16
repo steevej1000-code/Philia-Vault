@@ -1,16 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   RefreshControl, Modal, TextInput, ActivityIndicator, Alert,
   KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../../services/api';
 import { COLORS, RADIUS } from '../../constants/colors';
-import { GlassCard } from '../../components/GlassCard';
-import { PremiumButton } from '../../components/PremiumButton';
-import { StatCard } from '../../components/StatCard';
-import { IconBank, IconHouse, IconRefresh, IconCard, IconList, IconLiabilities, IconClose, IconProps } from '../../components/icons/Icons';
+import Svg, { Path } from 'react-native-svg';
+import {
+  IconBank, IconHouse, IconRefresh, IconCard, IconList,
+  IconClose, IconTrash, IconLiabilities, IconProps
+} from '../../components/icons/Icons';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
 
 interface Liability {
@@ -31,15 +32,21 @@ const LIABILITY_TYPE_LABEL_KEYS: Record<string, string> = {
   Other: 'liability_type_other',
 };
 
-const TYPE_CONFIG: Record<string, { Icon: React.ComponentType<IconProps>; color: string }> = {
-  Loan: { Icon: IconBank, color: COLORS.error },
-  Mortgage: { Icon: IconHouse, color: '#f59e0b' },
-  Subscription: { Icon: IconRefresh, color: COLORS.tertiary },
-  'Credit Card': { Icon: IconCard, color: COLORS.rose },
-  Other: { Icon: IconList, color: COLORS.onSurfaceVariant },
+const TYPE_ICONS: Record<string, React.ComponentType<IconProps>> = {
+  Loan: IconBank,
+  Mortgage: IconHouse,
+  Subscription: IconRefresh,
+  'Credit Card': IconCard,
+  Other: IconList,
 };
 
-const fmtK = (v: number) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`;
+const TYPE_DETAILS: Record<string, { labelKey: string; subLabel: string }> = {
+  Loan: { labelKey: 'liability_type_loan', subLabel: '(LOAN)' },
+  Mortgage: { labelKey: 'liability_type_mortgage', subLabel: '(MORTGAGE)' },
+  Subscription: { labelKey: 'liability_type_subscription', subLabel: '(SUB)' },
+  'Credit Card': { labelKey: 'liability_type_credit_card', subLabel: '(CARD)' },
+  Other: { labelKey: 'liability_type_other', subLabel: '(OTHER)' },
+};
 
 export default function LiabilitiesScreen() {
   const insets = useSafeAreaInsets();
@@ -50,6 +57,7 @@ export default function LiabilitiesScreen() {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Form state
   const [name, setName] = useState('');
   const [type, setType] = useState('Subscription');
   const [monthCost, setMonthCost] = useState('');
@@ -71,6 +79,8 @@ export default function LiabilitiesScreen() {
   }, []);
 
   useEffect(() => { load(); }, []);
+
+  const onRefresh = () => { setRefreshing(true); load(); };
 
   const handleOpenAdd = () => {
     setEditingLiabilityId(null);
@@ -124,36 +134,53 @@ export default function LiabilitiesScreen() {
   };
 
   const handleDelete = (id: number, name: string) => {
-    Alert.alert(t('delete_title'), t('delete_liability_confirm').replace('{name}', name), [
-      { text: t('cancel'), style: 'cancel' },
-      {
-        text: t('delete_title'), style: 'destructive',
-        onPress: async () => {
-          try {
-            await api.deleteLiability(id);
-            load();
-          } catch (e: any) {
-            Alert.alert(t('error'), e.message);
+    Alert.alert(
+      t('delete_title'),
+      t('delete_liability_confirm').replace('{name}', name),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete_title'), style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.deleteLiability(id);
+              load();
+            } catch (e: any) {
+              Alert.alert(t('error'), e.message);
+            }
           }
         }
-      }
-    ]);
+      ]
+    );
   };
 
-  const totalMonthly = liabilities.reduce((s, l) => s + (Number(l.monthly_cost) || 0), 0);
-  const totalDebtSum = liabilities.reduce((s, l) => {
-    // Ignore Subscription type from total remaining debt sum
-    if (l.type === 'Subscription') {
-      return s;
-    }
-    return s + (Number(l.total_debt) || 0);
-  }, 0);
+  const formatEuro = (v: any) => {
+    const num = Number(v);
+    if (isNaN(num)) return '0,00 €';
+    return `${num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+  };
+
+  // Render a tiny vector trend line in red stroke on the card background
+  const TrendLine = () => (
+    <View style={styles.trendContainer}>
+      <Svg width="120" height="36" viewBox="0 0 120 36">
+        <Path
+          d="M 10 25 C 25 25, 30 10, 45 15 C 60 20, 65 30, 80 12 C 95 -2, 100 22, 115 15"
+          fill="none"
+          stroke="#800000" // Dark red stroke matching the visual balance of the green assets trendline
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+      </Svg>
+    </View>
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Title Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>{t('liabilities_title')}</Text>
+        <View style={{ flex: 1, marginRight: 12 }}>
+          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>{t('liabilities_title')}</Text>
           <Text style={styles.subtitle}>{t('liabilities_subtitle')}</Text>
         </View>
         <TouchableOpacity style={styles.addBtn} onPress={handleOpenAdd}>
@@ -162,77 +189,105 @@ export default function LiabilitiesScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 60 }} />
+        <ActivityIndicator color="#FF3B30" size="large" style={{ marginTop: 60 }} />
       ) : (
-        <FlatList
-          data={liabilities}
-          keyExtractor={(l) => String(l.id)}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={COLORS.primary} />}
-          ListHeaderComponent={
-            <View style={styles.statsSection}>
-              <View style={styles.statsRow}>
-                <StatCard
-                  label={t('monthly_charges')}
-                  value={fmtK(totalMonthly)}
-                  color={COLORS.rose}
-                  style={{ flex: 1 }}
-                />
-                <View style={{ width: 12 }} />
-                <StatCard
-                  label={t('total_debt')}
-                  value={fmtK(totalDebtSum)}
-                  color={COLORS.onSurface}
-                  style={{ flex: 1 }}
-                />
-              </View>
-              <Text style={styles.listHeader}>
-                {liabilities.length} {liabilities.length !== 1 ? t('liabilities_count_label_plural') : t('liabilities_count_label')}
-              </Text>
-            </View>
-          }
-          ListEmptyComponent={
-            <GlassCard style={styles.emptyCard}>
-              <IconLiabilities size={32} color={COLORS.primary} />
-              <Text style={styles.emptyTitle}>{t('liabilities_empty_title')}</Text>
-              <Text style={styles.emptySubtitle}>
-                {t('liabilities_empty_subtitle')}
-              </Text>
-              <PremiumButton
-                title={t('add_liability')}
-                onPress={handleOpenAdd}
-                style={{ marginTop: 16 }}
-              />
-            </GlassCard>
-          }
-          renderItem={({ item }) => {
-            const cfg = TYPE_CONFIG[item.type] || TYPE_CONFIG.Other;
-            return (
-              <GlassCard style={styles.liabCard}>
-                <View style={[styles.liabIcon, { backgroundColor: `${cfg.color}15` }]}>
-                  <cfg.Icon size={18} color={cfg.color} />
-                </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={styles.liabName}>{item.name}</Text>
-                  <Text style={styles.liabMeta}>
-                    {t(LIABILITY_TYPE_LABEL_KEYS[item.type] || LIABILITY_TYPE_LABEL_KEYS.Other)} {item.total_debt > 0 && `· ${t('debt_label')}: $${item.total_debt.toLocaleString()}`}
-                  </Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                  <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                    <Text style={styles.liabCost}>-${item.monthly_cost}/m</Text>
-                    <TouchableOpacity onPress={() => handleDelete(item.id, item.name)}>
-                      <Text style={styles.deleteLink}>{t('delete_link')}</Text>
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF3B30" />}
+        >
+          {/* Pure Red Grid of Liabilities */}
+          <View style={styles.grid}>
+            {liabilities.map((item) => {
+              const Icon = TYPE_ICONS[item.type] || TYPE_ICONS.Other;
+              const details = TYPE_DETAILS[item.type] || TYPE_DETAILS.Other;
+              return (
+                <View key={item.id} style={styles.gridCard}>
+                  {/* Top line with Icon and category info */}
+                  <View style={styles.cardHeader}>
+                    <View style={styles.categoryIconWrapper}>
+                      <Icon size={20} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.categoryMeta}>
+                      <Text style={styles.categoryLabel}>{t(details.labelKey).toUpperCase()}</Text>
+                      <Text style={styles.categorySubLabel}>{details.subLabel}</Text>
+                      <Text style={styles.cardValue}>{formatEuro(item.total_debt)}</Text>
+                    </View>
+                  </View>
+
+                  {/* Middle part: Yield info (monthly cost for liability) */}
+                  <View style={styles.yieldContainer}>
+                    <Text style={styles.yieldLabel}>{t('monthly_cost_label').replace(' ($)', '')}</Text>
+                    <Text style={styles.yieldValue}>-{formatEuro(item.monthly_cost)}</Text>
+                  </View>
+
+                  {/* SVG Wave graphic */}
+                  <TrendLine />
+
+                  {/* Edit Pencil icon and Delete button bottom-right */}
+                  <View style={styles.cardActionsContainer}>
+                    <TouchableOpacity onPress={() => handleOpenEdit(item)} style={styles.editCardBtn}>
+                      <Text style={{ fontSize: 13, color: '#FFFFFF' }}>✎</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDelete(item.id, item.name)} style={styles.deleteCardBtn}>
+                      <IconTrash size={15} color="#FFFFFF" />
                     </TouchableOpacity>
                   </View>
-                  <TouchableOpacity onPress={() => handleOpenEdit(item)} style={styles.editBtnAction}>
-                    <Text style={{ color: COLORS.primary, fontSize: 16 }}>✎</Text>
-                  </TouchableOpacity>
                 </View>
-              </GlassCard>
-            );
-          }}
-          contentContainerStyle={{ paddingBottom: 40 }}
-        />
+              );
+            })}
+          </View>
+
+          {/* Performance Détaillée section */}
+          {liabilities.length > 0 && (
+            <View style={styles.performanceContainer}>
+              <Text style={styles.perfTitle}>{t('detailed_performance')}</Text>
+
+              {/* Table headers */}
+              <View style={styles.tableRowHeader}>
+                <Text style={[styles.colHeader, { flex: 1.5 }]}>{t('col_name')}</Text>
+                <Text style={[styles.colHeader, { flex: 1.5 }]}>{t('col_category')}</Text>
+                <Text style={[styles.colHeader, { flex: 1.2, textAlign: 'right' }]}>{t('total_debt')}</Text>
+                <Text style={[styles.colHeader, { flex: 1.2, textAlign: 'right' }]}>{t('monthly_charges')}</Text>
+                <Text style={[styles.colHeader, { flex: 1.0, textAlign: 'center' }]}>{t('col_actions')}</Text>
+              </View>
+
+              {/* Table items */}
+              {liabilities.map((item) => (
+                <View key={item.id} style={styles.tableRow}>
+                  <Text style={[styles.colText, { flex: 1.5, fontWeight: '700' }]} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={[styles.colText, { flex: 1.5, color: '#8e8e93' }]} numberOfLines={1}>
+                    {t(LIABILITY_TYPE_LABEL_KEYS[item.type] || LIABILITY_TYPE_LABEL_KEYS.Other)}
+                  </Text>
+                  <Text style={[styles.colText, { flex: 1.2, textAlign: 'right', fontWeight: '600' }]}>
+                    {formatEuro(item.total_debt).split(',')[0]} €
+                  </Text>
+                  <Text style={[styles.colText, { flex: 1.2, textAlign: 'right', color: '#ff3b30', fontWeight: '700' }]}>
+                    -{formatEuro(item.monthly_cost).split(',')[0]} €
+                  </Text>
+                  <View style={{ flex: 1.0, flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
+                    <TouchableOpacity onPress={() => handleOpenEdit(item)} style={styles.tableAction}>
+                      <Text style={{ color: '#ff3b30', fontSize: 15 }}>✎</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDelete(item.id, item.name)} style={styles.tableAction}>
+                      <IconTrash size={15} color={COLORS.error} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {liabilities.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <IconLiabilities size={32} color="#FF3B30" />
+              <Text style={styles.emptyText}>{t('liabilities_empty_title')}</Text>
+              <Text style={styles.emptySubText}>{t('liabilities_empty_subtitle')}</Text>
+            </View>
+          )}
+        </ScrollView>
       )}
 
       {/* Add / Edit Liability Modal */}
@@ -257,7 +312,7 @@ export default function LiabilitiesScreen() {
                   value={name}
                   onChangeText={setName}
                   placeholder={t('liability_name_placeholder')}
-                  placeholderTextColor={COLORS.outline}
+                  placeholderTextColor="#48484a"
                 />
               </View>
 
@@ -285,7 +340,7 @@ export default function LiabilitiesScreen() {
                   value={monthCost}
                   onChangeText={setMonthCost}
                   placeholder="15"
-                  placeholderTextColor={COLORS.outline}
+                  placeholderTextColor="#48484a"
                   keyboardType="numeric"
                 />
               </View>
@@ -297,17 +352,18 @@ export default function LiabilitiesScreen() {
                   value={totalDebt}
                   onChangeText={setTotalDebt}
                   placeholder="3000"
-                  placeholderTextColor={COLORS.outline}
+                  placeholderTextColor="#48484a"
                   keyboardType="numeric"
                 />
               </View>
 
-              <PremiumButton
-                title={editingLiabilityId ? t('save_changes') : t('add_liability')}
-                onPress={handleSave}
-                loading={saving}
-                style={{ marginTop: 8 }}
-              />
+              <TouchableOpacity style={styles.submitBtn} onPress={handleSave} disabled={saving}>
+                {saving ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.submitBtnText}>{editingLiabilityId ? t('save_changes') : t('add_liability')}</Text>
+                )}
+              </TouchableOpacity>
 
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowModal(false)}>
                 <Text style={styles.cancelBtnText}>{t('cancel')}</Text>
@@ -321,62 +377,185 @@ export default function LiabilitiesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#000000' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.glassBorder,
-    backgroundColor: 'rgba(12,14,18,0.8)',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+    backgroundColor: '#000000',
   },
-  title: { fontSize: 24, fontWeight: '800', color: COLORS.onSurface },
-  subtitle: { fontSize: 13, color: COLORS.onSurfaceVariant, marginTop: 2 },
+  title: { fontSize: 24, fontWeight: '900', color: '#ffffff', letterSpacing: -0.8 },
+  subtitle: { fontSize: 13, color: '#8e8e93', marginTop: 4, fontWeight: '500' },
   addBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF3B30',
     paddingHorizontal: 16,
     paddingVertical: 9,
-    borderRadius: RADIUS.full,
-  },
-  addBtnText: { fontSize: 13, fontWeight: '700', color: '#0c0e12' },
-  statsSection: { padding: 20, gap: 16 },
-  statsRow: { flexDirection: 'row' },
-  listHeader: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.onSurfaceVariant,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  emptyCard: { margin: 20, alignItems: 'center', paddingVertical: 40 },
-  emptyEmoji: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: COLORS.onSurface, marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: COLORS.onSurfaceVariant, textAlign: 'center', lineHeight: 22 },
-
-  liabCard: {
+    borderRadius: 24,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    marginHorizontal: 20,
-    marginBottom: 10,
+    justifyContent: 'center',
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
-  liabIcon: {
-    width: 44,
-    height: 44,
+  addBtnText: { fontSize: 13, fontWeight: '700', color: '#ffffff' },
+  
+  scroll: {
+    paddingBottom: 40,
+  },
+
+  // Grid of Liabilities
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 18,
+    justifyContent: 'space-between',
+  },
+  gridCard: {
+    width: '48%',
+    backgroundColor: '#FF3B30',
+    borderRadius: 30,
+    padding: 16,
+    marginBottom: 14,
+    position: 'relative',
+    minHeight: 180,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  categoryIconWrapper: {
+    width: 38,
+    height: 38,
     borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
   },
-  liabName: { fontSize: 16, fontWeight: '600', color: COLORS.onSurface },
-  liabMeta: { fontSize: 12, color: COLORS.onSurfaceVariant },
-  liabCost: { fontSize: 16, fontWeight: '700', color: COLORS.rose },
-  deleteLink: { fontSize: 12, color: COLORS.outline, fontWeight: '500' },
+  categoryMeta: {
+    flex: 1,
+  },
+  categoryLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#ffffff',
+  },
+  categorySubLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 1,
+  },
+  cardValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#ffffff',
+    marginTop: 4,
+    letterSpacing: -0.5,
+  },
+  yieldContainer: {
+    marginTop: 12,
+  },
+  yieldLabel: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '700',
+  },
+  yieldValue: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#ffffff',
+    marginTop: 1,
+  },
+  trendContainer: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  cardActionsContainer: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  editCardBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteCardBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-  // Modal
-  modalContainer: { flex: 1, backgroundColor: COLORS.surface },
+  // Performance Détaillée Table style
+  performanceContainer: {
+    backgroundColor: '#0c0e12',
+    marginHorizontal: 18,
+    marginTop: 12,
+    borderRadius: 30,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#1c222d',
+  },
+  perfTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: -0.5,
+    marginBottom: 16,
+  },
+  tableRowHeader: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1c222d',
+    paddingBottom: 8,
+    marginBottom: 10,
+  },
+  colHeader: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#8e8e93',
+    textTransform: 'uppercase',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.02)',
+  },
+  colText: {
+    fontSize: 12,
+    color: '#ffffff',
+  },
+  tableAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Empty View
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    gap: 8,
+  },
+  emptyText: { fontSize: 16, fontWeight: '700', color: '#ffffff' },
+  emptySubText: { fontSize: 13, color: '#8e8e93' },
+
+  // Modal styling (Add Liability)
+  modalContainer: { flex: 1, backgroundColor: '#000000' },
   modalScroll: { padding: 24, paddingBottom: 60 },
   modalHeader: {
     flexDirection: 'row',
@@ -385,46 +564,50 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     paddingTop: 8,
   },
-  modalTitle: { fontSize: 22, fontWeight: '800', color: COLORS.onSurface },
-  modalClose: { fontSize: 22, color: COLORS.onSurfaceVariant, fontWeight: '300' },
+  modalTitle: { fontSize: 22, fontWeight: '900', color: '#ffffff' },
   form: { gap: 20 },
   formGroup: { gap: 6 },
   label: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLORS.onSurfaceVariant,
+    color: '#8e8e93',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   input: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: COLORS.glassBorder,
-    borderRadius: RADIUS.lg,
+    borderColor: '#1c222d',
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    color: COLORS.onSurface,
+    color: '#ffffff',
   },
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   typeBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: RADIUS.full,
+    borderRadius: 99,
     borderWidth: 1,
-    borderColor: COLORS.glassBorder,
+    borderColor: '#1c222d',
     backgroundColor: 'rgba(255,255,255,0.02)',
   },
   typeBtnActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: 'rgba(204,255,0,0.1)',
+    borderColor: '#FF3B30',
+    backgroundColor: 'rgba(255,59,48,0.1)',
   },
-  typeBtnText: { fontSize: 13, color: COLORS.onSurfaceVariant, fontWeight: '500' },
-  typeBtnTextActive: { color: COLORS.primary, fontWeight: '700' },
-  editBtnAction: {
-    paddingHorizontal: 8,
-    paddingVertical: 12,
+  typeBtnText: { fontSize: 13, color: '#8e8e93', fontWeight: '500' },
+  typeBtnTextActive: { color: '#FF3B30', fontWeight: '700' },
+  submitBtn: {
+    backgroundColor: '#FF3B30',
+    borderRadius: 99,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
   },
+  submitBtnText: { fontSize: 15, fontWeight: '800', color: '#ffffff' },
   cancelBtn: {
     paddingVertical: 14,
     alignItems: 'center',
@@ -432,7 +615,7 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     fontSize: 14,
-    color: COLORS.onSurfaceVariant,
+    color: '#8e8e93',
     fontWeight: '600',
   },
 });
