@@ -16,13 +16,12 @@ function TabIcon({ focused, Icon, emoji, label }: TabIconProps) {
     <View style={styles.iconWrapper}>
       <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
         {Icon ? (
-          <Icon size={20} color={COLORS.primary} opacity={focused ? 1 : 0.5} />
+          <Icon size={20} color={focused ? '#000000' : COLORS.primary} opacity={focused ? 1 : 0.5} />
         ) : (
           <Text style={[styles.emoji, focused && styles.emojiActive]}>{emoji}</Text>
         )}
       </View>
       <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
-      {focused && <View style={styles.pill} />}
     </View>
   );
 }
@@ -92,21 +91,28 @@ const styles = StyleSheet.create({
     width: 72,
   },
   iconContainer: {
-    width: 40,
-    height: 32,
-    borderRadius: RADIUS.md,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconContainerActive: {
-    backgroundColor: 'rgba(204, 255, 0, 0.12)',
+    backgroundColor: '#C8FF00',
+    shadowColor: '#C8FF00',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    elevation: 5,
   },
   emoji: {
     fontSize: 20,
     opacity: 0.5,
+    color: COLORS.primary,
   },
   emojiActive: {
     opacity: 1,
+    color: '#000000',
   },
   label: {
     fontSize: 9,
@@ -117,13 +123,5 @@ const styles = StyleSheet.create({
   labelActive: {
     color: COLORS.primary,
     opacity: 1,
-  },
-  pill: {
-    position: 'absolute',
-    bottom: -6,
-    width: 20,
-    height: 3,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.full,
   },
 });
