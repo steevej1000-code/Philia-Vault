@@ -14,11 +14,66 @@ import { COLORS, RADIUS } from '../../constants/colors';
 import { PremiumButton } from '../../components/PremiumButton';
 import { GOOGLE_WEB_CLIENT_ID } from '../../constants/api';
 import api from '../../services/api';
+import { useUserPreferences } from '../../context/UserPreferencesContext';
+import Svg, { Path, Circle, Line, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
 WebBrowser.maybeCompleteAuthSession();
 
+function MirrorIllustration() {
+  return (
+    <Svg width={120} height={120} viewBox="0 0 120 120" style={{ alignSelf: 'center', marginVertical: 12 }}>
+      <Defs>
+        <SvgGradient id="mirrorGlow" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor="#c8ff00" stopOpacity="0.4" />
+          <Stop offset="1" stopColor="#0c0e12" stopOpacity="0.1" />
+        </SvgGradient>
+      </Defs>
+      <Path d="M 60 90 L 60 115" stroke="#8e8e93" strokeWidth="8" strokeLinecap="round" />
+      <Line x1="50" y1="110" x2="70" y2="110" stroke="#8e8e93" strokeWidth="6" strokeLinecap="round" />
+      <Circle cx="60" cy="55" r="35" fill="rgba(255,255,255,0.03)" stroke="#c8ff00" strokeWidth="4" />
+      <Circle cx="60" cy="55" r="30" fill="url(#mirrorGlow)" stroke="rgba(200,255,0,0.2)" strokeWidth="1" />
+      <Path d="M 45 45 L 75 65" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+      <Path d="M 55 40 L 70 50" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+    </Svg>
+  );
+}
+
+function GPSIllustration() {
+  return (
+    <Svg width={120} height={120} viewBox="0 0 120 120" style={{ alignSelf: 'center', marginVertical: 12 }}>
+      <Defs>
+        <SvgGradient id="pathGlow" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor="#c8ff00" />
+          <Stop offset="1" stopColor="#06b6d4" />
+        </SvgGradient>
+      </Defs>
+      <Line x1="10" y1="60" x2="110" y2="60" stroke="rgba(255,255,255,0.05)" strokeWidth="2" strokeDasharray="5 5" />
+      <Line x1="60" y1="10" x2="60" y2="110" stroke="rgba(255,255,255,0.05)" strokeWidth="2" strokeDasharray="5 5" />
+      <Path
+        d="M 20 100 C 40 100, 40 40, 70 40 C 90 40, 100 70, 100 20"
+        fill="none"
+        stroke="rgba(255,255,255,0.1)"
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      <Path
+        d="M 20 100 C 40 100, 40 40, 70 40 C 90 40, 100 70, 100 20"
+        fill="none"
+        stroke="url(#pathGlow)"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeDasharray="10 5"
+      />
+      <Circle cx="20" cy="100" r="6" fill="#06b6d4" stroke="#ffffff" strokeWidth="1.5" />
+      <Path d="M 100 20 L 100 10" stroke="#c8ff00" strokeWidth="2" />
+      <Path d="M 100 10 L 112 15 L 100 20 Z" fill="#c8ff00" />
+    </Svg>
+  );
+}
+
 export default function LoginScreen() {
   const { login, register, loginWithGoogle } = useAuthStore();
+  const { t } = useUserPreferences();
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [firstName, setFirstName] = useState('');
@@ -28,6 +83,8 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingSlide, setOnboardingSlide] = useState(1);
 
   // Real Google OAuth via expo-auth-session
   const [request, response, promptAsync] = Google.useAuthRequest({
@@ -122,13 +179,19 @@ export default function LoginScreen() {
 
   const [referralCode, setReferralCode] = useState('');
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (bypassOnboarding = false) => {
     if (!email.trim() || !password) {
       setError('Veuillez remplir tous les champs.');
       return;
     }
     if (mode === 'register' && (!firstName.trim() || !lastName.trim())) {
       setError('Veuillez entrer votre prénom et nom.');
+      return;
+    }
+
+    if (mode === 'register' && !bypassOnboarding && !showOnboarding) {
+      setShowOnboarding(true);
+      setOnboardingSlide(1);
       return;
     }
 
@@ -141,13 +204,81 @@ export default function LoginScreen() {
       } else {
         await register(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), password, referralCode.trim());
       }
-      // AuthGuard in _layout.tsx handles navigation after isAuthenticated changes
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue.');
+      setShowOnboarding(false);
     } finally {
       setLoading(false);
     }
   };
+
+  if (showOnboarding) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.glowTop} />
+        <View style={styles.glowBottom} />
+        <View style={styles.onboardingWrapper}>
+          {onboardingSlide === 1 ? (
+            <View style={styles.slide}>
+              <Text style={styles.onboardingTitle}>{t('onboarding_title_step1')}</Text>
+              <MirrorIllustration />
+              <View style={styles.slideCard}>
+                <Text style={styles.slideSubtitle}>{t('onboarding_subtitle_step1')}</Text>
+                <Text style={styles.slideResult}>{t('onboarding_result_step1').replace('{years}', '35')}</Text>
+              </View>
+              <View style={styles.dotsRow}>
+                <View style={[styles.dot, styles.dotActive]} />
+                <View style={styles.dot} />
+              </View>
+              <TouchableOpacity
+                style={styles.primaryBtn}
+                onPress={() => setOnboardingSlide(2)}
+              >
+                <Text style={styles.primaryBtnText}>{t('onboarding_btn_next')}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.slide}>
+              <Text style={styles.onboardingTitle}>{t('onboarding_title_step2')}</Text>
+              <GPSIllustration />
+              <View style={styles.slideCard}>
+                <Text style={styles.slideMessage}>{t('onboarding_message_step2')}</Text>
+              </View>
+              <View style={styles.dotsRow}>
+                <View style={styles.dot} />
+                <View style={[styles.dot, styles.dotActive]} />
+              </View>
+              <TouchableOpacity
+                style={styles.primaryBtn}
+                onPress={() => {
+                  handleSubmit(true);
+                }}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#0c0e12" size="small" />
+                ) : (
+                  <Text style={styles.primaryBtnText}>{t('onboarding_btn_start')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.backLink}
+            onPress={() => {
+              if (onboardingSlide === 2) {
+                setOnboardingSlide(1);
+              } else {
+                setShowOnboarding(false);
+              }
+            }}
+          >
+            <Text style={styles.backLinkText}>{t('cancel')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -513,5 +644,94 @@ const styles = StyleSheet.create({
     color: COLORS.outline,
     textAlign: 'left',
     lineHeight: 18,
+  },
+  onboardingWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  slide: {
+    alignItems: 'center',
+    gap: 16,
+    width: '100%',
+  },
+  onboardingTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  slideCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: RADIUS.xl,
+    padding: 24,
+    width: '100%',
+    gap: 12,
+    alignItems: 'center',
+  },
+  slideSubtitle: {
+    fontSize: 15,
+    color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  slideResult: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#c8ff00',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginTop: 8,
+  },
+  slideMessage: {
+    fontSize: 15,
+    color: COLORS.onSurface,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginVertical: 12,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  dotActive: {
+    backgroundColor: '#c8ff00',
+    width: 20,
+  },
+  primaryBtn: {
+    backgroundColor: '#c8ff00',
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    shadowColor: '#c8ff00',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+    marginTop: 16,
+  },
+  primaryBtnText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0c0e12',
+  },
+  backLink: {
+    marginTop: 24,
+    alignSelf: 'center',
+  },
+  backLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.outline,
   },
 });

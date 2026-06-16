@@ -24,6 +24,25 @@ export default function AffiliationScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const handlePingPress = () => {
+    Alert.alert(
+      t('affiliation_ping_title'),
+      t('affiliation_ping_message'),
+      [
+        {
+          text: t('affiliation_ping_btn_cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('affiliation_ping_btn_confirm'),
+          onPress: () => {
+            Alert.alert(t('success') || 'Succès', t('affiliation_ping_success'));
+          },
+        },
+      ]
+    );
+  };
+
   const load = useCallback(async () => {
     try {
       await api.init();
@@ -69,6 +88,10 @@ export default function AffiliationScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={COLORS.primary} />}
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.introCard}>
+            <Text style={styles.introText}>{t('affiliation_intro')}</Text>
+          </View>
+
           <GlassCard style={styles.gainCard}>
             <View style={styles.gainIcon}>
               <IconTrendUp size={22} color={COLORS.primary} />
@@ -105,6 +128,14 @@ export default function AffiliationScreen() {
             </View>
             <Text style={styles.statValue}>{stats?.active_referrals ?? 0}</Text>
           </GlassCard>
+
+          <TouchableOpacity
+            style={styles.pingBtn}
+            onPress={handlePingPress}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.pingBtnText}>⚡ {t('affiliation_ping_title')}</Text>
+          </TouchableOpacity>
         </ScrollView>
       )}
     </View>
@@ -179,4 +210,34 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 15, fontWeight: '700', color: COLORS.onSurface },
   statSubtitle: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 2 },
   statValue: { fontSize: 24, fontWeight: '800', color: COLORS.primary },
+
+  introCard: {
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    borderRadius: RADIUS.lg,
+    padding: 16,
+    marginBottom: 4,
+  },
+  introText: {
+    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  pingBtn: {
+    backgroundColor: 'rgba(200,255,0,0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(200,255,0,0.3)',
+    borderRadius: RADIUS.full,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  pingBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#c8ff00',
+  },
 });

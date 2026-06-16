@@ -9,19 +9,34 @@ interface TabIconProps {
   Icon?: React.ComponentType<IconProps>;
   emoji?: string;
   label: string;
+  isLiabilities?: boolean;
 }
 
-function TabIcon({ focused, Icon, emoji, label }: TabIconProps) {
+function TabIcon({ focused, Icon, emoji, label, isLiabilities }: TabIconProps) {
+  const activeBgColor = isLiabilities ? '#FF0000' : '#C8FF00';
+  const activeTextColor = isLiabilities ? '#FFFFFF' : '#C8FF00';
+  const activeIconColor = isLiabilities ? '#FFFFFF' : '#000000';
+
   return (
     <View style={styles.iconWrapper}>
-      <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
+      <View style={[
+        styles.iconContainer,
+        focused && {
+          backgroundColor: activeBgColor,
+          shadowColor: activeBgColor,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.6,
+          shadowRadius: 10,
+          elevation: 5,
+        }
+      ]}>
         {Icon ? (
-          <Icon size={focused ? 23 : 20} color={focused ? '#000000' : '#8e8e93'} opacity={focused ? 1 : 0.7} />
+          <Icon size={focused ? 23 : 20} color={focused ? activeIconColor : '#8e8e93'} opacity={focused ? 1 : 0.7} />
         ) : (
-          <Text style={[styles.emoji, focused && styles.emojiActive, focused && { fontSize: 23 }]}>{emoji}</Text>
+          <Text style={[styles.emoji, focused && { color: activeIconColor, opacity: 1 }, focused && { fontSize: 23 }]}>{emoji}</Text>
         )}
       </View>
-      <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
+      <Text style={[styles.label, focused && { color: activeTextColor, opacity: 1 }]}>{label}</Text>
     </View>
   );
 }
@@ -54,7 +69,7 @@ export default function TabsLayout() {
         name="liabilities"
         options={{
           title: t('tab_liabilities'),
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconLiabilities} label={t('tab_liabilities')} />,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconLiabilities} label={t('tab_liabilities')} isLiabilities />,
         }}
       />
       <Tabs.Screen

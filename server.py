@@ -729,35 +729,59 @@ def coach_chat():
     - Cashflow Net Mensuel: {total_passive - total_cost} $
     """
     
-    lang_directives = {
-        "fr": "Exprime-toi en français. Reste motivant, concis et professionnel.",
-        "en": "Express yourself in English. Stay motivational, concise, and professional.",
-        "es": "Exprésate en español. Sé motivador, conciso y profesional.",
-        "pt": "Expresse-se em português. Seja motivador, conciso et professionnel.",
-        "de": "Drücke dich auf Deutsch aus. Bleibe motivierend, präzise und professionell."
+    lang_names = {
+        "fr": "français",
+        "en": "anglais",
+        "es": "espagnol",
+        "pt": "portugais",
+        "de": "allemand"
     }
-    
-    sys_prompt = f"""
-    Tu es le "Coach Philia Vault", un conseiller financier virtuel premium et expert dans la méthodologie d'indépendance financière par les flux de trésorerie (séparation stricte Actifs vs Passifs). Ne mentionne JAMAIS de titres de livres ou de marques déposées comme "Rich Dad Poor Dad" ou "Père Riche Père Pauvre" dans tes réponses pour des raisons de droits d'auteur.
-    Ton but est d'analyser le patrimoine de l'utilisateur, de lui donner des conseils d'éducation financière bienveillants et d'optimiser ses flux de trésorerie.
-    Tu dois impérativement t'exprimer dans cette langue : {lang_directives.get(lang, lang_directives["en"])}
-    Quand tu proposes des plans de rebalancement ou d'investissement, fais des suggestions concrètes basées sur ses données.
-    
-    {context_str}
-    """
+    locale = lang_names.get(lang, "français")
+
+    sys_prompt = f"""Tu es le 'Coach Philia Vault', un stratège financier d'élite.
+L'utilisateur te parle en : {locale}. TU DOIS IMPÉRATIVEMENT RÉPONDRE DANS CETTE LANGUE ({locale}).
+
+RÈGLES ABSOLUES (Sous peine d'échec du système) :
+1. CONCISION EXTRÊME : Ta réponse ne doit JAMAIS dépasser 3 phrases ou 40 mots au total. Va droit au but. 
+2. PRÉCISION CHIRURGICALE : Donne le chiffre exact, l'action exacte ou le constat exact. Aucune introduction polie (interdit de dire 'Voici quelques pistes' ou 'Il est important de').
+3. INTERDICTION DES LISTES : N'utilise JAMAIS de listes à puces ou de points numérotés. Formule des paragraphes ultra-courts.
+4. LE VOCABULAIRE : Utilise 'Miroir Financier' pour la réalité actuelle (les dettes, passifs) et 'GPS Financier' pour la trajectoire vers la liberté.
+
+EXEMPLE D'AUDIT PARFAIT : 
+'Ton Miroir Financier montre un passif toxique avec l'abonnement Vvs à 150$. Coupe-le aujourd'hui. Ton GPS Financier recalculera ta route et tu gagneras 2 mois sur ton indépendance.'
+
+Applique ce comportement immédiatement.
+
+{context_str}
+"""
     
     if gemini_model:
         try:
-            # Build conversation history
-            contents = [{"role": "user", "parts": [sys_prompt + "\n\nInitialisons le chat."]}]
+            # Build conversation history with strict alternating roles
+            import google.generativeai as genai
+            contents = []
+            last_role = None
             for h in history:
+                role = "user" if h.get("role") == "user" else "model"
+                if role == last_role:
+                    continue
                 contents.append({
-                    "role": "user" if h["role"] == "user" else "model",
-                    "parts": [h["text"]]
+                    "role": role,
+                    "parts": [h.get("text", "")]
                 })
+                last_role = role
+            
+            # If the last message in history was 'user', pop it to avoid duplicate 'user' roles when appending user_msg
+            if last_role == "user" and contents:
+                contents.pop()
+            
             contents.append({"role": "user", "parts": [user_msg]})
             
-            response = gemini_model.generate_content(contents)
+            model_with_sys = genai.GenerativeModel('gemini-2.5-flash', system_instruction=sys_prompt)
+            response = model_with_sys.generate_content(
+                contents,
+                generation_config={"max_output_tokens": 100}
+            )
             return jsonify({"success": True, "reply": response.text})
         except Exception as e:
             print(f"Gemini error: {e}")
@@ -768,30 +792,16 @@ def coach_chat():
     lower_msg = user_msg.lower()
     
     if lang == "fr":
-        if "audit" in lower_msg or "analys" in lower_msg or "conseil" in lower_msg or "iif" in lower_msg:
-            reply = f"""Voici votre **Audit Mensuel Personnalisé** généré à partir de votre profil réel :
-1. **Analyse de l'IIF ({iif}%)** : Vos revenus passifs ({total_passive} $) couvrent une partie de vos dépenses.
-2. **Fuites Détectées** : Vos passifs drainent {total_cost} $/mois.
-3. **Stratégie** : Réinvestissez vos mensualités superflues pour atteindre la liberté plus tôt !"""
+        if "audit" in lower_msg or "analys" in lower_msg or "conseil" in lower_msg or "iif" in lower_msg or "miroir" in lower_msg or "gps" in lower_msg:
+            reply = f"Votre Miroir Financier affiche des passifs de {total_cost} $/mois. Votre GPS Financier estime votre IIF à {iif}%. Injectez du cash-flow immédiat pour recalculer votre route et accélérer l'indépendance."
         else:
-            reply = f"""Bonjour ! Je suis votre Coach Financier Philia Vault. En analysant votre situation :
-* Vos Actifs génèrent **{total_passive} $** par mois.
-* Vos Passifs consomment **{total_cost} $** par mois.
-* Votre Indice d'Indépendance Financière (IIF) est à **{iif}%**.
-Que souhaitez-vous optimiser aujourd'hui ? Demandez un 'audit de mon cashflow'."""
+            reply = f"Votre Miroir Financier consomme {total_cost} $/mois et vos actifs rapportent {total_passive} $/mois. Votre GPS Financier affiche une progression IIF de {iif}%. Précisez votre question pour optimiser l'itinéraire."
     else:
         # Default to English mock if not FR
-        if "audit" in lower_msg or "analys" in lower_msg or "advice" in lower_msg or "iif" in lower_msg:
-            reply = f"""Here is your **Personalized Monthly Audit** generated from your real profile:
-1. **IIF Index Analysis ({iif}%)**: Your passive income ({total_passive} $) covers part of your costs.
-2. **Leaks Detected**: Your liabilities drain {total_cost} $/month.
-3. **Strategy**: Reinvest extra monthly costs to accelerate your financial freedom!"""
+        if "audit" in lower_msg or "analys" in lower_msg or "advice" in lower_msg or "iif" in lower_msg or "mirror" in lower_msg or "gps" in lower_msg:
+            reply = f"Your Financial Mirror shows liabilities of {total_cost} $/month. Your Financial GPS tracks your IIF at {iif}%. Inject immediate cash-flow to recalculate your route and accelerate freedom."
         else:
-            reply = f"""Hello! I am your Philia Vault Financial Coach. Analyzing your situation:
-* Your Assets generate **{total_passive} $** per month.
-* Your Liabilities consume **{total_cost} $** per month.
-* Your Independence Index (IIF) is at **{iif}%**.
-What would you like to optimize today? Ask for a 'cashflow audit'."""
+            reply = f"Your Financial Mirror consumes {total_cost} $/month and assets yield {total_passive} $/month. Your Financial GPS progress is at {iif}%. Ask a specific question to optimize the route."
     return jsonify({"success": True, "reply": reply})
 
 # --- PRE-LAUNCH LANDING PAGE & SQUARE ENDPOINTS ---

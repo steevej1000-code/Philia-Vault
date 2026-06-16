@@ -263,10 +263,10 @@ class ApiClient {
 
   // ─── Coach / AI ────────────────────────────────────────────────────────────
 
-  async sendChatMessage(message: string, history: { role: string; text: string }[] = []) {
+  async sendChatMessage(message: string, history: { role: string; text: string }[] = [], lang: string = 'fr') {
     return this.request(ENDPOINTS.chat, {
       method: 'POST',
-      body: JSON.stringify({ message, lang: 'fr', history }),
+      body: JSON.stringify({ message, lang, history }),
     });
   }
 

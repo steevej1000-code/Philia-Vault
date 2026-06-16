@@ -153,7 +153,7 @@ export default function CoachScreen() {
   const insets = useSafeAreaInsets();
   const { isPremium, setPremium, user } = useAuthStore();
   const { isOnline } = useNetworkStatus();
-  const { t } = useUserPreferences();
+  const { t, language } = useUserPreferences();
   
   const [messages, setMessages] = useState<Message[]>([{
     id: '0',
@@ -235,7 +235,7 @@ export default function CoachScreen() {
     const newHistory = [...history, { role: 'user', text: msgText }];
 
     try {
-      const result = await api.sendChatMessage(msgText, newHistory.slice(-10));
+      const result = await api.sendChatMessage(msgText, history.slice(-10), language);
       const reply = result.reply || result.response || result.message || t('coach_no_reply');
 
       const aiMsg: Message = {
