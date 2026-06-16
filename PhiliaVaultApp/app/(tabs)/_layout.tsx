@@ -47,15 +47,15 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="assets"
         options={{
-          title: t('tab_assets') + ' ✎',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconAssets} label={t('tab_assets') + ' ✎'} />,
+          title: t('tab_assets'),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconAssets} label={t('tab_assets')} />,
         }}
       />
       <Tabs.Screen
         name="liabilities"
         options={{
-          title: t('tab_liabilities') + ' ✎',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconLiabilities} label={t('tab_liabilities') + ' ✎'} />,
+          title: t('tab_liabilities'),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconLiabilities} label={t('tab_liabilities')} />,
         }}
       />
       <Tabs.Screen
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    width: 60,
+    width: 72,
   },
   iconContainer: {
     width: 40,
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   label: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
     color: COLORS.onSurfaceVariant,
     opacity: 0.5,
