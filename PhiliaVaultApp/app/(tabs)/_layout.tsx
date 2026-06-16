@@ -16,9 +16,9 @@ function TabIcon({ focused, Icon, emoji, label }: TabIconProps) {
     <View style={styles.iconWrapper}>
       <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
         {Icon ? (
-          <Icon size={20} color={focused ? '#000000' : COLORS.primary} opacity={focused ? 1 : 0.5} />
+          <Icon size={focused ? 23 : 20} color={focused ? '#000000' : COLORS.primary} opacity={focused ? 1 : 0.6} />
         ) : (
-          <Text style={[styles.emoji, focused && styles.emojiActive]}>{emoji}</Text>
+          <Text style={[styles.emoji, focused && styles.emojiActive, focused && { fontSize: 23 }]}>{emoji}</Text>
         )}
       </View>
       <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
@@ -71,6 +71,12 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconCoach} label={t('tab_coach')} />,
         }}
       />
+      <Tabs.Screen
+        name="simulator"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
@@ -88,12 +94,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    width: 72,
+    width: 76,
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -115,7 +121,7 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   label: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '600',
     color: COLORS.onSurfaceVariant,
     opacity: 0.5,
