@@ -16,7 +16,7 @@ function TabIcon({ focused, Icon, emoji, label }: TabIconProps) {
     <View style={styles.iconWrapper}>
       <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
         {Icon ? (
-          <Icon size={focused ? 23 : 20} color={focused ? '#000000' : COLORS.primary} opacity={focused ? 1 : 0.6} />
+          <Icon size={focused ? 23 : 20} color={focused ? '#000000' : '#8e8e93'} opacity={focused ? 1 : 0.7} />
         ) : (
           <Text style={[styles.emoji, focused && styles.emojiActive, focused && { fontSize: 23 }]}>{emoji}</Text>
         )}
@@ -83,9 +83,9 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: 'rgba(12, 14, 18, 0.95)',
+    backgroundColor: '#000000',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: '#000000',
     height: 85,
     paddingBottom: 20,
     paddingTop: 8,
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   emoji: {
     fontSize: 20,
     opacity: 0.5,
-    color: COLORS.primary,
+    color: '#8e8e93',
   },
   emojiActive: {
     opacity: 1,
@@ -123,11 +123,11 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     fontWeight: '600',
-    color: COLORS.onSurfaceVariant,
-    opacity: 0.5,
+    color: '#8e8e93',
+    opacity: 0.6,
   },
   labelActive: {
-    color: COLORS.primary,
+    color: '#C8FF00',
     opacity: 1,
   },
 });
