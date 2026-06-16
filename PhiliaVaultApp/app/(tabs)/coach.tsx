@@ -744,8 +744,8 @@ const chat = StyleSheet.create({
     paddingTop: 10,
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: COLORS.glassBorder,
-    backgroundColor: 'rgba(12,14,18,0.98)',
+    borderTopColor: '#000000',
+    backgroundColor: '#000000',
   },
   input: {
     flex: 1,
