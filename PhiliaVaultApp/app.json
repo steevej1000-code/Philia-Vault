@@ -25,7 +25,8 @@
         {
           "fonts": []
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true

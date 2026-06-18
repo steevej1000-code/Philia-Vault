@@ -264,10 +264,90 @@ class ApiClient {
   // ─── Coach / AI ────────────────────────────────────────────────────────────
 
   async sendChatMessage(message: string, history: { role: string; text: string }[] = [], lang: string = 'fr') {
-    return this.request(ENDPOINTS.chat, {
-      method: 'POST',
-      body: JSON.stringify({ message, lang, history }),
-    });
+    const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'MISSING_API_KEY';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    
+    // Fetch real user data to prevent hallucination
+    const summary = await this.getSummary().catch(() => ({}));
+    const assets = await this.getAssets().catch(() => ([]));
+    const liabilities = await this.getLiabilities().catch(() => ([]));
+
+    const systemPrompt = `Rôle : Tu es le "Coach Philia Vault", une intelligence artificielle strictement éducative et clinique intégrée à un logiciel de simulation financière. 
+
+Directives Légales Absolues (Guardrails) :
+1. INTERDICTION DE CONSEIL : Tu ne dois JAMAIS donner de conseils en investissement, juridiques ou fiscaux.
+2. CENSURE DES ACTIFS SPÉCIFIQUES : Si l'utilisateur te pose une question sur un actif spécifique (ex: XLM, Bitcoin, Tesla, immobilier à Miami), tu DOIS REFUSER de donner un avis sur cet actif.
+3. AUCUNE VALIDATION : Tu ne dois jamais dire à un utilisateur qu'il est "prêt" ou dans une "position favorable" pour investir.
+
+Protocole de Réponse si l'utilisateur demande où investir ou cite un actif :
+1. Refus légal immédiat : "En tant que logiciel éducatif, je ne donne aucun conseil sur des actifs spécifiques (comme [Nom de l'actif])."
+2. Pivot mathématique : Ramène l'analyse EXCLUSIVEMENT sur ses propres chiffres (Cashflow, Passifs, Répartition des actifs).
+3. Éducation clinique : Explique les concepts de base (diversification, volatilité, réduction des passifs) sans jamais lui dire ce qu'il DOIT faire de son argent.
+
+Exemple de réponse exigée pour la question "Est-ce que je peux investir dans XLM ?" :
+"En tant qu'outil éducatif, Philia Vault ne donne aucun conseil sur des actifs spécifiques comme le XLM. Mathématiquement, votre cashflow net est positif de [X] $. Cependant, l'analyse de votre Miroir montre deux points d'attention : vos passifs s'élèvent à [Y] $, et votre portefeuille est déjà fortement concentré en cryptomonnaies. Le principe éducatif de la diversification suggère d'évaluer l'équilibre de vos classes d'actifs avant toute décision, qui demeure sous votre entière responsabilité."
+
+Ton ton doit toujours rester froid, mathématique, objectif et sans émotion. Tu es un miroir, pas un gourou financier.
+
+---
+FORMAT DE RÉPONSE (CRITIQUE) :
+Tu dois répondre en TEXTE BRUT UNIQUEMENT. L'interface mobile ne supporte pas le Markdown.
+1. INTERDIT d'utiliser le gras (pas de **).
+2. INTERDIT d'utiliser des astérisques pour les listes (pas de *). Utilise des tirets (-) à la place.
+3. INTERDIT d'utiliser des hashtags (#).
+Fais des phrases courtes et utilise des sauts de ligne simples pour aérer.
+---
+
+---
+DONNÉES RÉELLES DE L'UTILISATEUR (RUNTIME CONTEXT) :
+Tu dois ABSOLUMENT utiliser ces données pour ton analyse. Ne donne jamais de chiffres imaginaires. Si le montant est de 0, dis qu'il est de 0.
+Snapshot : ${JSON.stringify(summary)}
+Actifs : ${JSON.stringify(assets)}
+Passifs : ${JSON.stringify(liabilities)}
+---`;
+
+    const contents = history.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.text }]
+    }));
+    contents.push({ role: 'user', parts: [{ text: message }] });
+
+    const payload = {
+      system_instruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      contents,
+      generationConfig: {
+        temperature: 0.1, // Froid, clinique, sans émotion
+      }
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        let rawReply = data.candidates[0].content.parts[0].text;
+        const cleanReply = rawReply
+          .replace(/\*\*(.*?)\*\*/g, '$1')
+          .replace(/\*(.*?)\*/g, '$1')
+          .replace(/###\s?/g, '')
+          .replace(/##\s?/g, '')
+          .replace(/#\s?/g, '')
+          .replace(/^\* /gm, '- ');
+        return { reply: cleanReply };
+      } else {
+        console.error("Gemini API Error:", data);
+        return { reply: "Une erreur est survenue lors de l'analyse clinique." };
+      }
+    } catch (error) {
+      console.error("Fetch Error:", error);
+      return { reply: "Impossible de joindre le Coach (Erreur réseau locale)." };
+    }
   }
 
 

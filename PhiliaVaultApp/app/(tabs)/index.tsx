@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
-  TouchableOpacity, ActivityIndicator
+  TouchableOpacity, ActivityIndicator, Animated
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +24,16 @@ interface DashboardData {
   net_cashflow: number;
   timeline?: number;
 }
+
+const formatBadgeValue = (v: number) => {
+  const absVal = Math.abs(v);
+  if (absVal >= 1000000) {
+    return `${(absVal / 1000000).toFixed(1)}M`;
+  } else if (absVal >= 1000) {
+    return `${(absVal / 1000).toFixed(1)}k`;
+  }
+  return absVal.toString();
+};
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
@@ -94,6 +104,29 @@ export default function DashboardScreen() {
   const iifScore = data?.iif_score ?? 0;
   const netCashflow = data?.net_cashflow ?? 0;
 
+  const blinkAnim = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    if (netCashflow < 0) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(blinkAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(blinkAnim, {
+            toValue: 0.3,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      blinkAnim.setValue(0.3);
+    }
+  }, [netCashflow]);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header Minimalist */}
@@ -123,36 +156,50 @@ export default function DashboardScreen() {
         ) : (
           <>
             {/* Dribbble Style Hero Recommendation Card */}
-            <View style={styles.heroCard}>
-              <Text style={styles.heroLabel}>{t('simulation_summary')}</Text>
+            <View style={[styles.heroCard, netCashflow < 0 && { backgroundColor: '#FF3B30' }]}>
+              {netCashflow < 0 && (
+                <View style={styles.badgeContainer}>
+                  <Animated.View style={[styles.animatedCircle, { opacity: blinkAnim, borderColor: '#ffffff' }]} />
+                  <View style={styles.textContainer}>
+                    <Text style={[
+                      styles.badgeText,
+                      { color: '#ffffff' },
+                      { fontSize: formatBadgeValue(netCashflow).length > 3 ? 12 : formatBadgeValue(netCashflow).length > 2 ? 14 : 16 }
+                    ]}>
+                      {formatBadgeValue(netCashflow)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              <Text style={[styles.heroLabel, netCashflow < 0 && { color: '#ffffff' }]}>{t('simulation_summary')}</Text>
               
-              <Text style={styles.heroSubText}>{t('iif_full_name')}</Text>
-              <Text style={styles.heroValue}>
+              <Text style={[styles.heroSubText, netCashflow < 0 && { color: '#ffffff' }]}>{t('iif_full_name')}</Text>
+              <Text style={[styles.heroValue, netCashflow < 0 && { color: '#ffffff' }]}>
                 {iifScore.toFixed(0)}%
               </Text>
-              <Text style={styles.heroHelperText}>
+              <Text style={[styles.heroHelperText, netCashflow < 0 && { color: '#ffffff' }]}>
                 {t('iif_goal')}
               </Text>
 
               {/* Internal metrics inside hero */}
-              <View style={styles.heroMetrics}>
+              <View style={[styles.heroMetrics, netCashflow < 0 && { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
                 <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{t('monthly_cost')}</Text>
-                  <Text style={styles.metricVal}>
+                  <Text style={[styles.metricLabel, netCashflow < 0 && { color: '#ffffff' }]}>{t('monthly_cost')}</Text>
+                  <Text style={[styles.metricVal, netCashflow < 0 && { color: '#ffffff' }]}>
                     {formatLargeAmount(totalMonthlyCost)}
                   </Text>
                 </View>
-                <View style={styles.metricDivider} />
+                <View style={[styles.metricDivider, netCashflow < 0 && { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
                 <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{t('timeline')}</Text>
-                  <Text style={styles.metricVal}>
+                  <Text style={[styles.metricLabel, netCashflow < 0 && { color: '#ffffff' }]}>{t('timeline')}</Text>
+                  <Text style={[styles.metricVal, netCashflow < 0 && { color: '#ffffff' }]}>
                     {data?.timeline !== undefined ? `${data.timeline} ${t('years_suffix')}` : `0 ${t('years_suffix')}`}
                   </Text>
                 </View>
-                <View style={styles.metricDivider} />
+                <View style={[styles.metricDivider, netCashflow < 0 && { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
                 <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{t('portfolio')}</Text>
-                  <Text style={styles.metricVal}>{formatLargeAmount(totalAssets)}</Text>
+                  <Text style={[styles.metricLabel, netCashflow < 0 && { color: '#ffffff' }]}>{t('portfolio')}</Text>
+                  <Text style={[styles.metricVal, netCashflow < 0 && { color: '#ffffff' }]}>{formatLargeAmount(totalAssets)}</Text>
                 </View>
               </View>
             </View>
@@ -278,6 +325,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
     gap: 20,
+  },
+
+  // Cashflow Badge styles
+  badgeContainer: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  animatedCircle: {
+    position: 'absolute',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2.5,
+    borderColor: '#FF3B3B', // Neon red for negative cashflow warning
+  },
+  textContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: {
+    fontWeight: '800',
+    color: '#000000',
   },
 
   // Dribbble Hero Card
