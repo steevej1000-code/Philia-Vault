@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
-  TouchableOpacity, ActivityIndicator
+  TouchableOpacity, ActivityIndicator, Animated
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,6 +36,45 @@ export default function DashboardScreen() {
   const [fromCache, setFromCache] = useState(false);
   const { isOnline } = useNetworkStatus();
   const { t, formatAmount } = useUserPreferences();
+
+  // --- Animation du cercle rouge cash flow négatif ---
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Boucle de clignotement ultra-doux et professionnel
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(pulseAnim, {
+            toValue: 1.08,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0.55,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [pulseAnim, opacityAnim]);
+  // --- Fin animation ---
 
   const load = useCallback(async () => {
     try {
@@ -94,6 +133,9 @@ export default function DashboardScreen() {
   const iifScore = data?.iif_score ?? 0;
   const netCashflow = data?.net_cashflow ?? 0;
 
+  // Cash flow négatif = true quand netCashflow < 0
+  const isCashflowNegative = netCashflow < 0;
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header Minimalist */}
@@ -122,10 +164,36 @@ export default function DashboardScreen() {
           <ActivityIndicator color="#ccff00" size="large" style={{ marginTop: 60 }} />
         ) : (
           <>
-            {/* Dribbble Style Hero Recommendation Card */}
+            {/* Hero Card avec cercle rouge animé si cash flow négatif */}
             <View style={styles.heroCard}>
               <Text style={styles.heroLabel}>{t('simulation_summary')}</Text>
-              
+
+              {/* Cercle rouge animé — visible uniquement si cash flow négatif */}
+              {isCashflowNegative && (
+                <Animated.View
+                  style={[
+                    styles.cashflowAlertCircle,
+                    {
+                      transform: [{ scale: pulseAnim }],
+                      opacity: opacityAnim,
+                    },
+                  ]}
+                >
+                  <Text style={styles.cashflowAlertValue}>
+                    {iifScore.toFixed(0)}
+                  </Text>
+                </Animated.View>
+              )}
+
+              {/* Si cash flow positif : cercle normal sans animation */}
+              {!isCashflowNegative && (
+                <View style={styles.cashflowPositiveCircle}>
+                  <Text style={styles.cashflowPositiveValue}>
+                    {iifScore.toFixed(0)}
+                  </Text>
+                </View>
+              )}
+
               <Text style={styles.heroSubText}>{t('iif_full_name')}</Text>
               <Text style={styles.heroValue}>
                 {iifScore.toFixed(0)}%
@@ -287,7 +355,7 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 4,
     position: 'relative',
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   heroLabel: {
     fontSize: 12,
@@ -303,6 +371,7 @@ const styles = StyleSheet.create({
     color: '#000000',
     opacity: 0.8,
     fontWeight: '500',
+    marginTop: 48,
   },
   heroValue: {
     fontSize: 42,
@@ -348,6 +417,59 @@ const styles = StyleSheet.create({
     width: 1,
     height: 20,
     backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+
+  // ────────────────────────────────────────────
+  // Cercle rouge animé — cash flow NÉGATIF
+  // ────────────────────────────────────────────
+  cashflowAlertCircle: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 3,
+    borderColor: '#ff3b30',
+    backgroundColor: '#ccff00',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Ombre rouge douce pour renforcer l'alerte
+    shadowColor: '#ff3b30',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  cashflowAlertValue: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#ff3b30',
+    letterSpacing: -0.5,
+  },
+
+  // ────────────────────────────────────────────
+  // Cercle normal — cash flow POSITIF (discret)
+  // ────────────────────────────────────────────
+  cashflowPositiveCircle: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 3,
+    borderColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cashflowPositiveValue: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#000000',
+    letterSpacing: -0.5,
+    opacity: 0.7,
   },
 
   // AI Insights
