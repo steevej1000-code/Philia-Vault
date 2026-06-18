@@ -792,15 +792,34 @@ section { position: relative; padding: 120px 0; }
 }
 
 .screenshots-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 40px;
-  max-width: 700px;
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  max-width: 1200px;
   margin: 48px auto 0;
+  padding: 0 20px 40px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.screenshots-grid::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .screenshots-grid {
+    justify-content: center;
+    overflow-x: visible;
+  }
 }
 
 @media (max-width: 600px) {
-  .screenshots-grid { grid-template-columns: 1fr; max-width: 320px; }
+  .screenshots-grid {
+    gap: 16px;
+    padding: 0 16px 32px;
+  }
 }
 
 .screenshot-item {
@@ -808,6 +827,8 @@ section { position: relative; padding: 120px 0; }
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  flex: 0 0 260px; /* Fixed width for each phone card */
+  scroll-snap-align: center;
 }
 
 .phone-frame {
