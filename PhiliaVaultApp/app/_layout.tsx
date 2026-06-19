@@ -21,7 +21,7 @@ function AuthGuard() {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const isNotificationsScreen = segments[1] === 'notifications';
+    const isNotificationsScreen = (segments as string[])[1] === 'notifications';
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login');

@@ -236,7 +236,7 @@ export default function CoachScreen() {
 
     try {
       const result = await api.sendChatMessage(msgText, history.slice(-10), language);
-      const reply = result.reply || result.response || result.message || t('coach_no_reply');
+      const reply = result.reply || t('coach_no_reply');
 
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
