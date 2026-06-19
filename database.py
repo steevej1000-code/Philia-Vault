@@ -120,7 +120,10 @@ def init_db():
         ("created_at", "TEXT DEFAULT CURRENT_TIMESTAMP"),
         ("language", "TEXT DEFAULT 'en'"),
         ("currency_symbol", "TEXT DEFAULT '$'"),
-        ("is_blocked", "INTEGER DEFAULT 0")
+        ("is_blocked", "INTEGER DEFAULT 0"),
+        ("apple_id", "TEXT"),
+        ("password_reset_code", "TEXT"),
+        ("password_reset_expires", "TEXT")
     ]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")
@@ -641,6 +644,107 @@ def create_or_get_google_user(email, google_id):
     conn.close()
     seed_user_data(email_clean)
     return email_clean
+
+def create_or_get_apple_user(email, apple_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    email_clean = email.lower().strip()
+
+    # Apple only sends the email on first sign-in; subsequent sign-ins may omit it.
+    # Fall back to looking the user up by apple_id when no email is available.
+    if not email_clean:
+        cursor.execute("SELECT * FROM users WHERE apple_id=?", (apple_id,))
+        user = cursor.fetchone()
+        conn.close()
+        return dict(user)["email"] if user else None
+
+    cursor.execute("SELECT * FROM users WHERE email=?", (email_clean,))
+    user = cursor.fetchone()
+    if user:
+        if not user["apple_id"]:
+            cursor.execute("UPDATE users SET apple_id=? WHERE email=?", (apple_id, email_clean))
+            conn.commit()
+        conn.close()
+        return email_clean
+
+    # Create Apple user
+    from datetime import datetime, timedelta
+    expires_date = (datetime.utcnow() + timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+    code = generate_unique_referral_code(cursor)
+    cursor.execute(
+        "INSERT INTO users (email, apple_id, password, code_parrainage, premium_status, premium_expires) VALUES (?, ?, '', ?, 1, ?)",
+        (email_clean, apple_id, code, expires_date)
+    )
+    conn.commit()
+    conn.close()
+    seed_user_data(email_clean)
+    return email_clean
+
+def change_password(email, current_password, new_password):
+    conn = get_db()
+    cursor = conn.cursor()
+    email_clean = email.lower().strip()
+    cursor.execute("SELECT * FROM users WHERE email=?", (email_clean,))
+    user = cursor.fetchone()
+    if not user:
+        conn.close()
+        return False, "user_not_found"
+    if hash_password(current_password) != user["password"]:
+        conn.close()
+        return False, "invalid_current_password"
+    cursor.execute("UPDATE users SET password=? WHERE email=?", (hash_password(new_password), email_clean))
+    conn.commit()
+    conn.close()
+    return True, None
+
+def create_password_reset_code(email):
+    conn = get_db()
+    cursor = conn.cursor()
+    email_clean = email.lower().strip()
+    cursor.execute("SELECT id FROM users WHERE email=?", (email_clean,))
+    user = cursor.fetchone()
+    if not user:
+        conn.close()
+        return None
+    from datetime import datetime, timedelta
+    code = ''.join(secrets.choice(string.digits) for _ in range(6))
+    expires = (datetime.utcnow() + timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute(
+        "UPDATE users SET password_reset_code=?, password_reset_expires=? WHERE email=?",
+        (code, expires, email_clean)
+    )
+    conn.commit()
+    conn.close()
+    return code
+
+def reset_password_with_code(email, code, new_password):
+    conn = get_db()
+    cursor = conn.cursor()
+    email_clean = email.lower().strip()
+    cursor.execute("SELECT * FROM users WHERE email=?", (email_clean,))
+    user = cursor.fetchone()
+    if not user or not user["password_reset_code"]:
+        conn.close()
+        return False, "invalid_code"
+    if user["password_reset_code"] != code.strip():
+        conn.close()
+        return False, "invalid_code"
+    from datetime import datetime
+    try:
+        expires = datetime.strptime(user["password_reset_expires"], "%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        conn.close()
+        return False, "invalid_code"
+    if datetime.utcnow() > expires:
+        conn.close()
+        return False, "code_expired"
+    cursor.execute(
+        "UPDATE users SET password=?, password_reset_code=NULL, password_reset_expires=NULL WHERE email=?",
+        (hash_password(new_password), email_clean)
+    )
+    conn.commit()
+    conn.close()
+    return True, None
 
 def get_user_by_stripe_customer_id(customer_id):
     conn = get_db()

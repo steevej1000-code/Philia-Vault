@@ -131,6 +131,38 @@ class ApiClient {
     return data;
   }
 
+  async appleAuth(idToken: string, email?: string) {
+    const data = await this.request(ENDPOINTS.appleAuth, {
+      method: 'POST',
+      body: JSON.stringify({ id_token: idToken, email }),
+    });
+    if (data.success && data.user?.email) {
+      this.setUserEmail(data.user.email);
+    }
+    return data;
+  }
+
+  async forgotPassword(email: string, language?: string) {
+    return this.request(ENDPOINTS.forgotPassword, {
+      method: 'POST',
+      body: JSON.stringify({ email, language }),
+    });
+  }
+
+  async resetPassword(email: string, code: string, newPassword: string) {
+    return this.request(ENDPOINTS.resetPassword, {
+      method: 'POST',
+      body: JSON.stringify({ email, code, new_password: newPassword }),
+    });
+  }
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    return this.request(ENDPOINTS.changePassword, {
+      method: 'POST',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
+  }
+
   async logout() {
     this.setUserEmail(null);
     await storage.removeItem('user_email');

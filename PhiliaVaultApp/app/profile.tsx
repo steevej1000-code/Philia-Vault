@@ -5,17 +5,21 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuthStore } from '../store/authStore';
 import { COLORS, RADIUS } from '../constants/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { IconClose, IconStar } from '../components/icons/Icons';
 import api from '../services/api';
+import { storage } from '../services/storage';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { getLastSync } from '../services/offlineCache';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import { PreferencesSelectorModal, SelectorType } from '../components/PreferencesSelectorModal';
 import { LANGUAGES } from '../constants/translations';
+
+const BIOMETRIC_LOCK_KEY = 'biometric_lock_enabled';
 
 interface Transaction {
   id: number;
@@ -41,6 +45,32 @@ export default function ProfileScreen() {
   const { isOnline } = useNetworkStatus();
   const { t, formatAmount, language, currency } = useUserPreferences();
   const [selectorType, setSelectorType] = useState<SelectorType | null>(null);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricSupported, setBiometricSupported] = useState(false);
+  const [savingBiometric, setSavingBiometric] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      setBiometricSupported(hasHardware && isEnrolled);
+      const stored = await storage.getItem(BIOMETRIC_LOCK_KEY);
+      setBiometricEnabled(stored === 'true');
+    })();
+  }, []);
+
+  const handleBiometricToggle = async (value: boolean) => {
+    if (value) {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Confirmez votre identité',
+      });
+      if (!result.success) return;
+    }
+    setSavingBiometric(true);
+    setBiometricEnabled(value);
+    await storage.setItem(BIOMETRIC_LOCK_KEY, value ? 'true' : 'false');
+    setSavingBiometric(false);
+  };
 
 
   const load = useCallback(async () => {
@@ -214,6 +244,22 @@ export default function ProfileScreen() {
               <Text style={styles.optionLabel}>{t('security')}</Text>
               <Text style={styles.optionValue}>{t('security_value')}</Text>
             </View>
+            <TouchableOpacity style={styles.optionRow} onPress={() => router.push('/change-password')}>
+              <Text style={styles.optionLabel}>{t('change_password')}</Text>
+              <Text style={styles.optionValue}>›</Text>
+            </TouchableOpacity>
+            {biometricSupported && (
+              <View style={styles.optionRow}>
+                <Text style={styles.optionLabel}>{t('biometric_lock')}</Text>
+                <Switch
+                  value={biometricEnabled}
+                  onValueChange={handleBiometricToggle}
+                  disabled={savingBiometric}
+                  trackColor={{ false: '#3a3a3c', true: '#ccff00' }}
+                  thumbColor="#ffffff"
+                />
+              </View>
+            )}
             <View style={[styles.optionRow, { borderBottomWidth: 0 }]}>
               <Text style={styles.optionLabel}>{t('app_version')}</Text>
               <Text style={styles.optionValue}>1.0.0 (Expo)</Text>

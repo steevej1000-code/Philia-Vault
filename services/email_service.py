@@ -51,6 +51,53 @@ Philia Vault · Analyse financière éducative propulsée par IA"""
     },
 }
 
+RESET_EMAIL_TEMPLATES = {
+    'en': {
+        'subject': "Your Philia Vault password reset code",
+        'body': """Hi,
+
+Your password reset code is: {code}
+
+This code expires in 30 minutes. If you didn't request this, you can ignore this email.
+
+— The Philia Vault Team"""
+    },
+    'fr': {
+        'subject': "Ton code de réinitialisation Philia Vault",
+        'body': """Salut,
+
+Ton code de réinitialisation de mot de passe est : {code}
+
+Ce code expire dans 30 minutes. Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.
+
+— L'équipe Philia Vault"""
+    },
+}
+
+def send_password_reset_email(to_email, code, language='en'):
+    template = RESET_EMAIL_TEMPLATES.get(language, RESET_EMAIL_TEMPLATES['en'])
+
+    msg = MIMEMultipart()
+    msg['From'] = SMTP_USER
+    msg['To'] = to_email
+    msg['Subject'] = template['subject']
+    msg.attach(MIMEText(template['body'].format(code=code), 'plain'))
+
+    if not SMTP_USER or not SMTP_PASSWORD:
+        print(f'[Email] SMTP not configured, simulating password reset email to {to_email}: code={code}')
+        return False
+
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.send_message(msg)
+        print(f'[Email] Password reset code envoyé à {to_email}')
+        return True
+    except Exception as e:
+        print(f'[Email] Erreur envoi reset password: {e}')
+        return False
+
 def send_confirmation_email(to_email, member_number, language='en'):
     template = EMAIL_TEMPLATES.get(language, EMAIL_TEMPLATES['en'])
 

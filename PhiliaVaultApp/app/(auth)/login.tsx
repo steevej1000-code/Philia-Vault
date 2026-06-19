@@ -8,6 +8,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { makeRedirectUri } from 'expo-auth-session';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { router } from 'expo-router';
 import { IconShield } from '../../components/icons/Icons';
 import { useAuthStore } from '../../store/authStore';
 import { COLORS, RADIUS } from '../../constants/colors';
@@ -72,7 +74,7 @@ function GPSIllustration() {
 }
 
 export default function LoginScreen() {
-  const { login, register, loginWithGoogle } = useAuthStore();
+  const { login, register, loginWithGoogle, loginWithApple } = useAuthStore();
   const { t } = useUserPreferences();
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -82,6 +84,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [error, setError] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingSlide, setOnboardingSlide] = useState(1);
@@ -143,6 +146,29 @@ export default function LoginScreen() {
     setGoogleLoading(true);
     setError('');
     await promptAsync();
+  };
+
+  const handleApplePress = async () => {
+    setAppleLoading(true);
+    setError('');
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (!credential.identityToken) {
+        throw new Error('Token Apple non reçu');
+      }
+      await loginWithApple(credential.identityToken, credential.email ?? undefined);
+    } catch (e: any) {
+      if (e.code !== 'ERR_REQUEST_CANCELED') {
+        setError(e.message || 'Erreur lors de la connexion Apple.');
+      }
+    } finally {
+      setAppleLoading(false);
+    }
   };
 
   const handleDemoPress = async () => {
@@ -374,6 +400,15 @@ export default function LoginScreen() {
             />
           </View>
 
+          {mode === 'login' && (
+            <TouchableOpacity
+              style={styles.forgotLink}
+              onPress={() => router.push('/(auth)/forgot-password')}
+            >
+              <Text style={styles.forgotLinkText}>Mot de passe oublié ?</Text>
+            </TouchableOpacity>
+          )}
+
           {mode === 'register' && (
             <View style={styles.field}>
               <Text style={styles.label}>Code de parrainage (Optionnel)</Text>
@@ -420,6 +455,25 @@ export default function LoginScreen() {
               </>
             )}
           </TouchableOpacity>
+
+          {/* Native Sign in with Apple Button (iOS only) */}
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={[styles.appleBtn, appleLoading && styles.googleBtnDisabled]}
+              onPress={handleApplePress}
+              disabled={appleLoading}
+              activeOpacity={0.8}
+            >
+              {appleLoading ? (
+                <ActivityIndicator color="#0c0e12" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.appleIcon}>{''}</Text>
+                  <Text style={styles.appleText}>Continuer avec Apple</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
 
           {/* Quick Test Demo Button */}
           <TouchableOpacity
@@ -615,6 +669,34 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: COLORS.onSurface,
+  },
+  forgotLink: {
+    alignSelf: 'flex-end',
+    marginTop: -8,
+  },
+  forgotLinkText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  appleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    borderRadius: RADIUS.full,
+    backgroundColor: '#ffffff',
+    marginTop: 8,
+  },
+  appleIcon: {
+    fontSize: 18,
+    color: '#000000',
+  },
+  appleText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#000000',
   },
   demoBtn: {
     flexDirection: 'row',

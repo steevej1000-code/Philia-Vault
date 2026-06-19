@@ -16,7 +16,11 @@ export const ENDPOINTS = {
   login:          '/api/auth/login',
   register:       '/api/auth/register',
   googleAuth:     '/api/auth/google',
+  appleAuth:      '/api/auth/apple',
   authConfig:     '/api/auth/config',
+  forgotPassword: '/api/auth/forgot-password',
+  resetPassword:  '/api/auth/reset-password',
+  changePassword: '/api/auth/change-password',
 
   // User
   user:           '/api/user',

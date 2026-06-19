@@ -114,6 +114,13 @@ from google.auth.transport import requests as google_requests
 
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 
+# Apple Sign In verification helper
+import jwt as pyjwt
+from jwt import PyJWKClient
+
+APPLE_CLIENT_ID = os.environ.get("APPLE_CLIENT_ID")
+APPLE_JWKS_URL = "https://appleid.apple.com/auth/keys"
+
 @app.route("/api/auth/config", methods=["GET"])
 def auth_config():
     return jsonify({
@@ -155,6 +162,42 @@ def auth_google():
     except Exception as e:
         return jsonify({"success": False, "error": f"Échec de validation Google: {str(e)}"}), 401
 
+@app.route("/api/auth/apple", methods=["POST"])
+def auth_apple():
+    data = request.json or {}
+    token = data.get("id_token")
+    if not token:
+        return jsonify({"success": False, "error": "Token d'identification Apple manquant"}), 400
+
+    try:
+        if APPLE_CLIENT_ID:
+            jwk_client = PyJWKClient(APPLE_JWKS_URL)
+            signing_key = jwk_client.get_signing_key_from_jwt(token)
+            idinfo = pyjwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["RS256"],
+                audience=APPLE_CLIENT_ID,
+                issuer="https://appleid.apple.com",
+            )
+            email = idinfo.get("email", "")
+            apple_id = idinfo["sub"]
+        else:
+            # Local dev fallback: decode without signature verification
+            idinfo = pyjwt.decode(token, options={"verify_signature": False})
+            email = idinfo.get("email", "")
+            apple_id = idinfo.get("sub", "mock_apple_id_123")
+
+        # Apple may not resend the email on repeat sign-ins; the client should
+        # cache it from the first response and resend it as a fallback.
+        email = email or data.get("email", "")
+        user_email = database.create_or_get_apple_user(email, apple_id)
+        if not user_email:
+            return jsonify({"success": False, "error": "Compte Apple introuvable, veuillez réessayer la connexion"}), 401
+        return jsonify({"success": True, "user": {"email": user_email}, "message": "Connexion Apple réussie"})
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Échec de validation Apple: {str(e)}"}), 401
+
 # User Authentication endpoints
 @app.route("/api/auth/register", methods=["POST"])
 def auth_register():
@@ -188,6 +231,57 @@ def auth_login():
         return jsonify({"success": True, "user": {"email": user["email"]}, "message": "Connexion réussie"})
     else:
         return jsonify({"success": False, "error": "Email ou mot de passe incorrect"}), 401
+
+@app.route("/api/auth/forgot-password", methods=["POST"])
+def auth_forgot_password():
+    data = request.json or {}
+    email = data.get("email")
+    language = data.get("language", "en")
+    if not email:
+        return jsonify({"success": False, "error": "Email requis"}), 400
+
+    code = database.create_password_reset_code(email)
+    if code:
+        from services.email_service import send_password_reset_email
+        send_password_reset_email(email.lower().strip(), code, language)
+    # Always return success to avoid leaking whether an email is registered
+    return jsonify({"success": True, "message": "Si ce compte existe, un code a été envoyé par email"})
+
+@app.route("/api/auth/reset-password", methods=["POST"])
+def auth_reset_password():
+    data = request.json or {}
+    email = data.get("email")
+    code = data.get("code")
+    new_password = data.get("new_password")
+    if not email or not code or not new_password:
+        return jsonify({"success": False, "error": "Email, code et nouveau mot de passe requis"}), 400
+
+    success, error = database.reset_password_with_code(email, code, new_password)
+    if success:
+        return jsonify({"success": True, "message": "Mot de passe réinitialisé avec succès"})
+    error_messages = {
+        "invalid_code": "Code invalide",
+        "code_expired": "Ce code a expiré, veuillez en demander un nouveau",
+    }
+    return jsonify({"success": False, "error": error_messages.get(error, "Échec de la réinitialisation")}), 400
+
+@app.route("/api/auth/change-password", methods=["POST"])
+def auth_change_password():
+    data = request.json or {}
+    current_password = data.get("current_password")
+    new_password = data.get("new_password")
+    if not current_password or not new_password:
+        return jsonify({"success": False, "error": "Mot de passe actuel et nouveau mot de passe requis"}), 400
+
+    email = get_current_user_id()
+    success, error = database.change_password(email, current_password, new_password)
+    if success:
+        return jsonify({"success": True, "message": "Mot de passe modifié avec succès"})
+    error_messages = {
+        "user_not_found": "Utilisateur introuvable",
+        "invalid_current_password": "Mot de passe actuel incorrect",
+    }
+    return jsonify({"success": False, "error": error_messages.get(error, "Échec de la modification")}), 400
 
 # API Summary
 def calculate_corrected_fi_indices(active_cashflow_m, fixed_expenses_m):
