@@ -9,14 +9,22 @@
     "scheme": "philiavault",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.philia.vault"
+      "bundleIdentifier": "com.philia.vault",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Philia Vault utilise Face ID pour sécuriser l'accès à vos données financières."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.philia.vault"
+      "package": "com.philia.vault",
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -26,7 +34,14 @@
           "fonts": []
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      "expo-apple-authentication",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Philia Vault utilise Face ID pour sécuriser l'accès à vos données financières."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

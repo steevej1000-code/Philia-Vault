@@ -21,6 +21,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (firstName: string, lastName: string, email: string, password: string, referralCode?: string) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithApple: (idToken: string, email?: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
   loadSession: () => Promise<void>;
   setPremium: (status: boolean) => void;
@@ -64,6 +66,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // Now fetch full profile
     await get().refreshUser();
+  },
+
+  loginWithApple: async (idToken: string, email?: string) => {
+    await api.init();
+    const data = await api.appleAuth(idToken, email);
+    if (!data.success) throw new Error(data.error || 'Connexion Apple échouée');
+
+    // Now fetch full profile
+    await get().refreshUser();
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    await api.init();
+    const data = await api.changePassword(currentPassword, newPassword);
+    if (!data.success) throw new Error(data.error || 'Modification du mot de passe échouée');
   },
 
   logout: async () => {

@@ -99,10 +99,10 @@ export default function AffiliationScreen() {
           </GlassCard>
 
           {/* TRANSPARENCY FUNNEL */}
-          <GlassCard style={styles.funnelCard}>
+          <GlassCard style={[styles.funnelCard, { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}>
             <View style={styles.cardHeaderRow}>
-              <IconTarget size={20} color={COLORS.primary} />
-              <Text style={styles.cardTitle}>{t('affiliation_funnel_rate')}</Text>
+              <IconTarget size={20} color="#000000" />
+              <Text style={styles.funnelTitle}>{t('affiliation_funnel_rate')}</Text>
             </View>
             
             <View style={styles.funnelSteps}>
@@ -123,7 +123,7 @@ export default function AffiliationScreen() {
 
             <View style={styles.commissionsBox}>
               <Text style={styles.commissionsLabel}>{t('affiliation_funnel_commissions')}</Text>
-              <Text style={[styles.commissionsValue, !isEligible && { color: COLORS.onSurfaceVariant }]}>
+              <Text style={[styles.commissionsValue, !isEligible && { color: 'rgba(0,0,0,0.4)' }]}>
                 {fmtEUR(stats?.estimated_monthly_gain ?? 0)} / mois
               </Text>
             </View>
@@ -186,17 +186,18 @@ const styles = StyleSheet.create({
 
   // Funnel
   funnelCard: { padding: 20 },
+  funnelTitle: { fontSize: 14, fontWeight: '700', color: '#000000' },
   funnelSteps: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
   funnelStep: { alignItems: 'center', flex: 1 },
-  funnelValue: { fontSize: 24, fontWeight: '800', color: COLORS.onSurface },
-  funnelLabel: { fontSize: 11, color: COLORS.onSurfaceVariant, marginTop: 4, textAlign: 'center' },
-  funnelDivider: { width: 1, height: 30, backgroundColor: COLORS.glassBorder, marginHorizontal: 10 },
-  funnelStepHighlight: { alignItems: 'center', flex: 1, backgroundColor: 'rgba(204,255,0,0.1)', paddingVertical: 10, borderRadius: RADIUS.md },
-  funnelRateValue: { fontSize: 20, fontWeight: '800', color: COLORS.primary },
+  funnelValue: { fontSize: 24, fontWeight: '800', color: '#000000' },
+  funnelLabel: { fontSize: 11, color: 'rgba(0,0,0,0.7)', marginTop: 4, textAlign: 'center' },
+  funnelDivider: { width: 1, height: 30, backgroundColor: 'rgba(0,0,0,0.15)', marginHorizontal: 10 },
+  funnelStepHighlight: { alignItems: 'center', flex: 1, backgroundColor: 'rgba(0,0,0,0.05)', paddingVertical: 10, borderRadius: RADIUS.md },
+  funnelRateValue: { fontSize: 20, fontWeight: '800', color: '#000000' },
 
-  commissionsBox: { alignItems: 'center', paddingTop: 16, borderTopWidth: 1, borderTopColor: COLORS.glassBorder },
-  commissionsLabel: { fontSize: 11, textTransform: 'uppercase', color: COLORS.onSurfaceVariant, letterSpacing: 1, marginBottom: 4 },
-  commissionsValue: { fontSize: 28, fontWeight: '800', color: COLORS.primary },
+  commissionsBox: { alignItems: 'center', paddingTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.15)' },
+  commissionsLabel: { fontSize: 11, textTransform: 'uppercase', color: 'rgba(0,0,0,0.7)', letterSpacing: 1, marginBottom: 4 },
+  commissionsValue: { fontSize: 28, fontWeight: '800', color: '#000000' },
 
   // Code Card
   codeCard: { padding: 20, gap: 14 },
