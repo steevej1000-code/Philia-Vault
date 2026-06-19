@@ -14,6 +14,7 @@ import { OfflineBanner } from '../components/OfflineBanner';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { getLastSync } from '../services/offlineCache';
 import { useUserPreferences } from '../context/UserPreferencesContext';
+import * as WebBrowser from 'expo-web-browser';
 import { PreferencesSelectorModal, SelectorType } from '../components/PreferencesSelectorModal';
 import { LANGUAGES } from '../constants/translations';
 
@@ -214,6 +215,20 @@ export default function ProfileScreen() {
               <Text style={styles.optionLabel}>{t('security')}</Text>
               <Text style={styles.optionValue}>{t('security_value')}</Text>
             </View>
+            <TouchableOpacity 
+              style={styles.optionRow} 
+              onPress={() => WebBrowser.openBrowserAsync('https://philiavault.com/terms.html')}
+            >
+              <Text style={styles.optionLabel}>Conditions d'Utilisation</Text>
+              <Text style={styles.optionValue}>›</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.optionRow} 
+              onPress={() => WebBrowser.openBrowserAsync('https://philiavault.com/privacy.html')}
+            >
+              <Text style={styles.optionLabel}>Confidentialité</Text>
+              <Text style={styles.optionValue}>›</Text>
+            </TouchableOpacity>
             <View style={[styles.optionRow, { borderBottomWidth: 0 }]}>
               <Text style={styles.optionLabel}>{t('app_version')}</Text>
               <Text style={styles.optionValue}>1.0.0 (Expo)</Text>

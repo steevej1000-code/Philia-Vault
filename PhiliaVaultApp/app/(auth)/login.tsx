@@ -85,6 +85,7 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingSlide, setOnboardingSlide] = useState(1);
+  const [cguAccepted, setCguAccepted] = useState(false);
 
   // Real Google OAuth via expo-auth-session
   const [request, response, promptAsync] = Google.useAuthRequest({
@@ -186,6 +187,10 @@ export default function LoginScreen() {
     }
     if (mode === 'register' && (!firstName.trim() || !lastName.trim())) {
       setError('Veuillez entrer votre prénom et nom.');
+      return;
+    }
+    if (mode === 'register' && !cguAccepted) {
+      setError(t('cgu_mandatory_error') || 'Vous devez accepter les Conditions Générales d\'Utilisation pour créer un compte.');
       return;
     }
 
@@ -389,6 +394,28 @@ export default function LoginScreen() {
             </View>
           )}
 
+          {mode === 'register' && (
+            <TouchableOpacity 
+              style={styles.cguRow} 
+              activeOpacity={0.8} 
+              onPress={() => setCguAccepted(!cguAccepted)}
+            >
+              <View style={[styles.checkbox, cguAccepted && styles.checkboxActive]}>
+                {cguAccepted && (
+                  <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#0c0e12" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M20 6L9 17l-5-5" />
+                  </Svg>
+                )}
+              </View>
+              <Text style={styles.cguText}>
+                {t('cgu_checkbox_text') || 'J\'ai lu et j\'accepte les '}
+                <Text style={styles.cguLink} onPress={() => WebBrowser.openBrowserAsync('https://philiavault.com/terms.html')}>
+                  {t('cgu_link') || 'Conditions Générales d\'Utilisation'}
+                </Text>. {t('cgu_checkbox_suffix') || 'Je comprends que Philia Vault est un outil éducatif et ne fournit pas de conseils financiers.'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {!!error && <Text style={styles.errorText}>{error}</Text>}
 
           <PremiumButton
@@ -573,6 +600,38 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: 'rgba(239,68,68,0.2)',
+  },
+  cguRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: COLORS.glassBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    marginTop: 2,
+  },
+  checkboxActive: {
+    backgroundColor: '#c8ff00',
+    borderColor: '#c8ff00',
+  },
+  cguText: {
+    flex: 1,
+    fontSize: 12,
+    color: COLORS.onSurfaceVariant,
+    lineHeight: 18,
+  },
+  cguLink: {
+    color: '#c8ff00',
+    textDecorationLine: 'underline',
   },
   divider: {
     flexDirection: 'row',
