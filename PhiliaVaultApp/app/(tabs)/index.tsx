@@ -32,7 +32,7 @@ const formatBadgeValue = (v: number) => {
   } else if (absVal >= 1000) {
     return `${(absVal / 1000).toFixed(1)}k`;
   }
-  return absVal.toString();
+  return Math.round(absVal).toString();
 };
 
 export default function DashboardScreen() {
@@ -161,11 +161,15 @@ export default function DashboardScreen() {
                 <View style={styles.badgeContainer}>
                   <Animated.View style={[styles.animatedCircle, { opacity: blinkAnim, borderColor: '#ffffff' }]} />
                   <View style={styles.textContainer}>
-                    <Text style={[
-                      styles.badgeText,
-                      { color: '#ffffff' },
-                      { fontSize: formatBadgeValue(netCashflow).length > 3 ? 12 : formatBadgeValue(netCashflow).length > 2 ? 14 : 16 }
-                    ]}>
+                    <Text
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      style={[
+                        styles.badgeText,
+                        { color: '#ffffff' },
+                        { fontSize: formatBadgeValue(netCashflow).length > 3 ? 12 : formatBadgeValue(netCashflow).length > 2 ? 14 : 16 }
+                      ]}
+                    >
                       {formatBadgeValue(netCashflow)}
                     </Text>
                   </View>
