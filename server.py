@@ -21,8 +21,21 @@ if _missing:
         f"Vérifiez votre fichier .env (voir .env.example)."
     )
 
+from routes.stripe_webhook import stripe_webhook_bp
+from routes.admin_routes import admin_bp
+
 app = Flask(__name__, static_folder="static")
 app.secret_key = os.environ.get("SECRET_KEY")
+
+# Register Blueprints
+app.register_blueprint(stripe_webhook_bp)
+app.register_blueprint(admin_bp, url_prefix="/api/admin")
+
+@app.before_request
+def skip_json_parsing_for_webhook():
+    if request.path == '/api/webhooks/stripe':
+        return  # Laisse le raw body intact
+
 allowed_origins = [
     os.environ.get('ALLOWED_ORIGIN', 'https://philiavault.com'),
     'https://www.philiavault.com',
@@ -32,7 +45,8 @@ allowed_origins = [
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5000',
     'http://127.0.0.1:5001',
-    'http://localhost:8081'
+    'http://localhost:8081',
+    'http://localhost:5173'
 ]
 CORS(app, 
      origins=allowed_origins,
@@ -851,13 +865,12 @@ def founder_stripe_config():
 
 @app.route("/api/founder/count", methods=["GET"])
 def founder_count():
-    count = database.get_founder_count()
-    remaining = max(0, 10 - count)
+    data = database.get_founder_spots_counter()
     return jsonify({
         "success": True,
-        "count": remaining,
-        "remaining": remaining,
-        "total": 10
+        "count": data["spots_remaining"],
+        "remaining": data["spots_remaining"],
+        "total": data["total_spots"]
     })
 
 @app.route("/api/founder/purchase", methods=["POST"])

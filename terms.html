@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Use — Philia Vault Landing Page</title>
+<style>
+  body{background:#000000;color:#EAEAEA;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.7;max-width:800px;margin:0 auto;padding:60px 24px 100px;}
+  h1{color:#ccff00;font-size:2.2rem;margin-bottom:8px;}
+  h2{color:#ccff00;font-size:1.3rem;margin-top:40px;border-bottom:1px solid #333;padding-bottom:8px;}
+  h3{color:#fff;font-size:1.1rem;margin-top:30px;margin-bottom:10px;}
+  p,li{color:#B5B5B5;}
+  a{color:#ccff00;text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  .updated{color:#777;font-size:0.9rem;margin-bottom:40px;}
+  .language-nav { margin-bottom: 40px; display: flex; gap: 16px; border-bottom: 1px solid #333; padding-bottom: 16px; }
+  .language-nav a { color: #fff; font-weight: 500; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+  .language-nav a:hover { color: #ccff00; text-decoration: none; }
+  .lang-section { display: none; }
+  .lang-section.active { display: block; animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+<script>
+  function switchLang(lang) {
+    document.querySelectorAll('.lang-section').forEach(el => el.classList.remove('active'));
+    document.getElementById('lang-' + lang).classList.add('active');
+    document.querySelectorAll('.language-nav a').forEach(el => el.style.color = '#fff');
+    document.getElementById('btn-' + lang).style.color = '#ccff00';
+  }
+  window.onload = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const lang = urlParams.get('lang') || 'fr';
+    if(['fr','en','es','pt'].includes(lang)) { switchLang(lang); }
+    else { switchLang('en'); }
+  };
+</script>
+</head>
+<body>
+  <p><a href="/">← Back to Philia Vault</a></p>
+  
+  <div class="language-nav">
+    <a href="#" id="btn-fr" onclick="switchLang('fr'); return false;">Français</a>
+    <a href="#" id="btn-en" onclick="switchLang('en'); return false;">English</a>
+    <a href="#" id="btn-es" onclick="switchLang('es'); return false;">Español</a>
+    <a href="#" id="btn-pt" onclick="switchLang('pt'); return false;">Português</a>
+  </div>
+
+  <!-- FRANÇAIS -->
+  <div id="lang-fr" class="lang-section active">
+    <h1>Conditions d'Utilisation de la Landing Page</h1>
+    <p class="updated">Dernière mise à jour : 18 Juin 2026</p>
+
+    <h3>1. Objet</h3>
+    <p>Les présentes Conditions d’Utilisation régissent votre accès et votre utilisation de la page web de présentation (ci-après le "Site" ou la "Landing Page") éditée par Philia entreprise LLC. Ces conditions s'appliquent exclusivement au Site et non à l'application logicielle Philia Vault.</p>
+
+    <h3>2. Éditeur du Site</h3>
+    <p>Le Site est exploité par Philia entreprise LLC, société enregistrée dans l'État de l'Ohio, États-Unis.</p>
+
+    <h3>3. Champ d'application</h3>
+    <p>Ces conditions couvrent uniquement la consultation du Site, l'utilisation de ses formulaires (contact, préinscription) et l'interaction avec ses éléments visuels et marketing. Si vous souscrivez à l'application Philia Vault, des Conditions Générales d'Utilisation séparées s'appliqueront.</p>
+
+    <h3>4. Nature éducative et informative</h3>
+    <p>Philia Vault est un logiciel éducatif de visualisation financière. Le contenu du Site (textes, vidéos, captures d'écran, exemples d'audits par le Coach IA) a une vocation strictement de démonstration et d'information.</p>
+
+    <h3>5. Absence de conseil financier</h3>
+    <p>Le Site ne fournit aucun conseil financier, fiscal, juridique ou d'investissement. Philia entreprise LLC n'est pas un conseiller financier agréé. Toutes les décisions prises suite à la consultation du Site relèvent de votre entière responsabilité.</p>
+
+    <h3>6. Limites des démonstrations et simulations</h3>
+    <p>Le Site ne garantit aucune création de richesse, aucun revenu passif ni aucune liberté financière. Les trajectoires et résultats illustrés dépendent exclusivement d'une architecture mathématique basée sur des données hypothétiques ou renseignées par l'utilisateur.</p>
+
+    <h3>7. Collecte de données et Formulaires</h3>
+    <p>L'utilisation de nos formulaires de préinscription ou de contact implique l'acceptation de notre Politique de Confidentialité.</p>
+
+    <h3>8. Propriété Intellectuelle</h3>
+    <p>Tous les éléments du Site (logos, marque Philia Vault, textes, interface utilisateur, algorithmes décrits) sont la propriété exclusive de Philia entreprise LLC.</p>
+
+    <h3>9. Droit applicable</h3>
+    <p>Les présentes conditions sont régies par les lois de l'État de l'Ohio, États-Unis. En cas de litige, les tribunaux de l'Ohio seront seuls compétents.</p>
+  </div>
+
+  <!-- ENGLISH -->
+  <div id="lang-en" class="lang-section">
+    <h1>Landing Page Terms of Use</h1>
+    <p class="updated">Last Updated: June 18, 2026</p>
+
+    <h3>1. Purpose</h3>
+    <p>These Terms of Use govern your access to and use of the presentation webpage (hereinafter the "Site" or "Landing Page") operated by Philia entreprise LLC. These terms apply exclusively to the Site and not to the Philia Vault software application.</p>
+
+    <h3>2. Publisher</h3>
+    <p>The Site is operated by Philia entreprise LLC, registered in the State of Ohio, USA.</p>
+
+    <h3>3. Scope</h3>
+    <p>These terms cover only the browsing of the Site, the use of its forms (contact, pre-registration), and interaction with its marketing content. Accessing the Philia Vault application is subject to separate Terms of Service.</p>
+
+    <h3>4. Educational and Informative Nature</h3>
+    <p>Philia Vault is an educational financial visualization software. The content on the Site (text, videos, screenshots, AI Coach audit examples) is strictly for demonstration and informational purposes.</p>
+
+    <h3>5. No Financial Advice</h3>
+    <p>The Site does not provide financial, tax, legal, or investment advice. Philia entreprise LLC is not a licensed financial advisor. Any decisions made based on the Site's content are your sole responsibility.</p>
+
+    <h3>6. Limitations of Demonstrations and Simulations</h3>
+    <p>The Site does not guarantee wealth creation, passive income, or financial freedom. Illustrated trajectories and results depend exclusively on mathematical architecture based on hypothetical or user-provided data.</p>
+
+    <h3>7. Data Collection and Forms</h3>
+    <p>Use of our pre-registration or contact forms implies acceptance of our Privacy Policy.</p>
+
+    <h3>8. Intellectual Property</h3>
+    <p>All elements of the Site (logos, Philia Vault brand, texts, user interface, described algorithms) are the exclusive property of Philia entreprise LLC.</p>
+
+    <h3>9. Governing Law</h3>
+    <p>These terms are governed by the laws of the State of Ohio, USA. In the event of a dispute, the courts of Ohio shall have exclusive jurisdiction.</p>
+  </div>
+
+  <!-- ESPAÑOL -->
+  <div id="lang-es" class="lang-section">
+    <h1>Términos de Uso de la Landing Page</h1>
+    <p class="updated">Última actualización: 18 de junio de 2026</p>
+
+    <h3>1. Objeto</h3>
+    <p>Estos Términos de Uso regulan su acceso y uso de la página web de presentación (en adelante, el "Sitio" o "Landing Page") operada por Philia entreprise LLC. Estos términos se aplican exclusivamente al Sitio y no a la aplicación de software Philia Vault.</p>
+
+    <h3>2. Editor del Sitio</h3>
+    <p>El Sitio es operado por Philia entreprise LLC, registrada en el estado de Ohio, EE. UU.</p>
+
+    <h3>3. Ámbito de aplicación</h3>
+    <p>Estos términos cubren únicamente la consulta del Sitio, el uso de sus formularios y la interacción con su contenido de marketing. El acceso a la aplicación Philia Vault está sujeto a Términos de Servicio separados.</p>
+
+    <h3>4. Naturaleza educativa e informativa</h3>
+    <p>Philia Vault es un software educativo de visualización financiera. El contenido del Sitio (textos, vídeos, capturas de pantalla, ejemplos de auditorías del Coach IA) tiene un propósito estrictamente demostrativo e informativo.</p>
+
+    <h3>5. Ausencia de asesoramiento financiero</h3>
+    <p>El Sitio no proporciona asesoramiento financiero, fiscal, legal ni de inversión. Philia entreprise LLC no es un asesor financiero autorizado. Cualquier decisión tomada a raíz del contenido del Sitio es de su exclusiva responsabilidad.</p>
+
+    <h3>6. Límites de demostraciones y simulaciones</h3>
+    <p>El Sitio no garantiza la creación de riqueza, ingresos pasivos ni libertad financiera. Las trayectorias y resultados ilustrados dependen exclusivamente de una arquitectura matemática basada en datos hipotéticos o proporcionados por el usuario.</p>
+
+    <h3>7. Recopilación de datos y formularios</h3>
+    <p>El uso de nuestros formularios de preinscripción o contacto implica la aceptación de nuestra Política de Privacidad.</p>
+
+    <h3>8. Propiedad Intelectual</h3>
+    <p>Todos los elementos del Sitio (logotipos, marca Philia Vault, textos, interfaz de usuario) son propiedad exclusiva de Philia entreprise LLC.</p>
+
+    <h3>9. Ley aplicable</h3>
+    <p>Estos términos se rigen por las leyes del Estado de Ohio, EE. UU.</p>
+  </div>
+
+  <!-- PORTUGUÊS -->
+  <div id="lang-pt" class="lang-section">
+    <h1>Termos de Uso da Landing Page</h1>
+    <p class="updated">Última atualização: 18 de junho de 2026</p>
+
+    <h3>1. Objeto</h3>
+    <p>Estes Termos de Uso regem o seu acesso e uso da página web de apresentação (doravante o "Site" ou "Landing Page") operada pela Philia entreprise LLC. Estes termos se aplicam exclusivamente ao Site e não ao aplicativo Philia Vault.</p>
+
+    <h3>2. Editor do Site</h3>
+    <p>O Site é operado pela Philia entreprise LLC, registrada no Estado de Ohio, EUA.</p>
+
+    <h3>3. Escopo</h3>
+    <p>Estes termos cobrem apenas a navegação no Site, o uso de seus formulários e a interação com seu conteúdo de marketing. O acesso ao aplicativo Philia Vault está sujeito a Termos de Serviço separados.</p>
+
+    <h3>4. Natureza educacional e informativa</h3>
+    <p>Philia Vault é um software educacional de visualização financeira. O conteúdo do Site tem um propósito estritamente demonstrativo e informativo.</p>
+
+    <h3>5. Ausência de aconselhamento financeiro</h3>
+    <p>O Site não fornece consultoria financeira, fiscal, jurídica ou de investimento. A Philia entreprise LLC não é uma consultora financeira licenciada. Todas as decisões tomadas com base no conteúdo do Site são de sua exclusiva responsabilidade.</p>
+
+    <h3>6. Limites de demonstrações e simulações</h3>
+    <p>O Site não garante criação de riqueza, renda passiva ou liberdade financeira. As trajetórias ilustradas dependem exclusivamente de uma arquitetura matemática baseada em dados hipotéticos ou fornecidos pelo usuário.</p>
+
+    <h3>7. Coleta de dados e formulários</h3>
+    <p>O uso de nossos formulários implica a aceitação de nossa Política de Privacidade.</p>
+
+    <h3>8. Propriedade Intelectual</h3>
+    <p>Todos os elementos do Site são propriedade exclusiva da Philia entreprise LLC.</p>
+
+    <h3>9. Lei aplicável</h3>
+    <p>Estes termos são regidos pelas leis do Estado de Ohio, EUA.</p>
+  </div>
+
+</body>
+</html>

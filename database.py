@@ -119,7 +119,8 @@ def init_db():
         ("parrain_id", "INTEGER"),
         ("created_at", "TEXT DEFAULT CURRENT_TIMESTAMP"),
         ("language", "TEXT DEFAULT 'en'"),
-        ("currency_symbol", "TEXT DEFAULT '$'")
+        ("currency_symbol", "TEXT DEFAULT '$'"),
+        ("is_blocked", "INTEGER DEFAULT 0")
     ]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")
@@ -186,14 +187,45 @@ def init_db():
     )
     """)
 
-    # Create founder_members table for pre-launch purchases
+    # Create founder_members table for Stripe (updated)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS founder_members (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT NOT NULL UNIQUE,
-        name TEXT,
-        square_payment_id TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        stripe_customer_id TEXT UNIQUE NOT NULL,
+        stripe_subscription_id TEXT UNIQUE,
+        email TEXT NOT NULL,
+        member_number INTEGER NOT NULL,
+        amount_paid REAL DEFAULT 4.99,
+        currency TEXT DEFAULT 'usd',
+        status TEXT DEFAULT 'active',
+        language TEXT DEFAULT 'en',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        meta_event_sent INTEGER DEFAULT 0
+    )
+    """)
+
+    # Try to add missing columns to founder_members if the table existed with the old Square schema
+    for col_def in [
+        ("stripe_customer_id", "TEXT"),
+        ("stripe_subscription_id", "TEXT"),
+        ("member_number", "INTEGER"),
+        ("amount_paid", "REAL DEFAULT 4.99"),
+        ("currency", "TEXT DEFAULT 'usd'"),
+        ("status", "TEXT DEFAULT 'active'"),
+        ("language", "TEXT DEFAULT 'en'"),
+        ("meta_event_sent", "INTEGER DEFAULT 0")
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE founder_members ADD COLUMN {col_def[0]} {col_def[1]}")
+        except Exception:
+            pass
+
+    # Create founder_spots_counter table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS founder_spots_counter (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        total_spots INTEGER DEFAULT 10,
+        spots_taken INTEGER DEFAULT 0
     )
     """)
 
@@ -214,6 +246,47 @@ def init_db():
         except Exception:
             pass
             
+    # Create admin_users table for backoffice
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS admin_users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT,
+        google_id TEXT UNIQUE,
+        avatar_url TEXT,
+        full_name TEXT,
+        role TEXT DEFAULT 'viewer',
+        is_active INTEGER DEFAULT 1,
+        last_login TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # Try to add missing columns to admin_users if the table already existed
+    for col_def in [
+        ("google_id", "TEXT UNIQUE"),
+        ("avatar_url", "TEXT"),
+        ("full_name", "TEXT"),
+        ("last_login", "TEXT")
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE admin_users ADD COLUMN {col_def[0]} {col_def[1]}")
+        except Exception:
+            pass
+
+    # Create admin_invited_emails table (Whitelist)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS admin_invited_emails (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL UNIQUE,
+        intended_role TEXT NOT NULL DEFAULT 'viewer',
+        invited_by INTEGER,
+        invited_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        used INTEGER DEFAULT 0,
+        FOREIGN KEY (invited_by) REFERENCES admin_users(id)
+    )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -660,12 +733,250 @@ def get_founder_count():
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT COUNT(*) AS cnt FROM founder_members")
-        count = cursor.fetchone()["cnt"]
+        # We read from the new founder_spots_counter table
+        cursor.execute("SELECT spots_taken FROM founder_spots_counter ORDER BY id ASC LIMIT 1")
+        row = cursor.fetchone()
+        if row:
+            count = row["spots_taken"]
+        else:
+            # If counter row doesn't exist, count the actual members to be safe
+            cursor.execute("SELECT COUNT(*) AS cnt FROM founder_members")
+            count = cursor.fetchone()["cnt"]
     except Exception as e:
         print(f"Error getting founder count: {e}")
         count = 0
     finally:
         conn.close()
     return count
+
+def get_founder_spots_counter():
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT total_spots, spots_taken FROM founder_spots_counter ORDER BY id ASC LIMIT 1")
+        row = cursor.fetchone()
+        if not row:
+            # Create the counter if it doesn't exist
+            cursor.execute("INSERT INTO founder_spots_counter (total_spots, spots_taken) VALUES (10, 0)")
+            conn.commit()
+            return {"total_spots": 10, "spots_taken": 0, "spots_remaining": 10}
+        
+        spots_taken = row["spots_taken"]
+        total_spots = row["total_spots"]
+        spots_remaining = max(0, total_spots - spots_taken)
+        return {
+            "total_spots": total_spots,
+            "spots_taken": spots_taken,
+            "spots_remaining": spots_remaining
+        }
+    finally:
+        conn.close()
+
+def process_stripe_payment(customer_email, customer_id, subscription_id, amount_total, currency, language='en'):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Check idempotency
+        cursor.execute("SELECT id FROM founder_members WHERE stripe_customer_id = ?", (customer_id,))
+        if cursor.fetchone():
+            return {"success": True, "already_processed": True}
+
+        # Initialize counter if not exists
+        cursor.execute("SELECT id, total_spots, spots_taken FROM founder_spots_counter ORDER BY id ASC LIMIT 1")
+        row = cursor.fetchone()
+        if not row:
+            cursor.execute("INSERT INTO founder_spots_counter (total_spots, spots_taken) VALUES (10, 0)")
+            conn.commit()
+            row = {"id": 1, "total_spots": 10, "spots_taken": 0}
+
+        spots_taken = row["spots_taken"]
+        spots_remaining = row["total_spots"] - spots_taken
+        
+        new_member_number = spots_taken + 1
+
+        # Write new member
+        cursor.execute("""
+            INSERT INTO founder_members 
+            (stripe_customer_id, stripe_subscription_id, email, member_number, amount_paid, currency, status, language) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (customer_id, subscription_id, customer_email, new_member_number, amount_total, currency, 'active', language))
+
+        # Update counter
+        cursor.execute("UPDATE founder_spots_counter SET spots_taken = spots_taken + 1 WHERE id = ?", (row["id"] if isinstance(row, dict) else row[0],))
+        
+        conn.commit()
+        return {
+            "success": True, 
+            "member_number": new_member_number, 
+            "spots_remaining": max(0, spots_remaining - 1),
+            "language": language
+        }
+    except Exception as e:
+        conn.rollback()
+        print(f"Error processing stripe payment: {e}")
+        return {"success": False, "error": str(e)}
+    finally:
+        conn.close()
+
+def update_founder_meta_event_status(customer_id, sent_status=True):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE founder_members SET meta_event_sent = ? WHERE stripe_customer_id = ?", (1 if sent_status else 0, customer_id))
+        conn.commit()
+    except Exception as e:
+        print(f"Error updating meta status: {e}")
+    finally:
+        conn.close()
+
+# ==========================================
+# ADMIN BACKOFFICE AUTHENTICATION FUNCTIONS
+# ==========================================
+
+def get_admin_by_email(email):
+    """Récupère l'administrateur complet par son email (inclus le hash du mot de passe)"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """SELECT id, email, password_hash, role, full_name, avatar_url, is_active 
+           FROM admin_users WHERE email = ?""",
+        (email,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+def create_admin_user(email, password_hash, role='viewer', full_name=None):
+    """Crée un nouvel administrateur avec un mot de passe déjà hashé"""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """INSERT INTO admin_users (email, password_hash, role, full_name)
+               VALUES (?, ?, ?, ?)""",
+            (email, password_hash, role, full_name)
+        )
+        new_id = cursor.lastrowid
+        conn.commit()
+        return new_id
+    except Exception as e:
+        print(f"Erreur création admin: {e}")
+        conn.rollback()
+        return None
+    finally:
+        conn.close()
+
+def update_last_login(admin_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE admin_users SET last_login = CURRENT_TIMESTAMP WHERE id = ?", (admin_id,))
+    conn.commit()
+    conn.close()
+
+def log_admin_action(admin_id, action, target_table, target_id):
+    pass  # Optional: implement audit logging if needed
+
+def get_admin_dashboard_stats():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Founder Spots
+    cursor.execute("SELECT total_spots, spots_taken FROM founder_spots_counter ORDER BY id DESC LIMIT 1")
+    spots_row = cursor.fetchone()
+    spots = {"total": 10, "taken": 0}
+    if spots_row:
+        spots["total"] = spots_row[0]
+        spots["taken"] = spots_row[1]
+        
+    # Total Users (from users table)
+    cursor.execute("SELECT COUNT(id) FROM users")
+    total_users = cursor.fetchone()[0]
+    
+    # Total Founders (from founder_members table)
+    cursor.execute("SELECT COUNT(id) FROM founder_members")
+    total_founders = cursor.fetchone()[0]
+    
+    conn.close()
+    
+    return {
+        "spots": spots,
+        "total_users": total_users,
+        "total_founders": total_founders,
+        "status": "ONLINE"
+    }
+
+def get_all_users_for_admin():
+    conn = get_db()
+    cursor = conn.cursor()
+    # Fetching founder members as they are the most important right now
+    cursor.execute("""
+        SELECT id, email, stripe_customer_id, status, amount_paid, created_at 
+        FROM founder_members 
+        ORDER BY created_at DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    users = []
+    for row in rows:
+        users.append({
+            "id": row[0],
+            "email": row[1],
+            "customer_id": row[2],
+            "status": row[3],
+            "amount_paid": row[4],
+            "created_at": row[5]
+        })
+    return users
+
+def get_standard_users_for_admin():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, email, code_parrainage, premium_status, created_at, is_blocked 
+        FROM users 
+        ORDER BY created_at DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    users = []
+    for row in rows:
+        users.append({
+            "id": row[0],
+            "email": row[1],
+            "code_parrainage": row[2],
+            "balance": 0.00,  # Mocked as we don't have a direct balance column
+            "has_founder_access": bool(row[3]),
+            "created_at": row[4],
+            "is_blocked": bool(row[5])
+        })
+    return users
+
+def block_user(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET is_blocked = 1 WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+def block_founder(founder_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE founder_members SET status = 'blocked' WHERE id = ?", (founder_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+def update_founder_spots_counter(new_total, new_taken):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO founder_spots_counter (total_spots, spots_taken) VALUES (?, ?)", 
+        (new_total, new_taken)
+    )
+    conn.commit()
+    conn.close()
+    return True
 
