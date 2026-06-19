@@ -628,18 +628,19 @@ def create_or_get_google_user(email, google_id):
             conn.commit()
         conn.close()
         return email_clean
-        # Create Google user
-        from datetime import datetime, timedelta
-        expires_date = (datetime.utcnow() + timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
-        code = generate_unique_referral_code(cursor)
-        cursor.execute(
-            "INSERT INTO users (email, google_id, password, code_parrainage, premium_status, premium_expires) VALUES (?, ?, '', ?, 1, ?)",
-            (email_clean, google_id, code, expires_date)
-        )
-        conn.commit()
-        conn.close()
-        seed_user_data(email_clean)
-        return email_clean
+
+    # Create Google user
+    from datetime import datetime, timedelta
+    expires_date = (datetime.utcnow() + timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+    code = generate_unique_referral_code(cursor)
+    cursor.execute(
+        "INSERT INTO users (email, google_id, password, code_parrainage, premium_status, premium_expires) VALUES (?, ?, '', ?, 1, ?)",
+        (email_clean, google_id, code, expires_date)
+    )
+    conn.commit()
+    conn.close()
+    seed_user_data(email_clean)
+    return email_clean
 
 def get_user_by_stripe_customer_id(customer_id):
     conn = get_db()
