@@ -177,7 +177,7 @@ export default function LoginScreen() {
     setError('');
     try {
       // Create a persistent demo email
-      const demoEmail = 'test@philiavault.com';
+      const demoEmail = 'demo_v2@philiavault.com';
       
       // Initialize API and use user email directly to set local state
       await api.init();
