@@ -301,3 +301,16 @@ function initTracking() {
 
   console.log('[Philia Vault] GA4/Meta/TikTok tracking initialized ✓');
 }
+
+/* ---------- Beta Countdown ---------- */
+function updateBetaCountdown() {
+  const betaDate = new Date('2026-07-15'); // Ajuster à la vraie date prévue
+  const today = new Date();
+  const diffTime = betaDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  document.querySelectorAll('#days-counter').forEach(el => {
+    el.textContent = diffDays > 0 ? diffDays : '0';
+  });
+}
+updateBetaCountdown();

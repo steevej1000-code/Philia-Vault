@@ -1172,3 +1172,24 @@ a[href*="buy.stripe"] {
   .sticky-label { font-size: 9px; }
   .sticky-btn { padding: 12px 18px; font-size: 14px; }
 }
+
+/* Beta Countdown Badge */
+.beta-countdown-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(200,255,0,0.08);
+  border: 1px solid rgba(200,255,0,0.3);
+  border-radius: 100px;
+  padding: 10px 20px;
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  color: #C8FF00;
+  margin-bottom: 20px;
+}
+
+.beta-countdown-badge strong {
+  color: #FFF;
+  font-size: 15px;
+}
+
