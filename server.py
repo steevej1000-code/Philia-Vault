@@ -39,6 +39,8 @@ def skip_json_parsing_for_webhook():
 allowed_origins = [
     os.environ.get('ALLOWED_ORIGIN', 'https://philiavault.com'),
     'https://www.philiavault.com',
+    'https://philia-vault-pwa.onrender.com',
+    'https://app.philiavault.com',
     'http://localhost:3000',
     'http://localhost:5000',
     'http://localhost:5001',
@@ -46,6 +48,7 @@ allowed_origins = [
     'http://127.0.0.1:5000',
     'http://127.0.0.1:5001',
     'http://localhost:8081',
+    'http://localhost:8082',
     'http://localhost:5173'
 ]
 CORS(app, 
