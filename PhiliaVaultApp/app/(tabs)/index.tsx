@@ -14,6 +14,7 @@ import { OfflineBanner } from '../../components/OfflineBanner';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { getLastSync } from '../../services/offlineCache';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
+import Skeleton from '../../components/Skeleton';
 
 interface DashboardData {
   total_assets: number;
@@ -152,7 +153,21 @@ export default function DashboardScreen() {
         {!isOnline && <OfflineBanner lastSync={lastSync} />}
         {isOnline && fromCache && <OfflineBanner compact />}
         {loading ? (
-          <ActivityIndicator color="#ccff00" size="large" style={{ marginTop: 60 }} />
+          <View style={{ marginTop: 10 }}>
+            <Skeleton width="100%" height={200} borderRadius={30} style={{ marginBottom: 24 }} />
+            <Skeleton width="40%" height={24} borderRadius={6} style={{ marginBottom: 16 }} />
+            <Skeleton width="100%" height={140} borderRadius={24} style={{ marginBottom: 24 }} />
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+              <Skeleton width="48%" height={90} borderRadius={24} />
+              <Skeleton width="48%" height={90} borderRadius={24} />
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              <Skeleton width="48%" height={60} borderRadius={24} />
+              <Skeleton width="48%" height={60} borderRadius={24} />
+              <Skeleton width="48%" height={60} borderRadius={24} />
+              <Skeleton width="48%" height={60} borderRadius={24} />
+            </View>
+          </View>
         ) : (
           <>
             {/* Dribbble Style Hero Recommendation Card */}

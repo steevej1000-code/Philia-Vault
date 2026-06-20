@@ -967,6 +967,18 @@ def founder_count():
         "total": data["total_spots"]
     })
 
+@app.route("/api/user/founder-status", methods=["GET"])
+def founder_status():
+    email = request.args.get("email")
+    if not email:
+        return jsonify({"success": False, "error": "Email requis"}), 400
+    
+    is_founder = database.check_is_founder(email)
+    return jsonify({
+        "success": True,
+        "isFounder": is_founder
+    })
+
 @app.route("/api/founder/purchase", methods=["POST"])
 def founder_purchase():
     data = request.json or {}

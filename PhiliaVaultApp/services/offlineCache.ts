@@ -27,7 +27,7 @@ export async function saveToCache<T = any>(key: string, data: T): Promise<void> 
   try {
     await AsyncStorage.setItem(PREFIX + key, JSON.stringify(data));
     if (key !== CACHE_KEYS.lastSync) {
-      await AsyncStorage.setItem(PREFIX + CACHE_KEYS.lastSync, new Date().toISOString());
+      await AsyncStorage.setItem(PREFIX + CACHE_KEYS.lastSync, JSON.stringify(new Date().toISOString()));
     }
   } catch (e) {
     console.warn(`offlineCache: failed to save "${key}"`, e);
@@ -44,7 +44,10 @@ export async function getFromCache<T = any>(key: string): Promise<T | null> {
     if (raw == null) return null;
     return JSON.parse(raw) as T;
   } catch (e) {
-    console.warn(`offlineCache: failed to read "${key}"`, e);
+    // Don't warn for lastSync as it might just be the old non-stringified date format
+    if (key !== CACHE_KEYS.lastSync) {
+      console.warn(`offlineCache: failed to read "${key}"`, e);
+    }
     return null;
   }
 }

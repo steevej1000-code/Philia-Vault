@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Animated, ScrollView } from 'react-native';
 import { COLORS, RADIUS } from '../constants/colors';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import { LANGUAGES, Language } from '../constants/translations';
@@ -46,7 +46,7 @@ export function PreferencesSelectorModal({ visible, type, onClose }: Preferences
 
   const options: Option[] = type === 'language'
     ? LANGUAGES.map((l) => ({ code: l.code, flag: l.flag, label: l.label }))
-    : CURRENCIES.map((c) => ({ code: c.code, flag: c.flag, label: `${c.code} (${c.symbol})` }));
+    : CURRENCIES.map((c) => ({ code: c.code, flag: c.flag, label: `${t('currency_' + c.code.toLowerCase())} (${c.symbol})` }));
 
   const selected = type === 'language' ? language : currency;
 
@@ -67,7 +67,7 @@ export function PreferencesSelectorModal({ visible, type, onClose }: Preferences
         <View style={styles.handle} />
         <Text style={styles.title}>{type === 'language' ? t('language') : t('currency')}</Text>
 
-        <View style={styles.optionsList}>
+        <ScrollView style={styles.optionsList} showsVerticalScrollIndicator={false}>
           {options.map((opt, i) => {
             const isSelected = opt.code === selected;
             return (
@@ -85,7 +85,7 @@ export function PreferencesSelectorModal({ visible, type, onClose }: Preferences
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
 
         <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.8}>
           <Text style={styles.cancelText}>{t('cancel')}</Text>

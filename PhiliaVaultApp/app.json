@@ -10,7 +10,6 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.philia.vault",
-      "usesAppleSignIn": true,
       "infoPlist": {
         "NSFaceIDUsageDescription": "Philia Vault utilise Face ID pour sécuriser l'accès à vos données financières."
       }
@@ -34,8 +33,6 @@
           "fonts": []
         }
       ],
-      "expo-notifications",
-      "expo-apple-authentication",
       [
         "expo-local-authentication",
         {
@@ -43,6 +40,22 @@
         }
       ]
     ],
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/icon.png",
+      "backgroundColor": "#000000",
+      "themeColor": "#ccff00",
+      "name": "Philia Vault",
+      "shortName": "Philia Vault",
+      "description": "Your financial mirror — AI-powered wealth management",
+      "lang": "en",
+      "scope": "/",
+      "startUrl": "/",
+      "display": "standalone",
+      "orientation": "portrait",
+      "preferRelatedApplications": false
+    },
     "experiments": {
       "typedRoutes": true
     }

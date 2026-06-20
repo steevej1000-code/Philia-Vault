@@ -1,20 +1,20 @@
 export interface CurrencyInfo {
   code: string;
   symbol: string;
+  name: string;
   flag: string;
   locale: string;
 }
 
 export const CURRENCIES: CurrencyInfo[] = [
-  { code: 'USD', symbol: '$', flag: '🇺🇸', locale: 'en-US' },
-  { code: 'EUR', symbol: '€', flag: '🇪🇺', locale: 'fr-FR' },
-  { code: 'CAD', symbol: 'CA$', flag: '🇨🇦', locale: 'en-CA' },
-  { code: 'GBP', symbol: '£', flag: '🇬🇧', locale: 'en-GB' },
-  { code: 'BRL', symbol: 'R$', flag: '🇧🇷', locale: 'pt-BR' },
-  { code: 'MXN', symbol: 'MX$', flag: '🇲🇽', locale: 'es-MX' },
-  { code: 'AUD', symbol: 'A$', flag: '🇦🇺', locale: 'en-AU' },
-  { code: 'CHF', symbol: 'CHF', flag: '🇨🇭', locale: 'de-CH' },
-  { code: 'HTG', symbol: 'G', flag: '🇭🇹', locale: 'fr-HT' },
+  { code: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸', locale: 'en-US' },
+  { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺', locale: 'fr-FR' },
+  { code: 'CAD', symbol: 'CA$', name: 'Canadian Dollar', flag: '🇨🇦', locale: 'en-CA' },
+  { code: 'GBP', symbol: '£', name: 'British Pound', flag: '🇬🇧', locale: 'en-GB' },
+  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', flag: '🇧🇷', locale: 'pt-BR' },
+  { code: 'MXN', symbol: 'MX$', name: 'Mexican Peso', flag: '🇲🇽', locale: 'es-MX' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', flag: '🇦🇺', locale: 'en-AU' },
+  { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc', flag: '🇨🇭', locale: 'de-CH' },
 ];
 
 export const CURRENCY_MAP: Record<string, CurrencyInfo> = CURRENCIES.reduce((acc, c) => {

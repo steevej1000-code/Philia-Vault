@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { makeRedirectUri } from 'expo-auth-session';
-import * as AppleAuthentication from 'expo-apple-authentication';
+// import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import { IconShield } from '../../components/icons/Icons';
 import { useAuthStore } from '../../store/authStore';
@@ -18,6 +18,7 @@ import { GOOGLE_WEB_CLIENT_ID } from '../../constants/api';
 import api from '../../services/api';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
 import Svg, { Path, Circle, Line, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -150,26 +151,27 @@ export default function LoginScreen() {
   };
 
   const handleApplePress = async () => {
-    setAppleLoading(true);
-    setError('');
-    try {
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-      if (!credential.identityToken) {
-        throw new Error('Token Apple non reçu');
-      }
-      await loginWithApple(credential.identityToken, credential.email ?? undefined);
-    } catch (e: any) {
-      if (e.code !== 'ERR_REQUEST_CANCELED') {
-        setError(e.message || 'Erreur lors de la connexion Apple.');
-      }
-    } finally {
-      setAppleLoading(false);
-    }
+    // setAppleLoading(true);
+    // setError('');
+    // try {
+    //   const credential = await AppleAuthentication.signInAsync({
+    //     requestedScopes: [
+    //       AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+    //       AppleAuthentication.AppleAuthenticationScope.EMAIL,
+    //     ],
+    //   });
+    //   if (!credential.identityToken) {
+    //     throw new Error('Token Apple non reçu');
+    //   }
+    //   await loginWithApple(credential.identityToken, credential.email ?? undefined);
+    //   router.replace('/(tabs)');
+    // } catch (e: any) {
+    //   if (e.code !== 'ERR_REQUEST_CANCELED') {
+    //     setError(e.message || 'Erreur lors de la connexion Apple.');
+    //   }
+    // } finally {
+    //   setAppleLoading(false);
+    // }
   };
 
   const handleDemoPress = async () => {
@@ -312,195 +314,177 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      {/* Background glows */}
-      <View style={styles.glowTop} />
-      <View style={styles.glowBottom} />
-
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <Animated.View style={styles.container} entering={FadeIn.duration(800)}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Brand */}
-        <View style={styles.brand}>
-          <LinearGradient colors={['#ccff00', '#a3e635']} style={styles.logo}>
-            <Text style={styles.logoText}>PV</Text>
-          </LinearGradient>
-          <Text style={styles.brandName}>Philia Vault</Text>
-          <Text style={styles.tagline}>Votre coffre-fort financier sécurisé</Text>
-        </View>
+        {/* Background glows */}
+        <View style={styles.glowTop} />
+        <View style={styles.glowBottom} />
 
-        {/* Login / Register Tab Switcher */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, mode === 'login' && styles.tabActive]}
-            onPress={() => { setMode('login'); setError(''); }}
-          >
-            <Text style={[styles.tabText, mode === 'login' && styles.tabTextActive]}>Connexion</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, mode === 'register' && styles.tabActive]}
-            onPress={() => { setMode('register'); setError(''); }}
-          >
-            <Text style={[styles.tabText, mode === 'register' && styles.tabTextActive]}>Inscription</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Form */}
-        <View style={styles.form}>
-          {mode === 'register' && (
-            <View style={styles.nameRow}>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.label}>Prénom</Text>
-                <TextInput
-                  style={styles.input}
-                  value={firstName}
-                  onChangeText={setFirstName}
-                  placeholder="Jean"
-                  placeholderTextColor={COLORS.outline}
-                  autoCapitalize="words"
-                />
-              </View>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.label}>Nom</Text>
-                <TextInput
-                  style={styles.input}
-                  value={lastName}
-                  onChangeText={setLastName}
-                  placeholder="Dupont"
-                  placeholderTextColor={COLORS.outline}
-                  autoCapitalize="words"
-                />
-              </View>
-            </View>
-          )}
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="vous@exemple.com"
-              placeholderTextColor={COLORS.outline}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Brand */}
+          <View style={styles.brand}>
+            <LinearGradient colors={['#ccff00', '#a3e635']} style={styles.logo}>
+              <Text style={styles.logoText}>PV</Text>
+            </LinearGradient>
+            <Text style={styles.brandName}>Philia Vault</Text>
+            <Text style={styles.tagline}>Votre coffre-fort financier sécurisé</Text>
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Mot de passe</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor={COLORS.outline}
-              secureTextEntry
-            />
-          </View>
-
-          {mode === 'login' && (
+          {/* Login / Register Tab Switcher */}
+          <View style={styles.tabContainer}>
             <TouchableOpacity
-              style={styles.forgotLink}
-              onPress={() => router.push('/(auth)/forgot-password')}
+              style={[styles.tab, mode === 'login' && styles.tabActive]}
+              onPress={() => { setMode('login'); setError(''); }}
             >
-              <Text style={styles.forgotLinkText}>Mot de passe oublié ?</Text>
+              <Text style={[styles.tabText, mode === 'login' && styles.tabTextActive]}>Connexion</Text>
             </TouchableOpacity>
-          )}
+            <TouchableOpacity
+              style={[styles.tab, mode === 'register' && styles.tabActive]}
+              onPress={() => { setMode('register'); setError(''); }}
+            >
+              <Text style={[styles.tabText, mode === 'register' && styles.tabTextActive]}>Inscription</Text>
+            </TouchableOpacity>
+          </View>
 
-          {mode === 'register' && (
+          {/* Form */}
+          <View style={styles.form}>
+            {mode === 'register' && (
+              <View style={styles.nameRow}>
+                <View style={[styles.field, { flex: 1 }]}>
+                  <Text style={styles.label}>Prénom</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    placeholder="Jean"
+                    placeholderTextColor={COLORS.outline}
+                    autoCapitalize="words"
+                  />
+                </View>
+                <View style={[styles.field, { flex: 1 }]}>
+                  <Text style={styles.label}>Nom</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={lastName}
+                    onChangeText={setLastName}
+                    placeholder="Dupont"
+                    placeholderTextColor={COLORS.outline}
+                    autoCapitalize="words"
+                  />
+                </View>
+              </View>
+            )}
+
             <View style={styles.field}>
-              <Text style={styles.label}>Code de parrainage (Optionnel)</Text>
+              <Text style={styles.label}>Email</Text>
               <TextInput
                 style={styles.input}
-                value={referralCode}
-                onChangeText={setReferralCode}
-                placeholder="ex: REF12345"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="vous@exemple.com"
                 placeholderTextColor={COLORS.outline}
-                autoCapitalize="characters"
+                keyboardType="email-address"
+                autoCapitalize="none"
                 autoCorrect={false}
               />
             </View>
-          )}
 
-          {mode === 'register' && (
-            <TouchableOpacity 
-              style={styles.cguRow} 
-              activeOpacity={0.8} 
-              onPress={() => setCguAccepted(!cguAccepted)}
-            >
-              <View style={[styles.checkbox, cguAccepted && styles.checkboxActive]}>
-                {cguAccepted && (
-                  <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#0c0e12" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M20 6L9 17l-5-5" />
-                  </Svg>
-                )}
-              </View>
-              <Text style={styles.cguText}>
-                {t('cgu_checkbox_text') || 'J\'ai lu et j\'accepte les '}
-                <Text style={styles.cguLink} onPress={() => WebBrowser.openBrowserAsync('https://philiavault.com/terms.html')}>
-                  {t('cgu_link') || 'Conditions Générales d\'Utilisation'}
-                </Text>. {t('cgu_checkbox_suffix') || 'Je comprends que Philia Vault est un outil éducatif et ne fournit pas de conseils financiers.'}
-              </Text>
-            </TouchableOpacity>
-          )}
+            <View style={styles.field}>
+              <Text style={styles.label}>Mot de passe</Text>
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                placeholderTextColor={COLORS.outline}
+                secureTextEntry
+              />
+            </View>
 
-          {!!error && <Text style={styles.errorText}>{error}</Text>}
-
-          <PremiumButton
-            title={mode === 'login' ? 'Se connecter' : "Créer mon compte"}
-            onPress={handleSubmit}
-            loading={loading}
-          />
-
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>ou</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Real Google Sign-In Button */}
-          <TouchableOpacity
-            style={[styles.googleBtn, (googleLoading || !request) && styles.googleBtnDisabled]}
-            onPress={handleGooglePress}
-            disabled={googleLoading || !request}
-            activeOpacity={0.8}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color={COLORS.onSurface} size="small" />
-            ) : (
-              <>
-                <Text style={styles.googleIcon}>G</Text>
-                <Text style={styles.googleText}>Continuer avec Google</Text>
-              </>
+            {mode === 'login' && (
+              <TouchableOpacity
+                style={styles.forgotLink}
+                onPress={() => router.push('/(auth)/forgot-password')}
+              >
+                <Text style={styles.forgotLinkText}>Mot de passe oublié ?</Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
 
-          {/* Native Sign in with Apple Button (iOS only) */}
-          {Platform.OS === 'ios' && (
+            {mode === 'register' && (
+              <View style={styles.field}>
+                <Text style={styles.label}>Code de parrainage (Optionnel)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={referralCode}
+                  onChangeText={setReferralCode}
+                  placeholder="ex: REF12345"
+                  placeholderTextColor={COLORS.outline}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                />
+              </View>
+            )}
+
+            {mode === 'register' && (
+              <TouchableOpacity 
+                style={styles.cguRow} 
+                activeOpacity={0.8} 
+                onPress={() => setCguAccepted(!cguAccepted)}
+              >
+                <View style={[styles.checkbox, cguAccepted && styles.checkboxActive]}>
+                  {cguAccepted && (
+                    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#0c0e12" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                      <Path d="M20 6L9 17l-5-5" />
+                    </Svg>
+                  )}
+                </View>
+                <Text style={styles.cguText}>
+                  {t('cgu_checkbox_text') || 'J\'ai lu et j\'accepte les '}
+                  <Text style={styles.cguLink} onPress={() => WebBrowser.openBrowserAsync('https://philiavault.com/terms.html')}>
+                    {t('cgu_link') || 'Conditions Générales d\'Utilisation'}
+                  </Text>. {t('cgu_checkbox_suffix') || 'Je comprends que Philia Vault est un outil éducatif et ne fournit pas de conseils financiers.'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+            <PremiumButton
+              title={mode === 'login' ? 'Se connecter' : "Créer mon compte"}
+              onPress={handleSubmit}
+              loading={loading}
+            />
+
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>ou</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Real Google Sign-In Button */}
             <TouchableOpacity
-              style={[styles.appleBtn, appleLoading && styles.googleBtnDisabled]}
-              onPress={handleApplePress}
-              disabled={appleLoading}
+              style={[styles.googleBtn, (googleLoading || !request) && styles.googleBtnDisabled]}
+              onPress={handleGooglePress}
+              disabled={googleLoading || !request}
               activeOpacity={0.8}
             >
-              {appleLoading ? (
-                <ActivityIndicator color="#0c0e12" size="small" />
+              {googleLoading ? (
+                <ActivityIndicator color={COLORS.onSurface} size="small" />
               ) : (
                 <>
-                  <Text style={styles.appleIcon}>{''}</Text>
-                  <Text style={styles.appleText}>Continuer avec Apple</Text>
+                  <Text style={styles.googleIcon}>G</Text>
+                  <Text style={styles.googleText}>Continuer avec Google</Text>
                 </>
               )}
             </TouchableOpacity>
-          )}
 
           {/* Quick Test Demo Button */}
           <TouchableOpacity
@@ -521,6 +505,7 @@ export default function LoginScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </Animated.View>
   );
 }
 

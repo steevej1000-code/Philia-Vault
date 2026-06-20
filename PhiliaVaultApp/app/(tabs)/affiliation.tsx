@@ -2,9 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
-import Purchases from 'react-native-purchases';
 import api from '../../services/api';
-import { hasCoachEntitlement } from '../../services/purchases';
+import { useAuthStore } from '../../store/authStore';
 import { COLORS, RADIUS } from '../../constants/colors';
 import { GlassCard } from '../../components/GlassCard';
 import { IconShield, IconTarget, IconList, IconRefresh } from '../../components/icons/Icons';
@@ -17,26 +16,23 @@ interface AffiliationStats {
   total_invited: number; // Added for the funnel
 }
 
-const fmtEUR = (v: number) => `${v.toFixed(2).replace('.', ',')} $`;
-
 export default function AffiliationScreen() {
   const insets = useSafeAreaInsets();
-  const { t } = useUserPreferences();
+  const { t, formatAmount } = useUserPreferences();
+  const { isPremium } = useAuthStore();
   const [stats, setStats] = useState<AffiliationStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [isEligible, setIsEligible] = useState(false);
+
+  // L'éligibilité = avoir un abonnement premium actif (vérifié via le store, sans appel RevenueCat)
+  const isEligible = isPremium;
 
   const load = useCallback(async () => {
     try {
       await api.init();
-      
-      // 1. Fetch Entitlement (Eligibility Shield)
-      const customerInfo = await Purchases.getCustomerInfo();
-      setIsEligible(hasCoachEntitlement(customerInfo));
 
-      // 2. Fetch Stats
+      // Fetch Stats
       const result = await api.getAffiliationStats();
       if (result.success) {
         setStats({
@@ -48,7 +44,7 @@ export default function AffiliationScreen() {
         });
       }
     } catch (e) {
-      console.warn(e);
+      console.warn('[Affiliation] Erreur chargement:', e);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -124,7 +120,7 @@ export default function AffiliationScreen() {
             <View style={styles.commissionsBox}>
               <Text style={styles.commissionsLabel}>{t('affiliation_funnel_commissions')}</Text>
               <Text style={[styles.commissionsValue, !isEligible && { color: 'rgba(0,0,0,0.4)' }]}>
-                {fmtEUR(stats?.estimated_monthly_gain ?? 0)} / mois
+                {formatAmount(stats?.estimated_monthly_gain ?? 0)} / {t('month_suffix') || 'mois'}
               </Text>
             </View>
           </GlassCard>

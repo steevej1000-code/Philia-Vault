@@ -1067,12 +1067,24 @@ def block_user(user_id):
     return True
 
 def block_founder(founder_id):
-    conn = get_db()
+    conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     cursor.execute("UPDATE founder_members SET status = 'blocked' WHERE id = ?", (founder_id,))
     conn.commit()
     conn.close()
-    return True
+
+def check_is_founder(email):
+    """Check if an email is a founder member (for premium checks)"""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM founder_members WHERE email = ? COLLATE NOCASE", (email,))
+        row = cursor.fetchone()
+        conn.close()
+        return row is not None
+    except Exception as e:
+        print(f"Error checking founder status: {e}")
+        return False
 
 def update_founder_spots_counter(new_total, new_taken):
     conn = get_db()

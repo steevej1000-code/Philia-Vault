@@ -9,7 +9,7 @@ import { useAuthStore } from '../store/authStore';
 import { View, ActivityIndicator, AppState, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { configurePurchases } from '../services/purchases';
+import { initializeRevenueCat, checkPremiumStatus } from '../services/revenueCatService';
 import api from '../services/api';
 import { storage } from '../services/storage';
 import { UserPreferencesProvider } from '../context/UserPreferencesContext';
@@ -48,7 +48,7 @@ function BiometricGate() {
     const subscription = AppState.addEventListener('change', async (nextState) => {
       if (appState.current.match(/inactive|background/) && nextState === 'active' && isAuthenticated) {
         const enabled = (await storage.getItem(BIOMETRIC_LOCK_KEY)) === 'true';
-        if (enabled) setLocked(true);
+        if (enabled) { setLocked(true); tryUnlock(); }
       }
       appState.current = nextState;
     });
@@ -91,13 +91,62 @@ function AuthGuard() {
 
     const inAuthGroup = segments[0] === '(auth)';
     const isNotificationsScreen = (segments as string[])[1] === 'notifications';
+    const isOnboardingScreen = (segments as string[])[1] === 'onboarding';
 
     if (!isAuthenticated && !inAuthGroup) {
-      router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup && !isNotificationsScreen) {
+      // Check if they have seen onboarding
+      storage.getItem('has_seen_onboarding').then((seen) => {
+        if (seen === 'true') {
+          router.replace('/(auth)/login');
+        } else {
+          router.replace('/(auth)/onboarding');
+        }
+      });
+    } else if (isAuthenticated && inAuthGroup && !isNotificationsScreen && !isOnboardingScreen) {
       router.replace('/(auth)/notifications');
     }
   }, [isAuthenticated, isLoading, segments]);
+
+  return null;
+}
+
+function PremiumGuard() {
+  const { isAuthenticated, user } = useAuthStore();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+    const isPaywall = segments[0] === 'paywall';
+
+    if (!inAuthGroup && !isPaywall) {
+      // Vérifier le statut premium et founder
+      const checkAccess = async () => {
+        try {
+          const res = await fetch(`https://philiavault.com/api/user/founder-status?email=${encodeURIComponent(user.email)}`);
+          let isFounder = false;
+          if (res.ok) {
+            const data = await res.json();
+            isFounder = data.isFounder;
+          }
+
+          if (!isFounder) {
+            const { isPremium } = await checkPremiumStatus();
+            // @ts-ignore
+            if (!isPremium && !global.__bypassPaywall) {
+              router.replace('/paywall');
+            }
+          }
+        } catch (err) {
+          console.error('[PremiumGuard] Erreur de vérification:', err);
+        }
+      };
+
+      checkAccess();
+    }
+  }, [isAuthenticated, user, segments]);
 
   return null;
 }
@@ -118,10 +167,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     loadSession();
-    // Initialize RevenueCat as early as possible. appUserID is set to an
-    // anonymous RC-generated ID for now; it can be aliased to the user's
-    // email/account ID later via Purchases.logIn() once auth completes.
-    configurePurchases();
+    // Initialize RevenueCat
+    // @ts-ignore
+    initializeRevenueCat('anonymous'); // Ou utiliser l'ID de l'utilisateur quand il sera loadé.
+
     // Warm the offline cache on startup if we're online, so cached data is
     // available immediately the next time the user opens the app offline.
     (async () => {
@@ -143,9 +192,11 @@ export default function RootLayout() {
       <UserPreferencesProvider>
         <StatusBar style="light" />
         <AuthGuard />
+        <PremiumGuard />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.background } }}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
         </Stack>
         <BiometricGate />
       </UserPreferencesProvider>

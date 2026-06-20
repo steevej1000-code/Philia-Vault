@@ -48,7 +48,7 @@ const ASSET_TYPE_LABEL_KEYS: Record<string, string> = {
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
-  const { t } = useUserPreferences();
+  const { t, formatAmount } = useUserPreferences();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -152,10 +152,6 @@ export default function AssetsScreen() {
     );
   };
 
-  const formatEuro = (v: number) => {
-    return `${v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
-  };
-
   // Render a tiny vector trend line like the screenshot
   const TrendLine = () => (
     <View style={styles.trendContainer}>
@@ -207,14 +203,14 @@ export default function AssetsScreen() {
                     <View style={styles.categoryMeta}>
                       <Text style={styles.categoryLabel}>{t(labelKeys.label)}</Text>
                       <Text style={styles.categorySubLabel}>{t(labelKeys.subLabel)}</Text>
-                      <Text style={styles.cardValue}>{formatEuro(item.value)}</Text>
+                      <Text style={styles.cardValue}>{formatAmount(item.value)}</Text>
                     </View>
                   </View>
 
                   {/* Middle part: Yield info */}
                   <View style={styles.yieldContainer}>
                     <Text style={styles.yieldLabel}>{t('monthly_yield')}</Text>
-                    <Text style={styles.yieldValue}>+{formatEuro(item.monthly_yield)}</Text>
+                    <Text style={styles.yieldValue}>+{formatAmount(item.monthly_yield)}</Text>
                   </View>
 
                   {/* SVG Wave graphic */}
@@ -258,10 +254,10 @@ export default function AssetsScreen() {
                     {t(ASSET_TYPE_LABEL_KEYS[item.type] || ASSET_TYPE_LABEL_KEYS.Other)}
                   </Text>
                   <Text style={[styles.colText, { flex: 1.2, textAlign: 'right', fontWeight: '600' }]}>
-                    {formatEuro(item.value).split(',')[0]} €
+                    {formatAmount(item.value)}
                   </Text>
                   <Text style={[styles.colText, { flex: 1.2, textAlign: 'right', color: '#ccff00', fontWeight: '700' }]}>
-                    +{formatEuro(item.monthly_yield).split(',')[0]} €
+                    +{formatAmount(item.monthly_yield)}
                   </Text>
                   <View style={{ flex: 1.0, flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
                     <TouchableOpacity onPress={() => handleOpenEdit(item)} style={styles.tableAction}>

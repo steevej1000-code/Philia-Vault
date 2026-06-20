@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, FlatList, ActivityIndicator,
-  Alert, ScrollView, Keyboard
+  Alert, ScrollView, Keyboard, Animated
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import api from '../../services/api';
+// @ts-ignore — global défini dans paywall.tsx pour le bypass dev
 import { purchasePlan, restorePurchases, hasCoachEntitlement } from '../../services/purchases';
 import { useAuthStore } from '../../store/authStore';
 import { COLORS, RADIUS } from '../../constants/colors';
@@ -32,7 +33,7 @@ const QUICK_PROMPTS_DATA = [
 ];
 
 /* ─── Paywall ──────────────────────────────────────────────────────────────── */
-function PaywallScreen({ onSubscribe, onRestore, loading }: { onSubscribe: (plan: 'monthly' | 'annual') => void; onRestore: () => void; loading: boolean }) {
+function PaywallScreen({ onSubscribe, onRestore, onDevBypass, loading }: { onSubscribe: (plan: 'monthly' | 'annual') => void; onRestore: () => void; onDevBypass: () => void; loading: boolean }) {
   const [plan, setPlan] = useState<'monthly' | 'annual'>('annual');
   const { t } = useUserPreferences();
 
@@ -117,6 +118,15 @@ function PaywallScreen({ onSubscribe, onRestore, loading }: { onSubscribe: (plan
       <TouchableOpacity onPress={onRestore} disabled={loading} style={{ marginTop: 12 }}>
         <Text style={pw.restoreLink}>{t('coach_restore')}</Text>
       </TouchableOpacity>
+
+      {__DEV__ && (
+        <TouchableOpacity
+          onPress={onDevBypass}
+          style={{ marginTop: 20, marginHorizontal: 20, alignItems: 'center', padding: 12, borderWidth: 1, borderColor: '#ff4444', borderRadius: 8 }}
+        >
+          <Text style={{ color: '#ff4444', fontWeight: 'bold', fontSize: 14 }}>DEV: ACTIVER PREMIUM COACH</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
@@ -203,6 +213,27 @@ export default function CoachScreen() {
   const listRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
 
+  // Card animations
+  const cardAnims = useRef(QUICK_PROMPTS_DATA.map(() => new Animated.Value(0))).current;
+  const borderGlow = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Staggered entrance (slide up + fade in)
+    Animated.stagger(90, cardAnims.map(anim =>
+      Animated.timing(anim, { toValue: 1, duration: 450, useNativeDriver: false })
+    )).start();
+
+    // Breathing border glow: dim red-tinted → bright electric green
+    const breathe = Animated.loop(
+      Animated.sequence([
+        Animated.timing(borderGlow, { toValue: 1, duration: 2200, useNativeDriver: false }),
+        Animated.timing(borderGlow, { toValue: 0, duration: 2200, useNativeDriver: false }),
+      ])
+    );
+    breathe.start();
+    return () => breathe.stop();
+  }, []);
+
   const scrollToBottom = () => {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
   };
@@ -277,6 +308,11 @@ export default function CoachScreen() {
     } finally {
       setSubscribing(false);
     }
+  };
+
+  const handleDevBypass = async () => {
+    await api.setPremiumStatus(1).catch(() => {});
+    setPremium(true);
   };
 
   const handleRestore = async () => {
@@ -368,7 +404,7 @@ export default function CoachScreen() {
             <Text style={styles.premiumBadgeText}>{t('coach_premium_badge')}</Text>
           </View>
         </View>
-        <PaywallScreen onSubscribe={handleSubscribe} onRestore={handleRestore} loading={subscribing} />
+        <PaywallScreen onSubscribe={handleSubscribe} onRestore={handleRestore} onDevBypass={handleDevBypass} loading={subscribing} />
       </View>
     );
   }
@@ -417,25 +453,44 @@ export default function CoachScreen() {
 
 
 
-          {/* 2x2 grid shortcut cards with perfect circle icons */}
+          {/* 2x2 grid shortcut cards with animated green/red gradient */}
           <View style={styles.grid}>
-            {QUICK_PROMPTS_DATA.map((item) => (
-              <TouchableOpacity
+            {QUICK_PROMPTS_DATA.map((item, index) => (
+              <Animated.View
                 key={item.key}
-                style={styles.quickPromptCard}
-                onPress={() => handleSend(t(item.key))}
-                activeOpacity={0.8}
+                style={[styles.quickPromptCard, {
+                  opacity: cardAnims[index],
+                  transform: [{ translateY: cardAnims[index].interpolate({ inputRange: [0, 1], outputRange: [22, 0] }) }],
+                  borderColor: borderGlow.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['rgba(160,0,20,0.22)', 'rgba(204,255,0,0.55)'],
+                  }),
+                }]}
               >
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <View style={styles.quickPromptIconWrapper}>
-                    <item.Icon size={16} color="#ccff00" />
+                {/* Green-dominant gradient, red fade at bottom-right corner */}
+                <LinearGradient
+                  colors={['rgba(204,255,0,0.13)', 'rgba(0,0,0,0)', 'rgba(160,0,20,0.09)']}
+                  locations={[0, 0.5, 1]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[StyleSheet.absoluteFill, { borderRadius: 24 }]}
+                />
+                <TouchableOpacity
+                  style={{ flex: 1, justifyContent: 'space-between' }}
+                  onPress={() => handleSend(t(item.key))}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={styles.quickPromptIconWrapper}>
+                      <item.Icon size={16} color="#ccff00" />
+                    </View>
+                    <Text style={styles.quickPromptArrow}>↗</Text>
                   </View>
-                  <Text style={styles.quickPromptArrow}>↗</Text>
-                </View>
-                <Text style={styles.quickPromptText} numberOfLines={2}>
-                  {t(item.key)}
-                </Text>
-              </TouchableOpacity>
+                  <Text style={styles.quickPromptText} numberOfLines={2}>
+                    {t(item.key)}
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
             ))}
           </View>
         </ScrollView>
@@ -460,7 +515,7 @@ export default function CoachScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={chat.suggestionContainer}
           >
-            {['Faire un audit', 'Analyser mes passifs', 'Optimiser cashflow', 'Plus de détails'].map((s, idx) => (
+            {[t('coach_audit'), t('coach_optimize'), t('coach_strategy'), t('coach_analyze')].map((s, idx) => (
               <TouchableOpacity
                 key={idx}
                 style={chat.suggestionChip}
@@ -634,12 +689,10 @@ const styles = StyleSheet.create({
   quickPromptCard: {
     width: '48%',
     height: 114,
-    backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 24,
     padding: 14,
-    justifyContent: 'space-between',
+    overflow: 'hidden',
   },
   quickPromptIconWrapper: {
     width: 32,

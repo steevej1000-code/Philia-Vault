@@ -50,7 +50,7 @@ const TYPE_DETAILS: Record<string, { labelKey: string; subLabel: string }> = {
 
 export default function LiabilitiesScreen() {
   const insets = useSafeAreaInsets();
-  const { t } = useUserPreferences();
+  const { t, formatAmount } = useUserPreferences();
   const [liabilities, setLiabilities] = useState<Liability[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -154,12 +154,6 @@ export default function LiabilitiesScreen() {
     );
   };
 
-  const formatEuro = (v: any) => {
-    const num = Number(v);
-    if (isNaN(num)) return '0,00 €';
-    return `${num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
-  };
-
   // Render a tiny vector trend line in red stroke on the card background
   const TrendLine = () => (
     <View style={styles.trendContainer}>
@@ -211,14 +205,14 @@ export default function LiabilitiesScreen() {
                     <View style={styles.categoryMeta}>
                       <Text style={styles.categoryLabel}>{t(details.labelKey).toUpperCase()}</Text>
                       <Text style={styles.categorySubLabel}>{details.subLabel}</Text>
-                      <Text style={styles.cardValue}>{formatEuro(item.total_debt)}</Text>
+                      <Text style={styles.cardValue}>{formatAmount(item.total_debt)}</Text>
                     </View>
                   </View>
 
                   {/* Middle part: Yield info (monthly cost for liability) */}
                   <View style={styles.yieldContainer}>
                     <Text style={styles.yieldLabel}>{t('monthly_cost_label').replace(' ($)', '')}</Text>
-                    <Text style={styles.yieldValue}>-{formatEuro(item.monthly_cost)}</Text>
+                    <Text style={styles.yieldValue}>-{formatAmount(item.monthly_cost)}</Text>
                   </View>
 
                   {/* SVG Wave graphic */}
@@ -262,10 +256,10 @@ export default function LiabilitiesScreen() {
                     {t(LIABILITY_TYPE_LABEL_KEYS[item.type] || LIABILITY_TYPE_LABEL_KEYS.Other)}
                   </Text>
                   <Text style={[styles.colText, { flex: 1.2, textAlign: 'right', fontWeight: '600' }]}>
-                    {formatEuro(item.total_debt).split(',')[0]} €
+                    {formatAmount(item.total_debt)}
                   </Text>
                   <Text style={[styles.colText, { flex: 1.2, textAlign: 'right', color: '#ff3b30', fontWeight: '700' }]}>
-                    -{formatEuro(item.monthly_cost).split(',')[0]} €
+                    -{formatAmount(item.monthly_cost)}
                   </Text>
                   <View style={{ flex: 1.0, flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
                     <TouchableOpacity onPress={() => handleOpenEdit(item)} style={styles.tableAction}>
