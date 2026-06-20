@@ -3,6 +3,24 @@
    Design system: dark glassmorphism, violet/cyan accents
    ============================================================ */
 
+/* Size-adjusted fallback fonts to prevent CLS when custom fonts load */
+@font-face {
+  font-family: 'Bebas Neue Fallback';
+  src: local('Arial Narrow'), local('Arial');
+  ascent-override: 107%;
+  descent-override: 26%;
+  line-gap-override: 0%;
+  size-adjust: 88%;
+}
+
+@font-face {
+  font-family: 'Space Mono Fallback';
+  src: local('Courier New'), local('Courier');
+  ascent-override: 92%;
+  descent-override: 22%;
+  size-adjust: 100%;
+}
+
 :root {
   --bg-primary: #000000;
   --bg-secondary: #0D0D0D;
@@ -33,7 +51,7 @@
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'Space Mono', monospace;
+  font-family: 'Space Mono', 'Space Mono Fallback', monospace;
   font-size: 14px;
   line-height: 1.7;
   color: var(--text-primary);
@@ -54,7 +72,7 @@ a { color: inherit; }
 /* ---------- Typography ---------- */
 
 .hero-title {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Neue Fallback', sans-serif;
   font-size: clamp(40px, 10vw, 110px);
   line-height: 0.98;
   letter-spacing: -1px;
@@ -62,7 +80,7 @@ a { color: inherit; }
 }
 
 .section-title {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Neue Fallback', sans-serif;
   font-size: clamp(30px, 5vw, 60px);
   letter-spacing: -0.5px;
   text-transform: uppercase;
