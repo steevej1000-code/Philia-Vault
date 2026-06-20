@@ -27,7 +27,7 @@
 :root{--bg-primary:#000;--bg-secondary:#0D0D0D;--bg-card:#1A1A1A;--border:rgba(255,255,255,0.08);--border-strong:rgba(255,255,255,0.14);--accent-violet:#C8FF00;--accent-cyan:#C8FF00;--text-primary:#fff;--text-secondary:#888899;--text-muted:#444455;--radius:16px;--container:1100px}
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{font-family:'Space Mono','Space Mono Fallback',monospace;font-size:14px;line-height:1.7;color:#fff;background:#000;overflow-x:hidden;padding-bottom:80px}
+body{font-family:'Space Mono','Space Mono Fallback',monospace;font-size:14px;line-height:1.7;color:#fff;background:#000;overflow-x:hidden;padding-bottom:60px}
 img{max-width:100%;display:block}
 a{color:inherit}
 .container{max-width:1100px;margin:0 auto;padding:0 24px}
@@ -57,11 +57,11 @@ a{color:inherit}
 .hero-note{font-size:11px;color:#444455;max-width:480px;margin:0 auto}
 .fade-up{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
 .fade-up.visible{opacity:1;transform:translateY(0)}
-.sticky-cart{position:fixed;bottom:0;left:0;right:0;z-index:999;background:rgba(0,0,0,0.97);border-top:1px solid rgba(200,255,0,0.2);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.sticky-cart{position:fixed;bottom:0;left:0;right:0;z-index:999;background:rgba(0,0,0,0.97);border-top:1px solid rgba(200,255,0,0.2);padding:12px 24px;height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px;overflow:hidden}
 .sticky-price{font-family:'Bebas Neue','Bebas Neue Fallback',sans-serif;font-size:24px;color:#C8FF00;letter-spacing:1px}
 .sticky-btn{background:#C8FF00;color:#000;font-family:'Bebas Neue','Bebas Neue Fallback',sans-serif;font-size:16px;letter-spacing:2px;text-decoration:none;padding:14px 28px;border-radius:10px;white-space:nowrap}
 @media(max-width:768px){.site-header .container{padding:0 12px;gap:8px}.logo{font-size:16px}.spot-badge{padding:6px 10px;font-size:9px}.lang-switch button{padding:4px 6px;font-size:9px}}
-@media(max-width:640px){.sticky-cart{padding:10px 16px}.sticky-price{font-size:20px}.sticky-btn{padding:12px 18px;font-size:14px}}
+@media(max-width:640px){.sticky-cart{padding:10px 16px;height:56px}.sticky-price{font-size:20px}.sticky-btn{padding:12px 18px;font-size:14px}}
 </style>
 
 <!-- Full stylesheet: non-blocking (loaded after paint) -->
