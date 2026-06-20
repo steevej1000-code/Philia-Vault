@@ -154,11 +154,6 @@ function trackMeta(event, params = {}) {
   }
 }
 
-function trackTikTok(event, params = {}) {
-  if (typeof ttq !== 'undefined') {
-    ttq.track(event, params);
-  }
-}
 
 function initTracking() {
   // 1. CTA Stripe clicks
@@ -176,12 +171,6 @@ function initTracking() {
         currency: 'USD',
         content_name: 'Philia Vault Founder Spot',
         num_items: 1
-      });
-      trackTikTok('InitiateCheckout', {
-        value: 4.99,
-        currency: 'USD',
-        content_id: 'philia_vault_founder',
-        content_type: 'product'
       });
     });
   });
