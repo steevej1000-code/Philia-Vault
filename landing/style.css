@@ -837,8 +837,11 @@ section { position: relative; padding: 120px 0; }
 }
 
 /* ---------- data-lang visibility ---------- */
-
-[data-lang] { display: none; }
+/* English shown by default (before JS). JS overrides with inline styles. */
+[data-lang]:not([data-lang="en"]) { display: none; }
+[data-lang="en"] { display: revert; }
+[data-lang="en"].inline { display: inline; }
+[data-lang="en"].block { display: block; }
 [data-lang].lang-active { display: revert; }
 [data-lang].lang-active.inline { display: inline; }
 [data-lang].lang-active.flex { display: flex; }

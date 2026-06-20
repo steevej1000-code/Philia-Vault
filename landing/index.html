@@ -31,7 +31,11 @@ body{font-family:'Space Mono','Space Mono Fallback',monospace;font-size:14px;lin
 img{max-width:100%;display:block}
 a{color:inherit}
 .container{max-width:1100px;margin:0 auto;padding:0 24px}
-[data-lang]{display:none}
+/* Show English by default before JS runs — eliminates hero CLS */
+[data-lang]:not([data-lang="en"]){display:none}
+[data-lang="en"]{display:revert}
+[data-lang="en"].inline{display:inline}
+[data-lang="en"].block{display:block}
 [data-lang].lang-active{display:revert}
 [data-lang].lang-active.inline{display:inline}
 [data-lang].lang-active.block{display:block}
@@ -318,7 +322,7 @@ a{color:inherit}
         </div>
         <div class="phone-frame">
           <div class="notch"></div>
-          <img src="assets/screenshots/assets.webp" alt="Philia Vault Asset Tracker" loading="lazy">
+          <img src="assets/screenshots/assets.webp" alt="Philia Vault Asset Tracker" loading="lazy" width="390" height="844">
         </div>
         <div class="screenshot-caption">
           <span data-lang="en" class="inline">Track cash-flow producing assets</span>
@@ -338,7 +342,7 @@ a{color:inherit}
         </div>
         <div class="phone-frame">
           <div class="notch"></div>
-          <img src="assets/screenshots/liabilities.webp" alt="Philia Vault Liabilities Tracker" loading="lazy">
+          <img src="assets/screenshots/liabilities.webp" alt="Philia Vault Liabilities Tracker" loading="lazy" width="390" height="844">
         </div>
         <div class="screenshot-caption">
           <span data-lang="en" class="inline">Isolate your monthly costs</span>
