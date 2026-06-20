@@ -12,13 +12,60 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://philiavault.com">
 
-<!-- Fonts: display=optional = no CLS (browser never swaps after first paint) -->
+<!-- Preconnect for fonts & analytics -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="https://www.google-analytics.com">
+<link rel="preconnect" href="https://www.google-analytics.com">
+
+<!-- Fonts: non-blocking, display=optional = no CLS -->
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=optional" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=optional"></noscript>
 
-<link rel="stylesheet" href="style.css">
+<!-- Critical CSS inlined — eliminates render-blocking style.css -->
+<style>
+:root{--bg-primary:#000;--bg-secondary:#0D0D0D;--bg-card:#1A1A1A;--border:rgba(255,255,255,0.08);--border-strong:rgba(255,255,255,0.14);--accent-violet:#C8FF00;--accent-cyan:#C8FF00;--text-primary:#fff;--text-secondary:#888899;--text-muted:#444455;--radius:16px;--container:1100px}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Space Mono','Space Mono Fallback',monospace;font-size:14px;line-height:1.7;color:#fff;background:#000;overflow-x:hidden;padding-bottom:80px}
+img{max-width:100%;display:block}
+a{color:inherit}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+[data-lang]{display:none}
+[data-lang].lang-active{display:revert}
+[data-lang].lang-active.inline{display:inline}
+[data-lang].lang-active.block{display:block}
+.site-header{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(5,5,8,0.92);border-bottom:1px solid rgba(255,255,255,0.08)}
+.site-header .container{display:flex;align-items:center;justify-content:space-between;height:72px;gap:16px}
+.logo{font-family:'Bebas Neue','Bebas Neue Fallback',sans-serif;font-size:22px;letter-spacing:3px;text-transform:uppercase}
+.header-right{display:flex;align-items:center;gap:16px}
+.spot-badge{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;border-radius:999px;border:1px solid rgba(200,255,0,0.35);background:rgba(200,255,0,0.08);white-space:nowrap}
+.spot-badge .dot{width:7px;height:7px;border-radius:50%;background:#C8FF00}
+.lang-switch{display:flex;gap:4px;border:1px solid rgba(255,255,255,0.08);border-radius:999px;padding:4px}
+.lang-switch button{background:transparent;border:none;color:#888899;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:1px;padding:6px 10px;border-radius:999px;cursor:pointer}
+.lang-switch button.active{background:linear-gradient(135deg,#C8FF00,#fff);color:#000;font-weight:700}
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-top:120px;position:relative}
+.hero-bg{position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(200,255,0,0.25) 0%,transparent 60%),#000;z-index:0}
+.hero .container{position:relative;z-index:1;text-align:center}
+.hero-title{font-family:'Bebas Neue','Bebas Neue Fallback',sans-serif;font-size:clamp(40px,10vw,110px);line-height:.98;letter-spacing:-1px;text-transform:uppercase;margin-bottom:28px}
+.hero-title span{display:block}
+.text-violet{color:#C8FF00}
+.text-cyan{color:#C8FF00}
+.hero-subtitle{max-width:620px;margin:0 auto 36px;font-size:15px;color:#888899;line-height:1.8}
+.btn-cta-hero{display:inline-block;background:#C8FF00;color:#000;font-family:'Bebas Neue','Bebas Neue Fallback',sans-serif;font-size:18px;letter-spacing:3px;text-decoration:none;padding:18px 36px;border-radius:12px;margin-top:32px;box-shadow:0 0 16px rgba(200,255,0,0.3)}
+.hero-subcta{font-family:'Space Mono',monospace;font-size:12px;color:#666;margin-top:12px}
+.hero-note{font-size:11px;color:#444455;max-width:480px;margin:0 auto}
+.fade-up{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
+.fade-up.visible{opacity:1;transform:translateY(0)}
+.sticky-cart{position:fixed;bottom:0;left:0;right:0;z-index:999;background:rgba(0,0,0,0.97);border-top:1px solid rgba(200,255,0,0.2);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.sticky-price{font-family:'Bebas Neue','Bebas Neue Fallback',sans-serif;font-size:24px;color:#C8FF00;letter-spacing:1px}
+.sticky-btn{background:#C8FF00;color:#000;font-family:'Bebas Neue','Bebas Neue Fallback',sans-serif;font-size:16px;letter-spacing:2px;text-decoration:none;padding:14px 28px;border-radius:10px;white-space:nowrap}
+@media(max-width:768px){.site-header .container{padding:0 12px;gap:8px}.logo{font-size:16px}.spot-badge{padding:6px 10px;font-size:9px}.lang-switch button{padding:4px 6px;font-size:9px}}
+</style>
+
+<!-- Full stylesheet: non-blocking (loaded after paint) -->
+<link rel="preload" as="style" href="style.css" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="style.css"></noscript>
 </head>
 <body>
 
