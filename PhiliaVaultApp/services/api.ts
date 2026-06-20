@@ -374,7 +374,7 @@ Passifs : ${JSON.stringify(liabilities)}
         return { reply: cleanReply };
       } else {
         console.error("Gemini API Error:", data);
-        return { reply: "Une erreur est survenue lors de l'analyse clinique." };
+        return { reply: "Une erreur est survenue lors de l'audit financier." };
       }
     } catch (error) {
       console.error("Fetch Error:", error);
