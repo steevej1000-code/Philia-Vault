@@ -326,7 +326,7 @@ def get_summary():
         total_assets_val = sum(a["value"] for a in assets)
         total_passive_income = sum(a["monthly_yield"] for a in assets)
         
-        total_liabilities_val = sum(l["remaining_amount"] for l in liabilities)
+        total_liabilities_val = sum(l["remaining_amount"] for l in liabilities) + sum(l["monthly_cost"] for l in liabilities if l["type"] == "Subscription")
         total_monthly_cost = sum(l["monthly_cost"] for l in liabilities)
         
         # Calculate standardized index and timeline
@@ -342,7 +342,8 @@ def get_summary():
             
         liability_types = {}
         for l in liabilities:
-            liability_types[l["type"]] = liability_types.get(l["type"], 0) + l["remaining_amount"]
+            val = l["remaining_amount"] if l["type"] != "Subscription" else l["monthly_cost"]
+            liability_types[l["type"]] = liability_types.get(l["type"], 0) + val
             
         return jsonify({
             "success": True,
@@ -824,7 +825,7 @@ def coach_chat():
     
     total_assets = sum(a["value"] for a in assets)
     total_passive = sum(a["monthly_yield"] for a in assets)
-    total_liabilities = sum(l["remaining_amount"] for l in liabilities)
+    total_liabilities = sum(l["remaining_amount"] for l in liabilities) + sum(l["monthly_cost"] for l in liabilities if l["type"] == "Subscription")
     total_cost = sum(l["monthly_cost"] for l in liabilities)
     iif, _, _ = calculate_corrected_fi_indices(total_passive, total_cost)
     
