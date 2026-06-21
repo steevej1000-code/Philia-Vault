@@ -144,6 +144,17 @@ def get_users():
     return jsonify({'users': users, 'total': len(users)})
 
 
+@admin_bp.route('/standard_users', methods=['GET'])
+@require_admin_auth()
+def get_standard_users():
+    """Alias for /users — called by the admin dashboard All Users tab."""
+    search = request.args.get('q', '').strip().lower()
+    users  = get_standard_users_for_admin()
+    if search:
+        users = [u for u in users if search in u['email'].lower()]
+    return jsonify({'users': users, 'total': len(users)})
+
+
 @admin_bp.route('/users/<path:user_email>/detail', methods=['GET'])
 @require_admin_auth()
 def get_user_detail(user_email):

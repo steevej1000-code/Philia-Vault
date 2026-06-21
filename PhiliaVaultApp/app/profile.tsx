@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Alert, ActivityIndicator, Switch, RefreshControl
+  Alert, ActivityIndicator, Switch, RefreshControl, Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -144,28 +144,34 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      t('logout_confirm_title'),
-      t('logout_confirm_message'),
-      [
-        { text: t('cancel'), style: 'cancel' },
-        {
-          text: t('logout'),
-          style: 'destructive',
-          onPress: async () => {
-            setLoggingOut(true);
-            try {
-              await logout();
-              router.replace('/(auth)/login');
-            } catch (e: any) {
-              Alert.alert(t('error'), e.message || t('logout_error'));
-            } finally {
-              setLoggingOut(false);
-            }
-          }
-        }
-      ]
-    );
+    const doLogout = async () => {
+      setLoggingOut(true);
+      try {
+        await logout();
+        router.replace('/(auth)/login');
+      } catch (e: any) {
+        Alert.alert(t('error'), e.message || t('logout_error'));
+      } finally {
+        setLoggingOut(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      // Alert.alert buttons may not fire on web — use window.confirm directly
+      const confirmed = window.confirm(
+        `${t('logout_confirm_title')}\n${t('logout_confirm_message')}`
+      );
+      if (confirmed) doLogout();
+    } else {
+      Alert.alert(
+        t('logout_confirm_title'),
+        t('logout_confirm_message'),
+        [
+          { text: t('cancel'), style: 'cancel' },
+          { text: t('logout'), style: 'destructive', onPress: doLogout }
+        ]
+      );
+    }
   };
 
   const name = user ? `${user.first_name} ${user.last_name}` : t('default_user_name');
