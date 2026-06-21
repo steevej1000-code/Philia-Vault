@@ -628,13 +628,14 @@ def create_user(email, password, first_name="", last_name="", referral_code=None
             parrain_id = row["id"]
             
     try:
-        from datetime import datetime, timedelta
-        # Premium status set to 1 (active) with an expiration date in 3 days
-        expires_date = (datetime.utcnow() + timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
         code = generate_unique_referral_code(cursor)
+        # premium_status = 0 : l'utilisateur doit compléter Stripe pour accéder à l'app.
+        # Le trial 3 jours est géré par Stripe (subscription trialing),
+        # pas par un timestamp local. premium_status passe à 1 uniquement après
+        # confirmation Stripe via /api/stripe/verify-session ou webhook.
         cursor.execute(
-            "INSERT INTO users (email, password, first_name, last_name, code_parrainage, parrain_id, premium_status, premium_expires) VALUES (?, ?, ?, ?, ?, ?, 1, ?)",
-            (email.lower().strip(), pwd_hash, first_name, last_name, code, parrain_id, expires_date)
+            "INSERT INTO users (email, password, first_name, last_name, code_parrainage, parrain_id, premium_status) VALUES (?, ?, ?, ?, ?, ?, 0)",
+            (email.lower().strip(), pwd_hash, first_name, last_name, code, parrain_id)
         )
         conn.commit()
         success = True
@@ -667,13 +668,11 @@ def create_or_get_google_user(email, google_id):
         conn.close()
         return email_clean
 
-    # Create Google user
-    from datetime import datetime, timedelta
-    expires_date = (datetime.utcnow() + timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+    # Create Google user — premium_status=0 until Stripe checkout completes
     code = generate_unique_referral_code(cursor)
     cursor.execute(
-        "INSERT INTO users (email, google_id, password, code_parrainage, premium_status, premium_expires) VALUES (?, ?, '', ?, 1, ?)",
-        (email_clean, google_id, code, expires_date)
+        "INSERT INTO users (email, google_id, password, code_parrainage, premium_status) VALUES (?, ?, '', ?, 0)",
+        (email_clean, google_id, code)
     )
     conn.commit()
     conn.close()
@@ -702,13 +701,11 @@ def create_or_get_apple_user(email, apple_id):
         conn.close()
         return email_clean
 
-    # Create Apple user
-    from datetime import datetime, timedelta
-    expires_date = (datetime.utcnow() + timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+    # Create Apple user — premium_status=0 until Stripe checkout completes
     code = generate_unique_referral_code(cursor)
     cursor.execute(
-        "INSERT INTO users (email, apple_id, password, code_parrainage, premium_status, premium_expires) VALUES (?, ?, '', ?, 1, ?)",
-        (email_clean, apple_id, code, expires_date)
+        "INSERT INTO users (email, apple_id, password, code_parrainage, premium_status) VALUES (?, ?, '', ?, 0)",
+        (email_clean, apple_id, code)
     )
     conn.commit()
     conn.close()
