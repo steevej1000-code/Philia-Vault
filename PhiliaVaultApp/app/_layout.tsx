@@ -13,6 +13,7 @@ import { initializeRevenueCat, checkPremiumStatus } from '../services/revenueCat
 import api from '../services/api';
 import { storage } from '../services/storage';
 import { UserPreferencesProvider } from '../context/UserPreferencesContext';
+import { API_BASE } from '../constants/api';
 
 const BIOMETRIC_LOCK_KEY = 'biometric_lock_enabled';
 
@@ -125,7 +126,7 @@ function PremiumGuard() {
       // Vérifier le statut premium et founder
       const checkAccess = async () => {
         try {
-          const res = await fetch(`https://philiavault.com/api/user/founder-status?email=${encodeURIComponent(user.email)}`);
+          const res = await fetch(`${API_BASE}/api/user/founder-status?email=${encodeURIComponent(user.email)}`);
           let isFounder = false;
           if (res.ok) {
             const data = await res.json();

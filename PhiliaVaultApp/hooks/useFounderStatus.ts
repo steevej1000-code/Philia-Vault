@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore'; 
+import { API_BASE } from '../constants/api';
 
 export const useFounderStatus = () => {
   const { user } = useAuthStore();
@@ -14,8 +15,7 @@ export const useFounderStatus = () => {
       }
 
       try {
-        // Remplacer par votre vraie URL d'API
-        const response = await fetch(`https://philiavault.com/api/user/founder-status?email=${encodeURIComponent(user.email)}`);
+        const response = await fetch(`${API_BASE}/api/user/founder-status?email=${encodeURIComponent(user.email)}`);
         
         if (response.ok) {
           const data = await response.json();
