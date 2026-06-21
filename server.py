@@ -41,6 +41,7 @@ allowed_origins = [
     'https://www.philiavault.com',
     'https://philia-vault-pwa.onrender.com',
     'https://app.philiavault.com',
+    'https://admin.philiavault.com',
     'http://localhost:3000',
     'http://localhost:5000',
     'http://localhost:5001',
@@ -83,6 +84,11 @@ if GEMINI_KEY:
 # Static Routes
 @app.route("/")
 def serve_index():
+    host = request.host
+    if host.startswith("admin.philiavault.com"):
+        return send_from_directory("static", "admin.html")
+    if host.startswith("app.philiavault.com"):
+        return send_from_directory("static", "index.html")
     # If the file landing.html doesn't exist yet, fallback to index.html gracefully
     if os.path.exists(os.path.join("static", "landing.html")):
         return send_from_directory("static", "landing.html")
@@ -92,9 +98,48 @@ def serve_index():
 def serve_app():
     return send_from_directory("static", "index.html")
 
+@app.route("/admin")
+@app.route("/admin/")
+def serve_admin():
+    return send_from_directory("static", "admin.html")
+
+@app.route("/assets/<path:path>")
+def serve_assets(path):
+    return send_from_directory(os.path.join("static", "assets"), path)
+
+@app.route("/favicon.svg")
+def serve_favicon():
+    return send_from_directory("static", "favicon.svg")
+
+@app.route("/icons.svg")
+def serve_icons():
+    return send_from_directory("static", "icons.svg")
+
 @app.route("/static/<path:path>")
 def serve_static(path):
     return send_from_directory("static", path)
+
+@app.route("/api/public/config", methods=["GET"])
+def get_public_config():
+    """Public endpoint — returns display prices, FAQ, hero text for PWA/landing."""
+    import json as _json
+    cfg = database.get_config()
+    faq_raw = cfg.get('faq', '[]')
+    try:
+        faq = _json.loads(faq_raw)
+    except Exception:
+        faq = []
+    return jsonify({
+        "price_monthly_display":  cfg.get('price_monthly_display',  '$9.99'),
+        "price_yearly_display":   cfg.get('price_yearly_display',   '$79.99'),
+        "price_monthly_equiv":    cfg.get('price_monthly_equiv',    '= $6.67/mo'),
+        "price_founder_display":  cfg.get('price_founder_display',  '$4.99'),
+        "stripe_price_monthly":   cfg.get('stripe_price_monthly',   ''),
+        "stripe_price_yearly":    cfg.get('stripe_price_yearly',    ''),
+        "hero_title":             cfg.get('hero_title',             'Your Financial Mirror'),
+        "hero_subtitle":          cfg.get('hero_subtitle',          'AI-powered wealth management'),
+        "faq":                    faq,
+    })
 
 # User Session / Auth Helper to get current user_id
 # For maximum robustness in this single-page client, we accept a X-User-Email header or user parameter.

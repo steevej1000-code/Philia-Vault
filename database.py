@@ -277,6 +277,29 @@ def init_db():
         except Exception:
             pass
 
+    # Create config table (editable key/value store for admin)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS config (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    # Seed default config values (INSERT OR IGNORE → won't overwrite live edits)
+    _config_defaults = [
+        ('price_monthly_display',  '$9.99'),
+        ('price_yearly_display',   '$79.99'),
+        ('price_monthly_equiv',    '= $6.67/mo'),
+        ('price_founder_display',  '$4.99'),
+        ('stripe_price_monthly',   ''),
+        ('stripe_price_yearly',    ''),
+        ('faq',                    '[]'),
+        ('hero_title',             'Your Financial Mirror'),
+        ('hero_subtitle',          'AI-powered wealth management'),
+    ]
+    for _k, _v in _config_defaults:
+        cursor.execute("INSERT OR IGNORE INTO config (key, value) VALUES (?, ?)", (_k, _v))
+
     # Create admin_invited_emails table (Whitelist)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS admin_invited_emails (
@@ -289,6 +312,18 @@ def init_db():
         FOREIGN KEY (invited_by) REFERENCES admin_users(id)
     )
     """)
+
+    # ── Seed owner email so Google OAuth works on first boot ──────────────────
+    _owner_email = os.environ.get("ADMIN_EMAIL", "steevej1000@gmail.com")
+    cursor.execute(
+        "INSERT OR IGNORE INTO admin_invited_emails (email, intended_role) VALUES (?, 'owner')",
+        (_owner_email,)
+    )
+    # Also ensure the owner row in admin_users exists (if already created via invite, skip)
+    cursor.execute(
+        "INSERT OR IGNORE INTO admin_users (email, role, is_active) VALUES (?, 'owner', 1)",
+        (_owner_email,)
+    )
 
     conn.commit()
     conn.close()
@@ -1067,7 +1102,7 @@ def block_user(user_id):
     return True
 
 def block_founder(founder_id):
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db()
     cursor = conn.cursor()
     cursor.execute("UPDATE founder_members SET status = 'blocked' WHERE id = ?", (founder_id,))
     conn.commit()
@@ -1076,7 +1111,7 @@ def block_founder(founder_id):
 def check_is_founder(email):
     """Check if an email is a founder member (for premium checks)"""
     try:
-        conn = sqlite3.connect(DB_FILE)
+        conn = get_db()
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM founder_members WHERE email = ? COLLATE NOCASE", (email,))
         row = cursor.fetchone()
@@ -1090,10 +1125,271 @@ def update_founder_spots_counter(new_total, new_taken):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO founder_spots_counter (total_spots, spots_taken) VALUES (?, ?)", 
+        "INSERT INTO founder_spots_counter (total_spots, spots_taken) VALUES (?, ?)",
         (new_total, new_taken)
     )
     conn.commit()
     conn.close()
     return True
+
+# ─── Config helpers ────────────────────────────────────────────────────────────
+
+def get_config(key=None):
+    """Return a single config value (str) or the full dict if key is None."""
+    conn = get_db()
+    cursor = conn.cursor()
+    if key:
+        cursor.execute("SELECT value FROM config WHERE key = ?", (key,))
+        row = cursor.fetchone()
+        conn.close()
+        return row[0] if row else None
+    else:
+        cursor.execute("SELECT key, value FROM config")
+        rows = cursor.fetchall()
+        conn.close()
+        return {r[0]: r[1] for r in rows}
+
+def set_config(key, value):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO config (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+        (key, str(value))
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+# ─── Admin Google OAuth helper ─────────────────────────────────────────────────
+
+def get_admin_by_google_id(google_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, email, role, full_name, avatar_url, is_active FROM admin_users WHERE google_id = ?",
+        (google_id,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+def create_or_link_google_admin(email, google_id, full_name=None, avatar_url=None):
+    """
+    Returns (admin_id, role) if the email is in admin_users or admin_invited_emails.
+    Links google_id if not already set. Creates the admin_user row if invited.
+    Returns None if the email is not allowed.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # 1. Existing admin user by email?
+    cursor.execute(
+        "SELECT id, role, is_active, google_id FROM admin_users WHERE email = ? COLLATE NOCASE",
+        (email,)
+    )
+    row = cursor.fetchone()
+    if row:
+        admin_id, role, is_active, existing_gid = row
+        if not is_active:
+            conn.close()
+            return None, None, 'disabled'
+        if not existing_gid:
+            cursor.execute(
+                "UPDATE admin_users SET google_id=?, full_name=COALESCE(full_name,?), avatar_url=COALESCE(avatar_url,?) WHERE id=?",
+                (google_id, full_name, avatar_url, admin_id)
+            )
+            conn.commit()
+        conn.close()
+        return admin_id, role, None
+
+    # 2. Email in admin_invited_emails?
+    cursor.execute(
+        "SELECT id, intended_role FROM admin_invited_emails WHERE email = ? COLLATE NOCASE AND used = 0",
+        (email,)
+    )
+    invite = cursor.fetchone()
+    if invite:
+        invite_id, intended_role = invite
+        cursor.execute(
+            "INSERT INTO admin_users (email, google_id, full_name, avatar_url, role, is_active) VALUES (?,?,?,?,?,1)",
+            (email, google_id, full_name, avatar_url, intended_role)
+        )
+        new_id = cursor.lastrowid
+        cursor.execute("UPDATE admin_invited_emails SET used=1 WHERE id=?", (invite_id,))
+        conn.commit()
+        conn.close()
+        return new_id, intended_role, None
+
+    conn.close()
+    return None, None, 'not_invited'
+
+# ─── Admin: user detail ────────────────────────────────────────────────────────
+
+def get_user_detail_for_admin(user_email):
+    """Return full user profile + decrypted assets + liabilities + computed IIF."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, email, premium_status, created_at, is_blocked, first_name, last_name FROM users WHERE email = ? COLLATE NOCASE",
+        (user_email,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+
+    uid, email, premium, created_at, is_blocked, first_name, last_name = row
+    assets     = get_assets(email)
+    liabilities = get_liabilities(email)
+
+    total_passive = sum(a['monthly_yield'] for a in assets)
+    total_cost    = sum(l['monthly_cost'] for l in liabilities)
+    if total_cost > 0:
+        iif = round(((total_passive - total_cost) / abs(total_cost)) * 100, 1)
+        iif = max(iif, -100)
+    else:
+        iif = 0
+
+    return {
+        'id':           uid,
+        'email':        email,
+        'first_name':   first_name or '',
+        'last_name':    last_name or '',
+        'premium_status': bool(premium),
+        'created_at':   created_at,
+        'is_blocked':   bool(is_blocked),
+        'assets':       assets,
+        'liabilities':  liabilities,
+        'iif_score':    iif,
+        'total_assets': sum(a['value'] for a in assets),
+        'total_passive_income': total_passive,
+        'total_monthly_cost':   total_cost,
+        'net_cashflow':         total_passive - total_cost,
+    }
+
+# ─── Admin: product metrics ────────────────────────────────────────────────────
+
+def get_product_metrics():
+    import json
+    from datetime import datetime, timedelta
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    now = datetime.utcnow()
+    cutoff_7d  = (now - timedelta(days=7)).strftime('%Y-%m-%d')
+    cutoff_30d = (now - timedelta(days=30)).strftime('%Y-%m-%d')
+
+    # Total registered users
+    cursor.execute("SELECT COUNT(id) FROM users")
+    total_users = cursor.fetchone()[0]
+
+    # Total founders
+    cursor.execute("SELECT COUNT(id) FROM founder_members WHERE status='active'")
+    total_founders = cursor.fetchone()[0]
+
+    # Users created > 7 days ago (for retention denominator)
+    cursor.execute("SELECT COUNT(id) FROM users WHERE created_at <= ?", (cutoff_7d,))
+    users_older_7d = cursor.fetchone()[0]
+
+    # Users created > 30 days ago
+    cursor.execute("SELECT COUNT(id) FROM users WHERE created_at <= ?", (cutoff_30d,))
+    users_older_30d = cursor.fetchone()[0]
+
+    # Active = have at least 1 asset (proxy for real usage)
+    cursor.execute("""
+        SELECT COUNT(DISTINCT u.id) FROM users u
+        WHERE EXISTS (SELECT 1 FROM assets a WHERE a.user_id = u.email)
+        AND u.created_at <= ?
+    """, (cutoff_7d,))
+    active_7d = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(DISTINCT u.id) FROM users u
+        WHERE EXISTS (SELECT 1 FROM assets a WHERE a.user_id = u.email)
+        AND u.created_at <= ?
+    """, (cutoff_30d,))
+    active_30d = cursor.fetchone()[0]
+
+    # Asset type distribution
+    cursor.execute("SELECT type, COUNT(id) as cnt FROM assets GROUP BY type ORDER BY cnt DESC")
+    asset_dist = {r[0]: r[1] for r in cursor.fetchall()}
+
+    # Liability type distribution
+    cursor.execute("SELECT type, COUNT(id) as cnt FROM liabilities GROUP BY type ORDER BY cnt DESC")
+    liability_dist = {r[0]: r[1] for r in cursor.fetchall()}
+
+    # Users with any data
+    cursor.execute("""
+        SELECT COUNT(DISTINCT u.id) FROM users u
+        WHERE EXISTS (SELECT 1 FROM assets a WHERE a.user_id = u.email)
+           OR EXISTS (SELECT 1 FROM liabilities l WHERE l.user_id = u.email)
+    """)
+    users_with_data = cursor.fetchone()[0]
+
+    # Average IIF — compute in Python for users who have at least 1 asset
+    cursor.execute("""
+        SELECT DISTINCT u.email FROM users u
+        WHERE EXISTS (SELECT 1 FROM assets a WHERE a.user_id = u.email)
+        LIMIT 200
+    """)
+    sample_emails = [r[0] for r in cursor.fetchall()]
+    conn.close()
+
+    iif_scores = []
+    for email in sample_emails:
+        assets_u = get_assets(email)
+        liabs_u  = get_liabilities(email)
+        passive  = sum(a['monthly_yield'] for a in assets_u)
+        cost     = sum(l['monthly_cost'] for l in liabs_u)
+        if cost > 0:
+            iif = max(round(((passive - cost) / abs(cost)) * 100, 1), -100)
+        else:
+            iif = 0 if passive == 0 else 100
+        iif_scores.append(iif)
+
+    avg_iif = round(sum(iif_scores) / len(iif_scores), 1) if iif_scores else 0
+
+    return {
+        'total_users':        total_users,
+        'total_founders':     total_founders,
+        'users_with_data':    users_with_data,
+        'retention_7d_pct':   round(active_7d / users_older_7d * 100, 1) if users_older_7d else 0,
+        'retention_30d_pct':  round(active_30d / users_older_30d * 100, 1) if users_older_30d else 0,
+        'active_7d':          active_7d,
+        'active_30d':         active_30d,
+        'avg_iif_score':      avg_iif,
+        'asset_distribution': asset_dist,
+        'liability_distribution': liability_dist,
+    }
+
+# ─── Admin: Stripe payment history from founder_members ───────────────────────
+
+def get_payment_history():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, email, stripe_customer_id, stripe_subscription_id,
+               amount_paid, currency, status, created_at, member_number
+        FROM founder_members
+        ORDER BY created_at DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    payments = []
+    for r in rows:
+        payments.append({
+            'id':               r[0],
+            'email':            r[1],
+            'stripe_customer_id': r[2],
+            'stripe_subscription_id': r[3],
+            'amount_paid':      r[4],
+            'currency':         r[5],
+            'status':           r[6],
+            'created_at':       r[7],
+            'member_number':    r[8],
+            'stripe_url': f"https://dashboard.stripe.com/customers/{r[2]}" if r[2] else None,
+        })
+    return payments
 

@@ -308,8 +308,10 @@ class ApiClient {
     
     // Fetch real user data to prevent hallucination
     const summary = await this.getSummary().catch(() => ({}));
-    const assets = await this.getAssets().catch(() => ([]));
-    const liabilities = await this.getLiabilities().catch(() => ([]));
+    const assetsRes = await this.getAssets().catch(() => ({ assets: [] }));
+    const liabsRes  = await this.getLiabilities().catch(() => ({ liabilities: [] }));
+    const assets      = assetsRes?.assets      ?? [];
+    const liabilities = liabsRes?.liabilities  ?? [];
 
     const systemPrompt = `Rôle : Tu es le "Coach Philia Vault", une intelligence artificielle strictement éducative et clinique intégrée à un logiciel de simulation financière. 
 
