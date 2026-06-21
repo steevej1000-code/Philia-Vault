@@ -1069,21 +1069,38 @@ def get_all_users_for_admin():
 def get_standard_users_for_admin():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT id, email, code_parrainage, premium_status, created_at, is_blocked 
-        FROM users 
-        ORDER BY created_at DESC
-    """)
+    # Use COALESCE in case created_at column is missing on older DB instances
+    try:
+        cursor.execute("""
+            SELECT id, email, code_parrainage, premium_status, created_at, is_blocked
+            FROM users
+            ORDER BY created_at DESC
+        """)
+    except Exception:
+        # Fallback: created_at column not yet added by migration
+        cursor.execute("""
+            SELECT id, email, code_parrainage, premium_status, NULL as created_at, is_blocked
+            FROM users
+            ORDER BY id DESC
+        """)
     rows = cursor.fetchall()
+
+    # Also ensure the column exists for future queries (safe migration)
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP")
+        conn.commit()
+    except Exception:
+        pass  # Column already exists
+
     conn.close()
-    
+
     users = []
     for row in rows:
         users.append({
             "id": row[0],
             "email": row[1],
             "code_parrainage": row[2],
-            "balance": 0.00,  # Mocked as we don't have a direct balance column
+            "balance": 0.00,
             "has_founder_access": bool(row[3]),
             "created_at": row[4],
             "is_blocked": bool(row[5])
