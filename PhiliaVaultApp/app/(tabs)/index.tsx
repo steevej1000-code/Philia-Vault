@@ -16,7 +16,6 @@ import { getLastSync } from '../../services/offlineCache';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
 import Skeleton from '../../components/Skeleton';
 import DailyDecisionCard from '../../components/DailyDecisionCard';
-import CashflowSimulator from '../../components/CashflowSimulator';
 
 interface DashboardData {
   total_assets: number;
@@ -232,11 +231,6 @@ export default function DashboardScreen() {
 
             <DailyDecisionCard />
 
-            {/* Cashflow Simulator */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Simulateur</Text>
-            </View>
-            <CashflowSimulator />
 
             <TouchableOpacity
               style={styles.insightCard}
