@@ -1,3 +1,11 @@
+/**
+ * DailyDecisionCard — offline-first
+ *
+ * • Les 121 dilemmes (FR/EN/ES/PT) sont bundlés dans l'app → zéro appel réseau requis
+ * • Réponse + streak sauvés en AsyncStorage → persistants entre sessions, par compte
+ * • Sync backend tentée en arrière-plan (optionnel, silencieuse si offline)
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -8,10 +16,15 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import { API_BASE } from '../constants/api';
 
+// ─── Bundled dilemmas (offline) ───────────────────────────────────────────────
+import DILEMMAS_BUNDLE from '../data/dilemmas_bundle.json';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Dilemma {
   id: string;
   category: string;
@@ -27,26 +40,33 @@ interface Streak {
   last_answered_date: string | null;
 }
 
+// ─── UI Labels (multilingue) ──────────────────────────────────────────────────
 const CATEGORY_COLORS: Record<string, string> = {
-  cashflow: '#4ADE80',
-  dette: '#F87171',
-  investissement: '#60A5FA',
-  mentalite: '#FBBF24',
+  cashflow:      '#4ADE80',
+  dette:         '#F87171',
+  investissement:'#60A5FA',
+  mentalite:     '#FBBF24',
 };
 
 const CATEGORY_LABELS: Record<string, Record<string, string>> = {
-  cashflow:      { fr: 'Cash Flow',       en: 'Cash Flow',   es: 'Flujo de Caja', pt: 'Fluxo de Caixa' },
-  dette:         { fr: 'Dette',           en: 'Debt',        es: 'Deuda',         pt: 'Dívida'         },
-  investissement:{ fr: 'Investissement',  en: 'Investment',  es: 'Inversión',     pt: 'Investimento'   },
-  mentalite:     { fr: 'Mentalité',       en: 'Mindset',     es: 'Mentalidad',    pt: 'Mentalidade'    },
+  cashflow:      { fr: 'Cash Flow',      en: 'Cash Flow',   es: 'Flujo de Caja', pt: 'Fluxo de Caixa' },
+  dette:         { fr: 'Dette',          en: 'Debt',        es: 'Deuda',         pt: 'Dívida'         },
+  investissement:{ fr: 'Investissement', en: 'Investment',  es: 'Inversión',     pt: 'Investimento'   },
+  mentalite:     { fr: 'Mentalité',      en: 'Mindset',     es: 'Mentalidad',    pt: 'Mentalidade'    },
 };
 
 const UI_LABELS: Record<string, Record<string, string>> = {
-  daily_decision: { fr: 'DÉCISION DU JOUR', en: 'DAILY DECISION', es: 'DECISIÓN DEL DÍA', pt: 'DECISÃO DO DIA' },
-  good_reflex:    { fr: 'Bon réflexe !',    en: 'Good reflex!',   es: '¡Buen reflejo!',   pt: 'Bom reflexo!'  },
-  liability_chosen:{ fr: 'Passif choisi',   en: 'Liability chosen',es: 'Pasivo elegido',   pt: 'Passivo escolhido' },
-  next_dilemma:   { fr: 'Prochain dilemme dans', en: 'Next dilemma in', es: 'Próximo dilema en', pt: 'Próximo dilema em' },
+  daily_decision:  { fr: 'DÉCISION DU JOUR', en: 'DAILY DECISION',  es: 'DECISIÓN DEL DÍA', pt: 'DECISÃO DO DIA'      },
+  good_reflex:     { fr: 'Bon réflexe !',    en: 'Good reflex!',    es: '¡Buen reflejo!',   pt: 'Bom reflexo!'        },
+  liability_chosen:{ fr: 'Passif choisi',    en: 'Liability chosen',es: 'Pasivo elegido',   pt: 'Passivo escolhido'   },
+  next_dilemma:    { fr: 'Prochain dilemme dans', en: 'Next dilemma in', es: 'Próximo dilema en', pt: 'Próximo dilema em' },
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 function secondsUntilMidnight(): number {
   const now = new Date();
@@ -62,27 +82,41 @@ function formatCountdown(secs: number): string {
   return `${h}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`;
 }
 
+function getDilemmaOfTheDay(dilemmas: Dilemma[]): Dilemma {
+  const dayIndex = Math.floor(Date.now() / 86_400_000);
+  return dilemmas[dayIndex % dilemmas.length];
+}
+
+function getDilemmasForLang(lang: string): Dilemma[] {
+  const l = (lang || 'fr').toLowerCase().slice(0, 2);
+  const bundle = DILEMMAS_BUNDLE as Record<string, Dilemma[]>;
+  return bundle[l] ?? bundle['fr'] ?? [];
+}
+
+const KEY_ANSWER = (email: string) => `dd_answer_${email}_${todayStr()}`;
+const KEY_STREAK = (email: string) => `dd_streak_${email}`;
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function DailyDecisionCard() {
   const { user } = useAuthStore();
   const { language } = useUserPreferences();
-  const [dilemma, setDilemma] = useState<Dilemma | null>(null);
-  const [streak, setStreak] = useState<Streak>({ current: 0, longest: 0, last_answered_date: null });
-  const [loading, setLoading] = useState(true);
-  const [flipped, setFlipped] = useState(false);
-  const [choice, setChoice] = useState<'asset' | 'liability' | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const [dilemma, setDilemma]                 = useState<Dilemma | null>(null);
+  const [streak, setStreak]                   = useState<Streak>({ current: 0, longest: 0, last_answered_date: null });
+  const [loading, setLoading]                 = useState(true);
+  const [flipped, setFlipped]                 = useState(false);
+  const [choice, setChoice]                   = useState<'asset' | 'liability' | null>(null);
+  const [feedback, setFeedback]               = useState<string | null>(null);
   const [alreadyAnswered, setAlreadyAnswered] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [countdown, setCountdown] = useState(secondsUntilMidnight());
+  const [submitting, setSubmitting]           = useState(false);
+  const [countdown, setCountdown]             = useState(secondsUntilMidnight());
 
-  // Flip animation
-  const flipAnim = useRef(new Animated.Value(0)).current;
+  const flipAnim         = useRef(new Animated.Value(0)).current;
   const frontInterpolate = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
-  const backInterpolate = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] });
+  const backInterpolate  = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] });
 
-  useEffect(() => {
-    fetchDilemma();
-  }, []);
+  useEffect(() => { loadFromLocal(); }, [user?.email, language]);
 
   useEffect(() => {
     if (!alreadyAnswered) return;
@@ -90,57 +124,140 @@ export default function DailyDecisionCard() {
     return () => clearInterval(interval);
   }, [alreadyAnswered]);
 
-  async function fetchDilemma() {
-    if (!user?.email) return;
+  async function loadFromLocal() {
+    setLoading(true);
+    // Reset state when language/user changes
+    setFlipped(false);
+    setChoice(null);
+    setFeedback(null);
+    setAlreadyAnswered(false);
+    flipAnim.setValue(0);
+
     try {
-      const res = await fetch(`${API_BASE}/api/daily-decision`, {
-        headers: { 'X-User-Email': user.email, 'X-User-Lang': language },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setDilemma(data.dilemma);
-        setStreak(data.streak);
-        if (data.already_answered && data.choice) {
-          setChoice(data.choice);
+      const dilemmas = getDilemmasForLang(language);
+      const today    = getDilemmaOfTheDay(dilemmas);
+      setDilemma(today);
+
+      if (user?.email) {
+        // Streak
+        const streakRaw = await AsyncStorage.getItem(KEY_STREAK(user.email));
+        const savedStreak: Streak = streakRaw
+          ? JSON.parse(streakRaw)
+          : { current: 0, longest: 0, last_answered_date: null };
+        setStreak(savedStreak);
+
+        // Réponse du jour
+        const answerRaw = await AsyncStorage.getItem(KEY_ANSWER(user.email));
+        if (answerRaw) {
+          const { choice: savedChoice } = JSON.parse(answerRaw);
+          const key = savedChoice === 'asset' ? 'choice_asset' : 'choice_liability';
+          setChoice(savedChoice);
+          setFeedback(today[key].feedback);
           setAlreadyAnswered(true);
-          const key = data.choice === 'asset' ? 'choice_asset' : 'choice_liability';
-          setFeedback(data.dilemma[key].feedback);
-          // Start already flipped
           flipAnim.setValue(1);
           setFlipped(true);
         }
       }
     } catch (e) {
-      console.error('DailyDecision fetch error:', e);
+      console.error('DailyDecision local load error:', e);
     } finally {
       setLoading(false);
+    }
+
+    // Sync backend en arrière-plan (silencieuse)
+    syncWithBackend();
+  }
+
+  async function syncWithBackend() {
+    if (!user?.email) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/daily-decision`, {
+        headers: { 'X-User-Email': user.email, 'X-User-Lang': language },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && data.streak) {
+        const serverStreak: Streak = {
+          current: data.streak.current,
+          longest: data.streak.longest,
+          last_answered_date: data.streak.last_answered_date,
+        };
+        setStreak(prev =>
+          serverStreak.longest >= prev.longest ? serverStreak : prev
+        );
+        if (user?.email) {
+          await AsyncStorage.setItem(KEY_STREAK(user.email), JSON.stringify(serverStreak));
+        }
+      }
+    } catch (_) {
+      // silencieux — offline
     }
   }
 
   async function handleChoice(selected: 'asset' | 'liability') {
-    if (!dilemma || !user?.email || submitting || alreadyAnswered) return;
+    if (!dilemma || submitting || alreadyAnswered) return;
     setSubmitting(true);
+
     try {
-      const res = await fetch(`${API_BASE}/api/daily-decision/answer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-User-Email': user.email },
-        body: JSON.stringify({ dilemma_id: dilemma.id, choice: selected, lang: language }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setChoice(selected);
-        setFeedback(data.feedback);
-        setStreak(data.streak);
-        setAlreadyAnswered(true);
-        // Flip card
-        Animated.spring(flipAnim, { toValue: 1, friction: 8, useNativeDriver: Platform.OS !== 'web' }).start(() => setFlipped(true));
+      const key = selected === 'asset' ? 'choice_asset' : 'choice_liability';
+      setChoice(selected);
+      setFeedback(dilemma[key].feedback);
+      setAlreadyAnswered(true);
+
+      // Mise à jour streak local
+      const today     = todayStr();
+      const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+      const prevRaw   = user?.email ? await AsyncStorage.getItem(KEY_STREAK(user.email)) : null;
+      const prev: Streak = prevRaw
+        ? JSON.parse(prevRaw)
+        : { current: 0, longest: 0, last_answered_date: null };
+
+      const newCurrent = prev.last_answered_date === yesterday ? prev.current + 1 : 1;
+      const newStreak: Streak = {
+        current:            newCurrent,
+        longest:            Math.max(prev.longest, newCurrent),
+        last_answered_date: today,
+      };
+      setStreak(newStreak);
+
+      if (user?.email) {
+        await AsyncStorage.setItem(KEY_STREAK(user.email), JSON.stringify(newStreak));
+        await AsyncStorage.setItem(KEY_ANSWER(user.email), JSON.stringify({ choice: selected, dilemma_id: dilemma.id }));
       }
+
+      // Flip card
+      Animated.spring(flipAnim, {
+        toValue: 1,
+        friction: 8,
+        useNativeDriver: Platform.OS !== 'web',
+      }).start(() => setFlipped(true));
+
+      // Sync backend en arrière-plan
+      syncAnswerToBackend(dilemma.id, selected);
+
     } catch (e) {
-      console.error('DailyDecision answer error:', e);
+      console.error('DailyDecision choice error:', e);
     } finally {
       setSubmitting(false);
     }
   }
+
+  async function syncAnswerToBackend(dilemmaId: string, selectedChoice: 'asset' | 'liability') {
+    if (!user?.email) return;
+    try {
+      await fetch(`${API_BASE}/api/daily-decision/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-User-Email': user.email },
+        body: JSON.stringify({ dilemma_id: dilemmaId, choice: selectedChoice, lang: language }),
+        signal: AbortSignal.timeout(5000),
+      });
+    } catch (_) {
+      // silencieux — réponse déjà sauvegardée en local
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -152,14 +269,13 @@ export default function DailyDecisionCard() {
 
   if (!dilemma) return null;
 
+  const lang2    = (language || 'fr').toLowerCase().slice(0, 2);
   const catColor = CATEGORY_COLORS[dilemma.category] || '#4ADE80';
-  const lang2 = (language || 'fr').toLowerCase().slice(0, 2);
-  const catLabel = (CATEGORY_LABELS[dilemma.category]?.[lang2]) || dilemma.category;
-  const ui = (key: string) => UI_LABELS[key]?.[lang2] || UI_LABELS[key]?.['fr'] || key;
+  const catLabel = CATEGORY_LABELS[dilemma.category]?.[lang2] || dilemma.category;
+  const ui       = (key: string) => UI_LABELS[key]?.[lang2] || UI_LABELS[key]?.['fr'] || key;
 
   return (
     <View style={styles.wrapper}>
-      {/* Header row */}
       <View style={styles.headerRow}>
         <Text style={styles.sectionLabel}>{ui('daily_decision')}</Text>
         {streak.current > 0 && (
@@ -170,9 +286,8 @@ export default function DailyDecisionCard() {
         )}
       </View>
 
-      {/* Card */}
       <View style={styles.cardContainer}>
-        {/* Front face */}
+        {/* Front */}
         <Animated.View
           style={[
             styles.card,
@@ -208,7 +323,7 @@ export default function DailyDecisionCard() {
           </View>
         </Animated.View>
 
-        {/* Back face (feedback) */}
+        {/* Back (feedback) */}
         <Animated.View
           style={[
             styles.card,
@@ -235,146 +350,34 @@ export default function DailyDecisionCard() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  wrapper: {
-    marginBottom: 16,
-  },
-  loadingContainer: {
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  sectionLabel: {
-    color: '#9CA3AF',
-    fontSize: 11,
-    fontFamily: 'SpaceMono',
-    letterSpacing: 1.5,
-  },
-  streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1F2937',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    gap: 4,
-  },
-  streakFire: {
-    fontSize: 13,
-  },
-  streakText: {
-    color: '#FBBF24',
-    fontSize: 13,
-    fontWeight: '700',
-    fontFamily: 'SpaceMono',
-  },
-  cardContainer: {
-    position: 'relative',
-    minHeight: 260,
-  },
-  card: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#1F2937',
-    padding: 18,
-    backfaceVisibility: 'hidden',
-  },
-  cardFront: {},
-  cardBack: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  categoryTag: {
-    alignSelf: 'flex-start',
-    borderRadius: 6,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginBottom: 10,
-  },
-  categoryText: {
-    fontSize: 9,
-    fontFamily: 'SpaceMono',
-    letterSpacing: 1,
-  },
-  dilemmaTitle: {
-    color: '#F9FAFB',
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  dilemmaScenario: {
-    color: '#D1D5DB',
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 16,
-  },
-  choicesRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  choiceBtn: {
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    alignItems: 'center',
-    gap: 6,
-  },
-  liabilityBtn: {
-    backgroundColor: '#7F1D1D22',
-    borderColor: '#F8717155',
-  },
-  assetBtn: {
-    backgroundColor: '#14532D22',
-    borderColor: '#4ADE8055',
-  },
-  choiceBtnIcon: {
-    fontSize: 20,
-  },
-  choiceBtnLabel: {
-    color: '#E5E7EB',
-    fontSize: 11,
-    textAlign: 'center',
-    lineHeight: 15,
-  },
-  resultIcon: {
-    fontSize: 36,
-    marginBottom: 8,
-  },
-  resultLabel: {
-    color: '#F9FAFB',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  feedbackText: {
-    color: '#9CA3AF',
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  countdownRow: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  countdownLabel: {
-    color: '#6B7280',
-    fontSize: 11,
-    fontFamily: 'SpaceMono',
-  },
-  countdownValue: {
-    color: '#4ADE80',
-    fontSize: 13,
-    fontFamily: 'SpaceMono',
-    letterSpacing: 1,
-  },
+  wrapper:          { marginBottom: 16 },
+  loadingContainer: { height: 60, justifyContent: 'center', alignItems: 'center' },
+  headerRow:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  sectionLabel:     { color: '#9CA3AF', fontSize: 11, fontFamily: 'SpaceMono', letterSpacing: 1.5 },
+  streakBadge:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1F2937', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3, gap: 4 },
+  streakFire:       { fontSize: 13 },
+  streakText:       { color: '#FBBF24', fontSize: 13, fontWeight: '700', fontFamily: 'SpaceMono' },
+  cardContainer:    { position: 'relative', minHeight: 260 },
+  card:             { backgroundColor: '#111827', borderRadius: 16, borderWidth: 1, borderColor: '#1F2937', padding: 18, backfaceVisibility: 'hidden' },
+  cardFront:        {},
+  cardBack:         { alignItems: 'center', justifyContent: 'center' },
+  categoryTag:      { alignSelf: 'flex-start', borderRadius: 6, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 10 },
+  categoryText:     { fontSize: 9, fontFamily: 'SpaceMono', letterSpacing: 1 },
+  dilemmaTitle:     { color: '#F9FAFB', fontSize: 15, fontWeight: '700', marginBottom: 8 },
+  dilemmaScenario:  { color: '#D1D5DB', fontSize: 13, lineHeight: 19, marginBottom: 16 },
+  choicesRow:       { flexDirection: 'row', gap: 10 },
+  choiceBtn:        { flex: 1, borderRadius: 12, borderWidth: 1, padding: 12, alignItems: 'center', gap: 6 },
+  liabilityBtn:     { backgroundColor: '#7F1D1D22', borderColor: '#F8717155' },
+  assetBtn:         { backgroundColor: '#14532D22', borderColor: '#4ADE8055' },
+  choiceBtnIcon:    { fontSize: 20 },
+  choiceBtnLabel:   { color: '#E5E7EB', fontSize: 11, textAlign: 'center', lineHeight: 15 },
+  resultIcon:       { fontSize: 36, marginBottom: 8 },
+  resultLabel:      { color: '#F9FAFB', fontSize: 16, fontWeight: '700', marginBottom: 12 },
+  feedbackText:     { color: '#9CA3AF', fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 16 },
+  countdownRow:     { alignItems: 'center', gap: 4 },
+  countdownLabel:   { color: '#6B7280', fontSize: 11, fontFamily: 'SpaceMono' },
+  countdownValue:   { color: '#4ADE80', fontSize: 13, fontFamily: 'SpaceMono', letterSpacing: 1 },
 });
