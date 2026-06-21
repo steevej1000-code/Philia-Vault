@@ -44,22 +44,22 @@ export default function AffiliationScreen() {
       await api.init();
 
       // Fetch Stats
-      const [result, networkResult] = await Promise.all([
+      const [statsSettled, networkSettled] = await Promise.allSettled([
         api.getAffiliationStats(),
         api.getAffiliateNetwork(),
       ]);
+      const _result = statsSettled.status === 'fulfilled' ? statsSettled.value : null;
+      const networkResult = networkSettled.status === 'fulfilled' ? networkSettled.value : null;
       if (networkResult?.success) {
         setNetwork(networkResult.network ?? []);
       }
-      // reassign result usage below
-      const _result = result;
-      if (_result.success) {
+      if (_result?.success) {
         setStats({
-          code_parrainage: _result.code_parrainage,
-          active_referrals: _result.active_referrals,
-          estimated_monthly_gain: _result.estimated_monthly_gain,
+          code_parrainage: _result?.code_parrainage ?? '',
+          active_referrals: _result?.active_referrals ?? 0,
+          estimated_monthly_gain: _result?.estimated_monthly_gain ?? 0,
           // Mocking total invited if API doesn't have it yet to show the funnel concept
-          total_invited: _result.active_referrals > 0 ? _result.active_referrals * 3 : 0 
+          total_invited: (_result?.active_referrals ?? 0) > 0 ? (_result?.active_referrals ?? 0) * 3 : 0 
         });
       }
     } catch (e) {
@@ -152,7 +152,7 @@ export default function AffiliationScreen() {
             </View>
             <View style={styles.codeBox}>
               <Text style={styles.codeText} numberOfLines={1} ellipsizeMode="middle">
-                {stats?.code_parrainage ? REFERRAL_BASE_URL + stats.code_parrainage : '—'}
+                {stats?.code_parrainage ? REFERRAL_BASE_URL + stats.code_parrainage : '...'}
               </Text>
               <TouchableOpacity style={styles.copyBtn} onPress={handleCopy}>
                 <Text style={styles.copyBtnText}>{copied ? t('copied') : t('copy')}</Text>
