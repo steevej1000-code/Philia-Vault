@@ -869,6 +869,39 @@ def get_affiliation_stats(user_id, _retry=False):
         "commission_per_referral": COMMISSION_PER_REFERRAL,
     }
 
+
+def get_affiliate_network(user_id):
+    """Return the list of users referred by user_id."""
+    conn = get_db()
+    cursor = conn.cursor()
+    # Resolve to internal id first
+    cursor.execute("SELECT id, code_parrainage FROM users WHERE email = ? OR id = ?", (user_id, user_id))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return []
+    uid = row["id"]
+    cursor.execute(
+        """SELECT email, first_name, last_name, created_at, premium_status
+           FROM users WHERE parrain_id = ?
+           ORDER BY created_at DESC""",
+        (uid,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        d = dict(r)
+        name = ((d.get("first_name") or "") + " " + (d.get("last_name") or "")).strip()
+        result.append({
+            "email": d["email"],
+            "name": name if name else d["email"].split("@")[0],
+            "created_at": d["created_at"] or "",
+            "subscription_status": "active" if d["premium_status"] == 1 else "inactive",
+            "commission_earned": COMMISSION_PER_REFERRAL if d["premium_status"] == 1 else 0.0,
+        })
+    return result
+
 def add_founder_member(email, name, payment_id):
     conn = get_db()
     cursor = conn.cursor()

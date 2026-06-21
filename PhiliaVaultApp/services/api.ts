@@ -300,6 +300,10 @@ class ApiClient {
     return this.withOfflineCache(CACHE_KEYS.passiveIncome, () => this.request(ENDPOINTS.affiliationStats));
   }
 
+  async getAffiliateNetwork() {
+    return this.request(ENDPOINTS.affiliateNetwork);
+  }
+
   // ─── Coach / AI ────────────────────────────────────────────────────────────
 
   async sendChatMessage(message: string, history: { role: string; text: string }[] = [], lang: string = 'fr') {
