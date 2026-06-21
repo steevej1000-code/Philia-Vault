@@ -1156,6 +1156,195 @@ def founder_waitlist():
         "message": "Added to waitlist successfully"
     })
 
+# ── Daily Decision ────────────────────────────────────────────────────────────
+import json as _json
+import hashlib as _hashlib
+
+_DILEMMAS = None
+def _load_dilemmas():
+    global _DILEMMAS
+    if _DILEMMAS is None:
+        _path = os.path.join(os.path.dirname(__file__), "dilemmas.json")
+        with open(_path, "r", encoding="utf-8") as f:
+            _DILEMMAS = _json.load(f)
+    return _DILEMMAS
+
+def _pick_dilemma_for_user(user_id, today_str):
+    dilemmas = _load_dilemmas()
+    conn = database.get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT dilemma_id FROM user_dilemma_history WHERE user_id = (SELECT id FROM users WHERE email = ? OR id = ?)",
+            (user_id, user_id)
+        )
+        seen = {row[0] for row in cursor.fetchall()}
+    finally:
+        conn.close()
+
+    unseen = [d for d in dilemmas if d["id"] not in seen]
+    pool = unseen if unseen else dilemmas  # full cycle reset
+
+    seed_str = f"{user_id}:{today_str}"
+    seed = int(_hashlib.md5(seed_str.encode()).hexdigest(), 16)
+    return pool[seed % len(pool)]
+
+
+@app.route("/api/daily-decision", methods=["GET"])
+def get_daily_decision():
+    user_id = get_current_user_id()
+    today_str = request.args.get("date") or __import__("datetime").date.today().isoformat()
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+    try:
+        # Check if already answered today
+        cursor.execute(
+            """SELECT dh.dilemma_id, dh.choice FROM user_dilemma_history dh
+               JOIN users u ON u.id = dh.user_id
+               WHERE (u.email = ? OR u.id = ?)
+               AND date(dh.answered_at) = ?
+               ORDER BY dh.answered_at DESC LIMIT 1""",
+            (user_id, user_id, today_str)
+        )
+        existing = cursor.fetchone()
+        if existing:
+            dilemmas = _load_dilemmas()
+            dilemma = next((d for d in dilemmas if d["id"] == existing[0]), None)
+            choice = existing[1]
+        else:
+            dilemma = _pick_dilemma_for_user(user_id, today_str)
+            choice = None
+
+        # Streak
+        cursor.execute(
+            """SELECT current_streak, longest_streak, last_answered_date
+               FROM user_streak WHERE user_id = (SELECT id FROM users WHERE email = ? OR id = ?)""",
+            (user_id, user_id)
+        )
+        streak_row = cursor.fetchone()
+        streak = {"current": 0, "longest": 0, "last_answered_date": None}
+        if streak_row:
+            streak = {"current": streak_row[0], "longest": streak_row[1], "last_answered_date": streak_row[2]}
+    finally:
+        conn.close()
+
+    return jsonify({
+        "success": True,
+        "dilemma": dilemma,
+        "already_answered": existing is not None if not existing else True,
+        "choice": choice,
+        "streak": streak,
+        "date": today_str
+    })
+
+
+@app.route("/api/daily-decision/answer", methods=["POST"])
+def post_daily_decision():
+    user_id = get_current_user_id()
+    data = request.json or {}
+    dilemma_id = data.get("dilemma_id")
+    choice = data.get("choice")  # "asset" or "liability"
+    today_str = data.get("date") or __import__("datetime").date.today().isoformat()
+
+    if not dilemma_id or choice not in ("asset", "liability"):
+        return jsonify({"success": False, "error": "dilemma_id and choice (asset|liability) required"}), 400
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id FROM users WHERE email = ? OR id = ?", (user_id, user_id))
+        user_row = cursor.fetchone()
+        if not user_row:
+            return jsonify({"success": False, "error": "User not found"}), 404
+        uid = user_row[0]
+
+        # Prevent double-answer for same day
+        cursor.execute(
+            "SELECT 1 FROM user_dilemma_history WHERE user_id = ? AND date(answered_at) = ?",
+            (uid, today_str)
+        )
+        if cursor.fetchone():
+            return jsonify({"success": False, "error": "Already answered today"}), 409
+
+        cursor.execute(
+            "INSERT INTO user_dilemma_history (user_id, dilemma_id, choice) VALUES (?, ?, ?)",
+            (uid, dilemma_id, choice)
+        )
+
+        # Update streak
+        import datetime as _dt
+        today = _dt.date.fromisoformat(today_str)
+        yesterday = (today - _dt.timedelta(days=1)).isoformat()
+
+        cursor.execute("SELECT current_streak, longest_streak, last_answered_date FROM user_streak WHERE user_id = ?", (uid,))
+        s = cursor.fetchone()
+        if s:
+            last = s[2]
+            current = s[0] + 1 if last == yesterday else 1
+            longest = max(s[1], current)
+            cursor.execute(
+                "UPDATE user_streak SET current_streak=?, longest_streak=?, last_answered_date=? WHERE user_id=?",
+                (current, longest, today_str, uid)
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO user_streak (user_id, current_streak, longest_streak, last_answered_date) VALUES (?, 1, 1, ?)",
+                (uid, today_str)
+            )
+            current, longest = 1, 1
+
+        conn.commit()
+
+        # Return feedback from dilemma
+        dilemmas = _load_dilemmas()
+        dilemma = next((d for d in dilemmas if d["id"] == dilemma_id), None)
+        feedback = None
+        if dilemma:
+            key = "choice_asset" if choice == "asset" else "choice_liability"
+            feedback = dilemma[key]["feedback"]
+
+    finally:
+        conn.close()
+
+    return jsonify({
+        "success": True,
+        "feedback": feedback,
+        "streak": {"current": current, "longest": longest, "last_answered_date": today_str}
+    })
+
+
+@app.route("/api/daily-decision/history", methods=["GET"])
+def get_daily_decision_history():
+    user_id = get_current_user_id()
+    conn = database.get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """SELECT dh.dilemma_id, dh.choice, dh.answered_at
+               FROM user_dilemma_history dh
+               JOIN users u ON u.id = dh.user_id
+               WHERE u.email = ? OR u.id = ?
+               ORDER BY dh.answered_at DESC
+               LIMIT 30""",
+            (user_id, user_id)
+        )
+        rows = cursor.fetchall()
+        history = [{"dilemma_id": r[0], "choice": r[1], "answered_at": r[2]} for r in rows]
+
+        cursor.execute(
+            """SELECT current_streak, longest_streak, last_answered_date
+               FROM user_streak WHERE user_id = (SELECT id FROM users WHERE email = ? OR id = ?)""",
+            (user_id, user_id)
+        )
+        s = cursor.fetchone()
+        streak = {"current": s[0] if s else 0, "longest": s[1] if s else 0, "last_answered_date": s[2] if s else None}
+    finally:
+        conn.close()
+
+    return jsonify({"success": True, "history": history, "streak": streak})
+
+
 if __name__ == "__main__":
     # Ensure static directory exists
     os.makedirs("static", exist_ok=True)

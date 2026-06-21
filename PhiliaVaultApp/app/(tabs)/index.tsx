@@ -15,6 +15,7 @@ import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { getLastSync } from '../../services/offlineCache';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
 import Skeleton from '../../components/Skeleton';
+import DailyDecisionCard from '../../components/DailyDecisionCard';
 
 interface DashboardData {
   total_assets: number;
@@ -228,8 +229,10 @@ export default function DashboardScreen() {
               <Text style={styles.sectionTitle}>{t('ai_insights')}</Text>
             </View>
 
-            <TouchableOpacity 
-              style={styles.insightCard} 
+            <DailyDecisionCard />
+
+            <TouchableOpacity
+              style={styles.insightCard}
               onPress={() => router.push('/coach')}
               activeOpacity={0.8}
             >
