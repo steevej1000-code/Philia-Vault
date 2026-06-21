@@ -242,7 +242,14 @@ class ApiClient {
   // ─── Liabilities ───────────────────────────────────────────────────────────
 
   async getLiabilities() {
-    return this.withOfflineCache(CACHE_KEYS.liabilities, () => this.request(ENDPOINTS.liabilities));
+    const res = await this.withOfflineCache(CACHE_KEYS.liabilities, () => this.request(ENDPOINTS.liabilities));
+    if (res && res.success && Array.isArray(res.liabilities)) {
+      res.liabilities = res.liabilities.map((l: any) => ({
+        ...l,
+        total_debt: l.total_debt !== undefined ? l.total_debt : (l.remaining_amount !== undefined ? l.remaining_amount : l.total_amount),
+      }));
+    }
+    return res;
   }
 
   async addLiability(data: { name: string; type: string; total_debt: number; monthly_cost: number }) {

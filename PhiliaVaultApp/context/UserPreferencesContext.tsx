@@ -37,7 +37,7 @@ interface UserPreferences {
   setLanguage: (lang: Language) => Promise<void>;
   setCurrency: (currency: string) => Promise<void>;
   t: (key: string) => string;
-  formatAmount: (value: number) => string;
+  formatAmount: (value: any) => string;
 }
 
 const defaultPrefs: UserPreferences = {
@@ -48,7 +48,7 @@ const defaultPrefs: UserPreferences = {
   setLanguage: async () => {},
   setCurrency: async () => {},
   t: (key: string) => key,
-  formatAmount: (value: number) => `$${value}`,
+  formatAmount: (value: any) => `$${value}`,
 };
 
 const UserPreferencesContext = createContext<UserPreferences>(defaultPrefs);
@@ -139,13 +139,17 @@ export function UserPreferencesProvider({ children }: { children: React.ReactNod
 
   const t = useCallback((key: string) => translate(language, key), [language]);
 
-  const formatAmount = useCallback((value: number) => {
+  const formatAmount = useCallback((value: any) => {
     const info = CURRENCY_MAP[currency] || CURRENCY_MAP.USD;
-    const formatted = Math.abs(value).toLocaleString(info.locale, {
+    const num = typeof value === 'number' ? value : parseFloat(value);
+    if (num === null || num === undefined || isNaN(num)) {
+      return `${info.symbol}0`;
+    }
+    const formatted = Math.abs(num).toLocaleString(info.locale, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     });
-    const sign = value < 0 ? '-' : '';
+    const sign = num < 0 ? '-' : '';
     return `${sign}${info.symbol}${formatted}`;
   }, [currency]);
 

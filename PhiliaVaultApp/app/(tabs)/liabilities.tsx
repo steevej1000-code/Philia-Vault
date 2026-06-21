@@ -205,7 +205,9 @@ export default function LiabilitiesScreen() {
                     <View style={styles.categoryMeta}>
                       <Text style={styles.categoryLabel}>{t(details.labelKey).toUpperCase()}</Text>
                       <Text style={styles.categorySubLabel}>{details.subLabel}</Text>
-                      <Text style={styles.cardValue}>{formatAmount(item.total_debt)}</Text>
+                      <Text style={styles.cardValue}>
+                        {item.type === 'Subscription' ? item.name : formatAmount(item.total_debt)}
+                      </Text>
                     </View>
                   </View>
 
@@ -256,7 +258,7 @@ export default function LiabilitiesScreen() {
                     {t(LIABILITY_TYPE_LABEL_KEYS[item.type] || LIABILITY_TYPE_LABEL_KEYS.Other)}
                   </Text>
                   <Text style={[styles.colText, { flex: 1.2, textAlign: 'right', fontWeight: '600' }]}>
-                    {formatAmount(item.total_debt)}
+                    {item.type === 'Subscription' ? '—' : formatAmount(item.total_debt)}
                   </Text>
                   <Text style={[styles.colText, { flex: 1.2, textAlign: 'right', color: '#ff3b30', fontWeight: '700' }]}>
                     -{formatAmount(item.monthly_cost)}
