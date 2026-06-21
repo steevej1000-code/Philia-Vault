@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuthStore } from '../store/authStore';
+import { useUserPreferences } from '../context/UserPreferencesContext';
 import { API_BASE } from '../constants/api';
 
 interface Dilemma {
@@ -56,6 +57,7 @@ function formatCountdown(secs: number): string {
 
 export default function DailyDecisionCard() {
   const { user } = useAuthStore();
+  const { language } = useUserPreferences();
   const [dilemma, setDilemma] = useState<Dilemma | null>(null);
   const [streak, setStreak] = useState<Streak>({ current: 0, longest: 0, last_answered_date: null });
   const [loading, setLoading] = useState(true);
@@ -85,7 +87,7 @@ export default function DailyDecisionCard() {
     if (!user?.email) return;
     try {
       const res = await fetch(`${API_BASE}/api/daily-decision`, {
-        headers: { 'X-User-Email': user.email },
+        headers: { 'X-User-Email': user.email, 'X-User-Lang': language },
       });
       const data = await res.json();
       if (data.success) {
@@ -115,7 +117,7 @@ export default function DailyDecisionCard() {
       const res = await fetch(`${API_BASE}/api/daily-decision/answer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Email': user.email },
-        body: JSON.stringify({ dilemma_id: dilemma.id, choice: selected }),
+        body: JSON.stringify({ dilemma_id: dilemma.id, choice: selected, lang: language }),
       });
       const data = await res.json();
       if (data.success) {

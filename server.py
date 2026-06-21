@@ -1169,6 +1169,87 @@ def _load_dilemmas():
             _DILEMMAS = _json.load(f)
     return _DILEMMAS
 
+_LANG_NAMES = {"en": "English", "es": "Spanish", "pt": "Portuguese", "fr": "French"}
+
+def _translate_dilemma(dilemma, lang):
+    """Translate a dilemma to the target language using Gemini. Returns translated dict."""
+    if not gemini_model:
+        return dilemma  # fallback: serve French if Gemini unavailable
+
+    lang_name = _LANG_NAMES.get(lang, lang)
+    prompt = f"""Translate this financial education dilemma from French to {lang_name}.
+Preserve the exact JSON structure. Keep the educational/Kiyosaki tone.
+Do NOT add financial advice disclaimers. Return ONLY valid JSON, no markdown.
+
+Input JSON:
+{_json.dumps(dilemma, ensure_ascii=False)}
+
+Return the same JSON structure with all text fields translated to {lang_name}.
+Keep the "id" and "category" fields unchanged."""
+
+    try:
+        resp = gemini_model.generate_content(prompt)
+        text = resp.text.strip()
+        # Strip markdown fences if present
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        return _json.loads(text.strip())
+    except Exception as e:
+        print(f"[DailyDecision] Translation error ({lang}): {e}")
+        return dilemma  # fallback to French
+
+def _get_dilemma_in_lang(dilemma, lang):
+    """Return dilemma localized to lang, using DB cache or Gemini translation."""
+    if lang == "fr" or not lang:
+        return dilemma
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT title, scenario, choice_liability_label, choice_liability_feedback, choice_asset_label, choice_asset_feedback FROM dilemma_translations WHERE dilemma_id = ? AND lang = ?",
+            (dilemma["id"], lang)
+        )
+        row = cursor.fetchone()
+        if row:
+            return {
+                **dilemma,
+                "title": row[0],
+                "scenario": row[1],
+                "choice_liability": {"label": row[2], "feedback": row[3]},
+                "choice_asset": {"label": row[4], "feedback": row[5]},
+            }
+    finally:
+        conn.close()
+
+    # Not cached — translate and store
+    translated = _translate_dilemma(dilemma, lang)
+    try:
+        conn2 = database.get_db()
+        cursor2 = conn2.cursor()
+        cursor2.execute(
+            """INSERT OR REPLACE INTO dilemma_translations
+               (dilemma_id, lang, title, scenario, choice_liability_label, choice_liability_feedback, choice_asset_label, choice_asset_feedback)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                dilemma["id"], lang,
+                translated.get("title", dilemma["title"]),
+                translated.get("scenario", dilemma["scenario"]),
+                translated.get("choice_liability", {}).get("label", dilemma["choice_liability"]["label"]),
+                translated.get("choice_liability", {}).get("feedback", dilemma["choice_liability"]["feedback"]),
+                translated.get("choice_asset", {}).get("label", dilemma["choice_asset"]["label"]),
+                translated.get("choice_asset", {}).get("feedback", dilemma["choice_asset"]["feedback"]),
+            )
+        )
+        conn2.commit()
+        conn2.close()
+    except Exception as e:
+        print(f"[DailyDecision] Cache write error: {e}")
+
+    return translated
+
 def _pick_dilemma_for_user(user_id, today_str):
     dilemmas = _load_dilemmas()
     conn = database.get_db()
@@ -1194,6 +1275,7 @@ def _pick_dilemma_for_user(user_id, today_str):
 def get_daily_decision():
     user_id = get_current_user_id()
     today_str = request.args.get("date") or __import__("datetime").date.today().isoformat()
+    lang = (request.args.get("lang") or request.headers.get("X-User-Lang") or "fr").lower()[:2]
 
     conn = database.get_db()
     cursor = conn.cursor()
@@ -1210,11 +1292,13 @@ def get_daily_decision():
         existing = cursor.fetchone()
         if existing:
             dilemmas = _load_dilemmas()
-            dilemma = next((d for d in dilemmas if d["id"] == existing[0]), None)
+            dilemma_raw = next((d for d in dilemmas if d["id"] == existing[0]), None)
             choice = existing[1]
         else:
-            dilemma = _pick_dilemma_for_user(user_id, today_str)
+            dilemma_raw = _pick_dilemma_for_user(user_id, today_str)
             choice = None
+
+        dilemma = _get_dilemma_in_lang(dilemma_raw, lang) if dilemma_raw else None
 
         # Streak
         cursor.execute(
@@ -1296,13 +1380,15 @@ def post_daily_decision():
 
         conn.commit()
 
-        # Return feedback from dilemma
+        # Return feedback from dilemma (localized)
         dilemmas = _load_dilemmas()
-        dilemma = next((d for d in dilemmas if d["id"] == dilemma_id), None)
+        dilemma_raw = next((d for d in dilemmas if d["id"] == dilemma_id), None)
         feedback = None
-        if dilemma:
+        if dilemma_raw:
+            _lang = (data.get("lang") or request.headers.get("X-User-Lang") or "fr").lower()[:2]
+            dilemma_loc = _get_dilemma_in_lang(dilemma_raw, _lang)
             key = "choice_asset" if choice == "asset" else "choice_liability"
-            feedback = dilemma[key]["feedback"]
+            feedback = dilemma_loc[key]["feedback"]
 
     finally:
         conn.close()

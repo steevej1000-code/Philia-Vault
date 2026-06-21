@@ -315,6 +315,21 @@ def init_db():
 
     # ── Daily Decision tables ─────────────────────────────────────────────────
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS dilemma_translations (
+        dilemma_id TEXT NOT NULL,
+        lang TEXT NOT NULL,
+        title TEXT NOT NULL,
+        scenario TEXT NOT NULL,
+        choice_liability_label TEXT NOT NULL,
+        choice_liability_feedback TEXT NOT NULL,
+        choice_asset_label TEXT NOT NULL,
+        choice_asset_feedback TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (dilemma_id, lang)
+    )
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS user_dilemma_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
