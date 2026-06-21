@@ -833,7 +833,8 @@ def coach_chat():
     - Actifs totaux: {total_assets} $ (Revenus passifs mensuels: {total_passive} $)
     Détail des actifs: {', '.join([f"{a['name']} ({a['type']}): Val={a['value']}$, Yield={a['monthly_yield']}$" for a in assets])}
     
-    - Passifs totaux: {total_liabilities} $ (Coût mensuel total: {total_cost} $)
+    - Dettes totales (capital restant dû): {total_liabilities} $
+    - Coût mensuel des passifs (charges/abonnements): {total_cost} $
     Détail des passifs: {', '.join([f"{l['name']} ({l['type']}): Restant={l['remaining_amount']}$, Coût mensuel={l['monthly_cost']}$" for l in liabilities])}
     
     - Indice d'Indépendance Financière (IIF): {iif}%
@@ -859,6 +860,7 @@ CONSIGNES POUR UN COMPORTEMENT HUMAIN ET PROFESSIONNEL :
 2. LONGUEUR DES RÉPONSES : Rédige une réponse courte, claire et précise de maximum 5 phrases. Sois chaleureux et pédagogue, ne sois pas trop sec ou distant.
 3. PAS DE LISTES : N'utilise jamais de puces ou de numéros. Rédige en paragraphes fluides.
 4. CHIFFRES CLÉS : Utilise les données financières réelles de l'utilisateur de manière pertinente pour étayer tes conseils.
+5. PASSIFS ET ABONNEMENTS : Distingue bien la dette de capital restant dû (ex: prêt immobilier) et les charges récurrentes/abonnements (type Subscription). Si l'utilisateur n'a aucun prêt mais possède des abonnements (coûts mensuels), ne dis pas simplement "vos passifs sont de 0 $". Précise que vous n'avez pas de dette financière directe mais que vos charges mensuelles d'abonnements s'élèvent à X $ par mois (le coût mensuel total des passifs). Ne laisse pas entendre qu'il n'y a aucun passif si des coûts mensuels d'abonnements existent.
 
 Voici les données financières de l'utilisateur pour orienter sa navigation :
 {context_str}
