@@ -313,6 +313,84 @@ def init_db():
     )
     """)
 
+    # ── Daily Decision tables ─────────────────────────────────────────────────
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS dilemma_translations (
+        dilemma_id TEXT NOT NULL,
+        lang TEXT NOT NULL,
+        title TEXT NOT NULL,
+        scenario TEXT NOT NULL,
+        choice_liability_label TEXT NOT NULL,
+        choice_liability_feedback TEXT NOT NULL,
+        choice_asset_label TEXT NOT NULL,
+        choice_asset_feedback TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (dilemma_id, lang)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_dilemma_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        dilemma_id TEXT NOT NULL,
+        choice TEXT NOT NULL CHECK (choice IN ('asset', 'liability')),
+        answered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_streak (
+        user_id INTEGER PRIMARY KEY,
+        current_streak INTEGER DEFAULT 0,
+        longest_streak INTEGER DEFAULT 0,
+        last_answered_date DATE,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
+    # ── Cashflow Simulator tables ──────────────────────────────────────────────
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS simulator_state (
+        user_id TEXT PRIMARY KEY,
+        balance REAL DEFAULT 10000,
+        monthly_salary REAL DEFAULT 5000,
+        monthly_expenses REAL DEFAULT 3000,
+        cycle INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS simulator_portfolio (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        asset_id TEXT NOT NULL,
+        asset_type TEXT NOT NULL,
+        asset_name TEXT NOT NULL,
+        purchase_price REAL NOT NULL,
+        monthly_income REAL DEFAULT 0,
+        depreciation_rate REAL DEFAULT 0,
+        quantity INTEGER DEFAULT 1,
+        purchased_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS simulator_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        action TEXT NOT NULL,
+        asset_id TEXT,
+        asset_name TEXT,
+        amount REAL,
+        cycle INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
     # ── Seed owner email so Google OAuth works on first boot ──────────────────
     _owner_email = os.environ.get("ADMIN_EMAIL", "steevej1000@gmail.com")
     cursor.execute(
@@ -1406,4 +1484,148 @@ def get_payment_history():
             'stripe_url': f"https://dashboard.stripe.com/customers/{r[2]}" if r[2] else None,
         })
     return payments
+
+
+# ─── Cashflow Simulator helpers ────────────────────────────────────────────────
+
+SIMULATOR_DEFAULTS = {
+    "balance": 10000.0,
+    "monthly_salary": 5000.0,
+    "monthly_expenses": 3000.0,
+    "cycle": 0,
+}
+
+def sim_get_state(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM simulator_state WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return dict(SIMULATOR_DEFAULTS)
+    d = dict(row)
+    return {
+        "balance": d["balance"],
+        "monthly_salary": d["monthly_salary"],
+        "monthly_expenses": d["monthly_expenses"],
+        "cycle": d["cycle"],
+    }
+
+def sim_ensure_state(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR IGNORE INTO simulator_state (user_id, balance, monthly_salary, monthly_expenses, cycle) VALUES (?, 10000, 5000, 3000, 0)", (user_id,))
+    conn.commit()
+    conn.close()
+
+def sim_get_portfolio(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM simulator_portfolio WHERE user_id = ? ORDER BY purchased_at DESC", (user_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def sim_get_history(user_id, limit=20):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM simulator_history WHERE user_id = ? ORDER BY id DESC LIMIT ?", (user_id, limit))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def sim_buy(user_id, asset_id, asset_type, asset_name, purchase_price, monthly_income, depreciation_rate):
+    from datetime import datetime
+    conn = get_db()
+    cursor = conn.cursor()
+    # Ensure state exists
+    cursor.execute("INSERT OR IGNORE INTO simulator_state (user_id, balance, monthly_salary, monthly_expenses, cycle) VALUES (?, 10000, 5000, 3000, 0)", (user_id,))
+    cursor.execute("SELECT balance, cycle FROM simulator_state WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    if not row or row["balance"] < purchase_price:
+        conn.close()
+        return False, "Solde insuffisant"
+    new_balance = row["balance"] - purchase_price
+    cycle = row["cycle"]
+    cursor.execute("UPDATE simulator_state SET balance = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?", (new_balance, user_id))
+    cursor.execute(
+        "INSERT INTO simulator_portfolio (user_id, asset_id, asset_type, asset_name, purchase_price, monthly_income, depreciation_rate) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (user_id, asset_id, asset_type, asset_name, purchase_price, monthly_income, depreciation_rate)
+    )
+    cursor.execute(
+        "INSERT INTO simulator_history (user_id, action, asset_id, asset_name, amount, cycle) VALUES (?, 'buy', ?, ?, ?, ?)",
+        (user_id, asset_id, asset_name, purchase_price, cycle)
+    )
+    conn.commit()
+    conn.close()
+    return True, new_balance
+
+def sim_sell(user_id, portfolio_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM simulator_portfolio WHERE id = ? AND user_id = ?", (portfolio_id, user_id))
+    item = cursor.fetchone()
+    if not item:
+        conn.close()
+        return False, "Actif introuvable"
+    item = dict(item)
+    cursor.execute("SELECT balance, cycle FROM simulator_state WHERE user_id = ?", (user_id,))
+    state = cursor.fetchone()
+    cycle = state["cycle"] if state else 0
+    # Sell at purchase price (simplified — no appreciation in V1)
+    sale_price = item["purchase_price"]
+    new_balance = (state["balance"] if state else 10000) + sale_price
+    cursor.execute("UPDATE simulator_state SET balance = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?", (new_balance, user_id))
+    cursor.execute("DELETE FROM simulator_portfolio WHERE id = ?", (portfolio_id,))
+    cursor.execute(
+        "INSERT INTO simulator_history (user_id, action, asset_id, asset_name, amount, cycle) VALUES (?, 'sell', ?, ?, ?, ?)",
+        (user_id, item["asset_id"], item["asset_name"], sale_price, cycle)
+    )
+    conn.commit()
+    conn.close()
+    return True, new_balance
+
+def sim_advance(user_id):
+    """Advance one month: collect salary + passive income, pay expenses."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR IGNORE INTO simulator_state (user_id, balance, monthly_salary, monthly_expenses, cycle) VALUES (?, 10000, 5000, 3000, 0)", (user_id,))
+    cursor.execute("SELECT * FROM simulator_state WHERE user_id = ?", (user_id,))
+    state = dict(cursor.fetchone())
+    cursor.execute("SELECT * FROM simulator_portfolio WHERE user_id = ?", (user_id,))
+    portfolio = [dict(r) for r in cursor.fetchall()]
+    passive_income = sum(p["monthly_income"] for p in portfolio)
+    net = state["monthly_salary"] + passive_income - state["monthly_expenses"]
+    new_balance = state["balance"] + net
+    new_cycle = state["cycle"] + 1
+    cursor.execute(
+        "UPDATE simulator_state SET balance = ?, cycle = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+        (new_balance, new_cycle, user_id)
+    )
+    cursor.execute(
+        "INSERT INTO simulator_history (user_id, action, amount, cycle) VALUES (?, 'advance', ?, ?)",
+        (user_id, net, new_cycle)
+    )
+    conn.commit()
+    conn.close()
+    freed = passive_income >= state["monthly_expenses"]
+    return {
+        "balance": new_balance,
+        "cycle": new_cycle,
+        "net_this_month": net,
+        "passive_income": passive_income,
+        "rat_race_escaped": freed,
+    }
+
+def sim_reset(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM simulator_portfolio WHERE user_id = ?", (user_id,))
+    cursor.execute("DELETE FROM simulator_history WHERE user_id = ?", (user_id,))
+    cursor.execute(
+        "INSERT OR REPLACE INTO simulator_state (user_id, balance, monthly_salary, monthly_expenses, cycle, updated_at) VALUES (?, 10000, 5000, 3000, 0, CURRENT_TIMESTAMP)",
+        (user_id,)
+    )
+    conn.commit()
+    conn.close()
 

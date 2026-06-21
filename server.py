@@ -1369,6 +1369,126 @@ def get_daily_decision_history():
     return jsonify({"success": True, "history": history, "streak": streak})
 
 
+# ════════════════════════════════════════════════════════════════════════════════
+# CASHFLOW SIMULATOR
+# ════════════════════════════════════════════════════════════════════════════════
+
+import json as _json_mod
+
+_SIMULATOR_CATALOG = None
+
+def _load_simulator_catalog():
+    global _SIMULATOR_CATALOG
+    if _SIMULATOR_CATALOG is None:
+        _path = os.path.join(os.path.dirname(__file__), "simulator_catalog.json")
+        with open(_path, "r", encoding="utf-8") as f:
+            _SIMULATOR_CATALOG = _json_mod.load(f)
+    return _SIMULATOR_CATALOG
+
+
+@app.route("/api/simulator/catalog", methods=["GET"])
+def get_simulator_catalog():
+    catalog = _load_simulator_catalog()
+    return jsonify({"success": True, "catalog": catalog})
+
+
+@app.route("/api/simulator/state", methods=["GET"])
+def get_simulator_state():
+    user_id = get_current_user_id()
+    database.sim_ensure_state(user_id)
+    state = database.sim_get_state(user_id)
+    portfolio = database.sim_get_portfolio(user_id)
+    history = database.sim_get_history(user_id, limit=20)
+    passive_income = sum(p["monthly_income"] for p in portfolio)
+    monthly_cashflow = state["monthly_salary"] + passive_income - state["monthly_expenses"]
+    rat_race_escaped = passive_income >= state["monthly_expenses"]
+    return jsonify({
+        "success": True,
+        "state": state,
+        "portfolio": portfolio,
+        "history": history,
+        "passive_income": passive_income,
+        "monthly_cashflow": monthly_cashflow,
+        "rat_race_escaped": rat_race_escaped,
+    })
+
+
+@app.route("/api/simulator/buy", methods=["POST"])
+def simulator_buy():
+    user_id = get_current_user_id()
+    data = request.json or {}
+    asset_id = data.get("asset_id")
+    asset_type = data.get("asset_type")
+    if not asset_id or not asset_type:
+        return jsonify({"success": False, "error": "asset_id and asset_type required"}), 400
+    catalog = _load_simulator_catalog()
+    items = catalog.get(asset_type, [])
+    item = next((i for i in items if i["id"] == asset_id), None)
+    if not item:
+        return jsonify({"success": False, "error": "Actif introuvable dans le catalogue"}), 404
+    ok, result = database.sim_buy(
+        user_id,
+        asset_id=item["id"],
+        asset_type=asset_type,
+        asset_name=item["name"],
+        purchase_price=item["cost"],
+        monthly_income=item.get("monthly_income", 0),
+        depreciation_rate=item.get("depreciation_rate", 0),
+    )
+    if not ok:
+        return jsonify({"success": False, "error": result}), 400
+    state = database.sim_get_state(user_id)
+    portfolio = database.sim_get_portfolio(user_id)
+    passive_income = sum(p["monthly_income"] for p in portfolio)
+    return jsonify({
+        "success": True,
+        "new_balance": result,
+        "state": state,
+        "portfolio": portfolio,
+        "passive_income": passive_income,
+        "rat_race_escaped": passive_income >= state["monthly_expenses"],
+    })
+
+
+@app.route("/api/simulator/sell", methods=["POST"])
+def simulator_sell():
+    user_id = get_current_user_id()
+    data = request.json or {}
+    portfolio_id = data.get("portfolio_id")
+    if not portfolio_id:
+        return jsonify({"success": False, "error": "portfolio_id required"}), 400
+    ok, result = database.sim_sell(user_id, portfolio_id)
+    if not ok:
+        return jsonify({"success": False, "error": result}), 400
+    state = database.sim_get_state(user_id)
+    portfolio = database.sim_get_portfolio(user_id)
+    passive_income = sum(p["monthly_income"] for p in portfolio)
+    return jsonify({
+        "success": True,
+        "new_balance": result,
+        "state": state,
+        "portfolio": portfolio,
+        "passive_income": passive_income,
+        "rat_race_escaped": passive_income >= state["monthly_expenses"],
+    })
+
+
+@app.route("/api/simulator/advance", methods=["POST"])
+def simulator_advance():
+    user_id = get_current_user_id()
+    result = database.sim_advance(user_id)
+    portfolio = database.sim_get_portfolio(user_id)
+    return jsonify({"success": True, **result, "portfolio": portfolio})
+
+
+@app.route("/api/simulator/reset", methods=["POST"])
+def simulator_reset():
+    user_id = get_current_user_id()
+    database.sim_reset(user_id)
+    state = database.sim_get_state(user_id)
+    return jsonify({"success": True, "state": state, "portfolio": [], "history": []})
+
+
 if __name__ == "__main__":
     # Ensure static directory exists
     os.makedirs("static", exist_ok=True)
