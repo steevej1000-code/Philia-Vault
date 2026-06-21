@@ -350,6 +350,44 @@ def init_db():
     )
     """)
 
+
+    # ── Stripe Connect affiliate tables ───────────────────────────────────────
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS affiliate_accounts (
+        user_id INTEGER PRIMARY KEY,
+        stripe_account_id TEXT,
+        onboarding_status TEXT DEFAULT 'pending' CHECK (onboarding_status IN ('pending','active','restricted')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS affiliate_commissions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        affiliate_user_id INTEGER NOT NULL,
+        referred_user_id INTEGER NOT NULL,
+        subscription_payment_id TEXT NOT NULL,
+        commission_amount REAL NOT NULL,
+        status TEXT DEFAULT 'pending' CHECK (status IN ('pending','eligible','paid','cancelled')),
+        eligible_at TIMESTAMP,
+        paid_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (affiliate_user_id) REFERENCES users(id),
+        FOREIGN KEY (referred_user_id) REFERENCES users(id)
+    )
+    """)
+
+    # Try to add missing columns if tables already existed without them
+    for col_def in [
+        ("stripe_account_id", "TEXT"),
+        ("onboarding_status", "TEXT DEFAULT 'pending'"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE affiliate_accounts ADD COLUMN {col_def[0]} {col_def[1]}")
+        except Exception:
+            pass
+
     # ── Seed owner email so Google OAuth works on first boot ──────────────────
     _owner_email = os.environ.get("ADMIN_EMAIL", "steevej1000@gmail.com")
     cursor.execute(
@@ -404,10 +442,12 @@ def get_user_profile(user_id):
             "premium_status": d["premium_status"],
             "stripe_customer_id": d["stripe_customer_id"],
             "currency": d["currency"] or "EUR",
+            "id": d["id"],
             "first_name": d["first_name"] or "",
             "last_name": d["last_name"] or "",
             "custom_categories": d["custom_categories"] or "",
-            "avatar": d.get("avatar") or ""
+            "avatar": d.get("avatar") or "",
+            "parrain_id": d.get("parrain_id"),
         }
     return None
 
@@ -869,6 +909,150 @@ def get_affiliation_stats(user_id, _retry=False):
         "commission_per_referral": COMMISSION_PER_REFERRAL,
     }
 
+
+
+# ─── Stripe Connect affiliate DB helpers ──────────────────────────────────────
+
+def get_affiliate_account(user_id):
+    """Return affiliate_accounts row for user (by email or int id)."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE email = ? OR id = ?", (user_id, user_id))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+    uid = row["id"]
+    cursor.execute("SELECT * FROM affiliate_accounts WHERE user_id = ?", (uid,))
+    acc = cursor.fetchone()
+    conn.close()
+    return dict(acc) if acc else None
+
+def upsert_affiliate_account(user_id, stripe_account_id, status='pending'):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE email = ? OR id = ?", (user_id, user_id))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+    uid = row["id"]
+    cursor.execute("""
+        INSERT INTO affiliate_accounts (user_id, stripe_account_id, onboarding_status)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+            stripe_account_id = excluded.stripe_account_id,
+            onboarding_status = excluded.onboarding_status
+    """, (uid, stripe_account_id, status))
+    conn.commit()
+    conn.close()
+    return True
+
+def update_affiliate_onboarding_status(user_id, status):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE email = ? OR id = ?", (user_id, user_id))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return
+    uid = row["id"]
+    cursor.execute("UPDATE affiliate_accounts SET onboarding_status = ? WHERE user_id = ?", (status, uid))
+    conn.commit()
+    conn.close()
+
+def insert_affiliate_commission(affiliate_user_id, referred_user_id, payment_id, commission_amount):
+    """Insert a pending commission row. Idempotent on payment_id."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id FROM affiliate_commissions WHERE subscription_payment_id = ?", (payment_id,)
+    )
+    if cursor.fetchone():
+        conn.close()
+        return  # already recorded
+    cursor.execute("""
+        INSERT INTO affiliate_commissions
+            (affiliate_user_id, referred_user_id, subscription_payment_id, commission_amount, status)
+        VALUES (?, ?, ?, ?, 'pending')
+    """, (affiliate_user_id, referred_user_id, payment_id, commission_amount))
+    conn.commit()
+    conn.close()
+
+def get_eligible_commissions_batch():
+    """Return eligible commissions grouped by affiliate for payout."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT ac.affiliate_user_id, u.email, aa.stripe_account_id,
+               SUM(ac.commission_amount) AS total_amount,
+               GROUP_CONCAT(ac.id) AS commission_ids
+        FROM affiliate_commissions ac
+        JOIN users u ON u.id = ac.affiliate_user_id
+        LEFT JOIN affiliate_accounts aa ON aa.user_id = ac.affiliate_user_id
+        WHERE ac.status = 'eligible'
+        GROUP BY ac.affiliate_user_id
+    """)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def get_pending_commissions_older_than_days(days=30):
+    """Commissions in 'pending' status older than `days` days."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT ac.*, u.email AS referred_email,
+               ru.stripe_customer_id AS referred_stripe_customer_id,
+               ru.stripe_subscription_id AS referred_stripe_sub_id
+        FROM affiliate_commissions ac
+        JOIN users u ON u.id = ac.referred_user_id
+        LEFT JOIN users ru ON ru.id = ac.referred_user_id
+        WHERE ac.status = 'pending'
+          AND ac.created_at <= datetime('now', ?)
+    """, (f'-{days} days',))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def mark_commissions_eligible(commission_ids):
+    if not commission_ids:
+        return
+    conn = get_db()
+    cursor = conn.cursor()
+    placeholders = ','.join('?' * len(commission_ids))
+    cursor.execute(
+        f"UPDATE affiliate_commissions SET status='eligible', eligible_at=CURRENT_TIMESTAMP WHERE id IN ({placeholders})",
+        commission_ids
+    )
+    conn.commit()
+    conn.close()
+
+def mark_commissions_cancelled(commission_ids):
+    if not commission_ids:
+        return
+    conn = get_db()
+    cursor = conn.cursor()
+    placeholders = ','.join('?' * len(commission_ids))
+    cursor.execute(
+        f"UPDATE affiliate_commissions SET status='cancelled' WHERE id IN ({placeholders})",
+        commission_ids
+    )
+    conn.commit()
+    conn.close()
+
+def mark_commissions_paid(commission_ids):
+    if not commission_ids:
+        return
+    conn = get_db()
+    cursor = conn.cursor()
+    placeholders = ','.join('?' * len(commission_ids))
+    cursor.execute(
+        f"UPDATE affiliate_commissions SET status='paid', paid_at=CURRENT_TIMESTAMP WHERE id IN ({placeholders})",
+        commission_ids
+    )
+    conn.commit()
+    conn.close()
 
 def get_affiliate_network(user_id):
     """Return the list of users referred by user_id."""

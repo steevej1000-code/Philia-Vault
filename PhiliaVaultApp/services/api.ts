@@ -304,6 +304,14 @@ class ApiClient {
     return this.request(ENDPOINTS.affiliateNetwork);
   }
 
+  async getAffiliateOnboardStatus() {
+    return this.request(ENDPOINTS.affiliateOnboardStatus);
+  }
+
+  async startAffiliateOnboarding() {
+    return this.request(ENDPOINTS.affiliateOnboard, { method: 'POST', body: JSON.stringify({}) });
+  }
+
   // ─── Coach / AI ────────────────────────────────────────────────────────────
 
   async sendChatMessage(message: string, history: { role: string; text: string }[] = [], lang: string = 'fr') {

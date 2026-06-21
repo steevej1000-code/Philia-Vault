@@ -267,6 +267,13 @@ export const translations: Record<Language, Dict> = {
     affiliation_network_status_inactive: 'Inactive',
     affiliation_network_commission: 'Commission',
     affiliation_network_joined: 'Joined',
+    affiliate_connect_title: 'PAYMENT SETUP',
+    affiliate_connect_btn_setup: '⚙️ Set Up Payment Info',
+    affiliate_connect_active: '✅ Ready to receive payments',
+    affiliate_connect_restricted: '⚠️ Additional information required',
+    affiliate_connect_restricted_link: 'Complete your profile',
+    affiliate_connect_pending: 'Stripe account created — finish setup to activate',
+    affiliate_connect_loading: 'Checking payment status...',
 
     // Push Notifications Soft-Prompt
     push_optin_title: 'Clarity demands discipline.',
@@ -560,6 +567,13 @@ export const translations: Record<Language, Dict> = {
     affiliation_network_status_inactive: 'Inactif',
     affiliation_network_commission: 'Commission',
     affiliation_network_joined: 'Inscrit',
+    affiliate_connect_title: 'CONFIGURATION DU PAIEMENT',
+    affiliate_connect_btn_setup: '⚙️ Configurer mes infos de paiement',
+    affiliate_connect_active: '✅ Prêt à recevoir des paiements',
+    affiliate_connect_restricted: '⚠️ Informations complémentaires requises',
+    affiliate_connect_restricted_link: 'Compléter mon profil',
+    affiliate_connect_pending: 'Compte Stripe créé — finalisez la configuration pour activer',
+    affiliate_connect_loading: 'Vérification du statut de paiement...',
 
     // Push Notifications Soft-Prompt
     push_optin_title: 'La clarté exige de la discipline.',
@@ -843,6 +857,13 @@ export const translations: Record<Language, Dict> = {
     affiliation_network_status_inactive: 'Inactivo',
     affiliation_network_commission: 'Comisión',
     affiliation_network_joined: 'Inscrito',
+    affiliate_connect_title: 'CONFIGURACIÓN DE PAGO',
+    affiliate_connect_btn_setup: '⚙️ Configurar mis datos de pago',
+    affiliate_connect_active: '✅ Listo para recibir pagos',
+    affiliate_connect_restricted: '⚠️ Se requiere información adicional',
+    affiliate_connect_restricted_link: 'Completar mi perfil',
+    affiliate_connect_pending: 'Cuenta Stripe creada — completa la configuración para activar',
+    affiliate_connect_loading: 'Verificando el estado de pago...',
 
     // Push Notifications Soft-Prompt
     push_optin_title: 'La claridad exige disciplina.',
@@ -1124,6 +1145,13 @@ export const translations: Record<Language, Dict> = {
     affiliation_network_status_inactive: 'Inativo',
     affiliation_network_commission: 'Comissão',
     affiliation_network_joined: 'Inscrito',
+    affiliate_connect_title: 'CONFIGURAÇÃO DE PAGAMENTO',
+    affiliate_connect_btn_setup: '⚙️ Configurar meus dados de pagamento',
+    affiliate_connect_active: '✅ Pronto para receber pagamentos',
+    affiliate_connect_restricted: '⚠️ Informações adicionais necessárias',
+    affiliate_connect_restricted_link: 'Completar meu perfil',
+    affiliate_connect_pending: 'Conta Stripe criada — conclua a configuração para ativar',
+    affiliate_connect_loading: 'Verificando status de pagamento...',
 
     // Push Notifications Soft-Prompt
     push_optin_title: 'A clareza exige disciplina.',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl, ScrollView, Alert, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import api from '../../services/api';
@@ -35,6 +35,8 @@ export default function AffiliationScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [network, setNetwork] = useState<ReferralMember[]>([]);
+  const [onboardStatus, setOnboardStatus] = useState<'not_started'|'pending'|'active'|'restricted'|'loading'>('loading');
+  const [onboardLoading, setOnboardLoading] = useState(false);
 
   // L'éligibilité = avoir un abonnement premium actif (vérifié via le store, sans appel RevenueCat)
   const isEligible = isPremium;
@@ -44,12 +46,19 @@ export default function AffiliationScreen() {
       await api.init();
 
       // Fetch Stats
-      const [statsSettled, networkSettled] = await Promise.allSettled([
+      const [statsSettled, networkSettled, onboardSettled] = await Promise.allSettled([
         api.getAffiliationStats(),
         api.getAffiliateNetwork(),
+        api.getAffiliateOnboardStatus(),
       ]);
       const _result = statsSettled.status === 'fulfilled' ? statsSettled.value : null;
       const networkResult = networkSettled.status === 'fulfilled' ? networkSettled.value : null;
+      const onboardResult = onboardSettled.status === 'fulfilled' ? onboardSettled.value : null;
+      if (onboardResult?.success) {
+        setOnboardStatus(onboardResult.status ?? 'not_started');
+      } else {
+        setOnboardStatus('not_started');
+      }
       if (networkResult?.success) {
         setNetwork(networkResult.network ?? []);
       }
@@ -71,6 +80,22 @@ export default function AffiliationScreen() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleOnboard = async () => {
+    setOnboardLoading(true);
+    try {
+      const result = await api.startAffiliateOnboarding();
+      if (result?.success && result.onboarding_url) {
+        await Linking.openURL(result.onboarding_url);
+      } else if (result?.status === 'active') {
+        setOnboardStatus('active');
+      }
+    } catch (e) {
+      console.warn('[Affiliate onboard]', e);
+    } finally {
+      setOnboardLoading(false);
+    }
+  };
 
   const handleCopy = async () => {
     if (!stats?.code_parrainage) return;
@@ -161,6 +186,59 @@ export default function AffiliationScreen() {
             <Text style={styles.codeHint}>{t('affiliation_share_hint')}</Text>
           </GlassCard>
 
+          {/* STRIPE CONNECT — PAYMENT SETUP */}
+          <GlassCard style={styles.connectCard}>
+            <View style={styles.cardHeaderRow}>
+              <IconShield size={20} color={COLORS.tertiary} />
+              <Text style={styles.cardTitle}>{t('affiliate_connect_title')}</Text>
+            </View>
+
+            {onboardStatus === 'loading' && (
+              <Text style={styles.connectHint}>{t('affiliate_connect_loading')}</Text>
+            )}
+
+            {(onboardStatus === 'not_started') && (
+              <TouchableOpacity
+                style={styles.connectBtn}
+                onPress={handleOnboard}
+                disabled={onboardLoading}
+              >
+                {onboardLoading
+                  ? <ActivityIndicator color="#0c0e12" size="small" />
+                  : <Text style={styles.connectBtnText}>{t('affiliate_connect_btn_setup')}</Text>
+                }
+              </TouchableOpacity>
+            )}
+
+            {onboardStatus === 'pending' && (
+              <View style={styles.connectStatusRow}>
+                <Text style={styles.connectHint}>{t('affiliate_connect_pending')}</Text>
+                <TouchableOpacity style={styles.connectBtn} onPress={handleOnboard} disabled={onboardLoading}>
+                  {onboardLoading
+                    ? <ActivityIndicator color="#0c0e12" size="small" />
+                    : <Text style={styles.connectBtnText}>{t('affiliate_connect_btn_setup')}</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {onboardStatus === 'active' && (
+              <View style={styles.connectActiveBadge}>
+                <Text style={styles.connectActiveText}>{t('affiliate_connect_active')}</Text>
+              </View>
+            )}
+
+            {onboardStatus === 'restricted' && (
+              <View style={styles.connectStatusRow}>
+                <View style={styles.connectRestrictedBadge}>
+                  <Text style={styles.connectRestrictedText}>{t('affiliate_connect_restricted')}</Text>
+                </View>
+                <TouchableOpacity onPress={handleOnboard} disabled={onboardLoading}>
+                  <Text style={styles.connectRestrictedLink}>{t('affiliate_connect_restricted_link')} →</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </GlassCard>
 
           {/* ACTIVE NETWORK */}
           <GlassCard style={styles.networkCard}>
@@ -265,6 +343,29 @@ const styles = StyleSheet.create({
   copyBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.full },
   copyBtnText: { fontSize: 12, fontWeight: '700', color: '#0c0e12' },
   codeHint: { fontSize: 12, color: COLORS.onSurfaceVariant, lineHeight: 18 },
+
+  // Stripe Connect
+  connectCard: { padding: 20, gap: 14 },
+  connectBtn: {
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.full,
+    paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
+  },
+  connectBtnText: { fontSize: 14, fontWeight: '800', color: '#0c0e12' },
+  connectHint: { fontSize: 13, color: COLORS.onSurfaceVariant, lineHeight: 18 },
+  connectStatusRow: { gap: 10 },
+  connectActiveBadge: {
+    backgroundColor: 'rgba(204,255,0,0.12)', borderWidth: 1,
+    borderColor: 'rgba(204,255,0,0.4)', borderRadius: RADIUS.md,
+    paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center',
+  },
+  connectActiveText: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
+  connectRestrictedBadge: {
+    backgroundColor: 'rgba(255,160,0,0.1)', borderWidth: 1,
+    borderColor: 'rgba(255,160,0,0.4)', borderRadius: RADIUS.md,
+    paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center',
+  },
+  connectRestrictedText: { fontSize: 13, fontWeight: '700', color: '#FFA000' },
+  connectRestrictedLink: { fontSize: 13, color: COLORS.primary, textDecorationLine: 'underline', textAlign: 'center' },
 
   // Network
   networkCard: { padding: 20, gap: 0 },

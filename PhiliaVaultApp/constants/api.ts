@@ -39,6 +39,8 @@ export const ENDPOINTS = {
   // Affiliation / Revenu Passif
   affiliationStats: '/api/affiliation/stats',
   affiliateNetwork: '/api/affiliate/network',
+  affiliateOnboard: '/api/affiliate/onboard',
+  affiliateOnboardStatus: '/api/affiliate/onboard/status',
 
   // Coach & Payments
   chat:           '/api/coach/chat',

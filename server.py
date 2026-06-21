@@ -644,6 +644,190 @@ def affiliation_stats():
 
 
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STRIPE CONNECT — AFFILIATE ONBOARDING & PAYOUTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+STRIPE_CONNECT_RETURN_URL  = os.environ.get("STRIPE_CONNECT_RETURN_URL",  "https://app.philiavault.com/affiliate-onboarding-return")
+STRIPE_CONNECT_REFRESH_URL = os.environ.get("STRIPE_CONNECT_REFRESH_URL", "https://app.philiavault.com/affiliate-onboarding-refresh")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "steevej1000@gmail.com")
+
+def _require_admin(req):
+    """Return None if authorized, or a JSON error response."""
+    caller = req.headers.get("X-Admin-Email", "")
+    if caller != ADMIN_EMAIL:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    return None
+
+
+@app.route("/api/affiliate/onboard", methods=["POST"])
+def affiliate_onboard():
+    """Create (or re-create) a Stripe Connect Express account and return the onboarding URL."""
+    user_id = get_current_user_id()
+    if not STRIPE_SECRET_KEY:
+        return jsonify({"success": False, "error": "Stripe not configured"}), 500
+    try:
+        existing = database.get_affiliate_account(user_id)
+        if existing and existing.get("stripe_account_id") and existing.get("onboarding_status") == "active":
+            return jsonify({"success": True, "status": "active", "onboarding_url": None})
+
+        # Re-use existing account id if already created but not yet active
+        if existing and existing.get("stripe_account_id"):
+            account_id = existing["stripe_account_id"]
+        else:
+            account = stripe.Account.create(
+                type="express",
+                country="US",
+                capabilities={"transfers": {"requested": True}},
+            )
+            account_id = account.id
+            database.upsert_affiliate_account(user_id, account_id, status="pending")
+
+        link = stripe.AccountLink.create(
+            account=account_id,
+            refresh_url=STRIPE_CONNECT_REFRESH_URL,
+            return_url=STRIPE_CONNECT_RETURN_URL,
+            type="account_onboarding",
+        )
+        return jsonify({"success": True, "onboarding_url": link.url, "stripe_account_id": account_id})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/affiliate/onboard/status", methods=["GET"])
+def affiliate_onboard_status():
+    """Return current onboarding status, syncing with Stripe if an account exists."""
+    user_id = get_current_user_id()
+    acc = database.get_affiliate_account(user_id)
+    if not acc or not acc.get("stripe_account_id"):
+        return jsonify({"success": True, "status": "not_started", "stripe_account_id": None})
+
+    account_id = acc["stripe_account_id"]
+    current_status = acc.get("onboarding_status", "pending")
+
+    if STRIPE_SECRET_KEY and current_status != "active":
+        try:
+            sa = stripe.Account.retrieve(account_id)
+            if sa.charges_enabled:
+                current_status = "active"
+            elif sa.requirements and (sa.requirements.currently_due or sa.requirements.past_due):
+                current_status = "restricted"
+            # else stays "pending"
+            database.update_affiliate_onboarding_status(user_id, current_status)
+        except Exception as e:
+            print(f"[Affiliate] Stripe account retrieve error: {e}")
+
+    return jsonify({"success": True, "status": current_status, "stripe_account_id": account_id})
+
+
+@app.route("/api/admin/affiliate/payout-batch", methods=["GET"])
+def affiliate_payout_batch():
+    """List all eligible commissions grouped by affiliate (admin only)."""
+    err = _require_admin(request)
+    if err:
+        return err
+    try:
+        rows = database.get_eligible_commissions_batch()
+        return jsonify({"success": True, "batch": rows, "count": len(rows)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/admin/affiliate/payout-execute", methods=["POST"])
+def affiliate_payout_execute():
+    """Execute Stripe transfers for eligible commissions (admin only)."""
+    err = _require_admin(request)
+    if err:
+        return err
+    data = request.json or {}
+    target_user_id = data.get("affiliate_user_id")
+    execute_all = data.get("all", False)
+
+    if not STRIPE_SECRET_KEY:
+        return jsonify({"success": False, "error": "Stripe not configured"}), 500
+
+    try:
+        batch = database.get_eligible_commissions_batch()
+        if not execute_all and target_user_id:
+            batch = [b for b in batch if str(b["affiliate_user_id"]) == str(target_user_id)]
+
+        transferred = []
+        errors = []
+
+        for item in batch:
+            stripe_account_id = item.get("stripe_account_id")
+            if not stripe_account_id:
+                errors.append({"affiliate_user_id": item["affiliate_user_id"], "error": "No Stripe account linked"})
+                continue
+            total_cents = int(round(item["total_amount"] * 100))
+            if total_cents < 100:  # Stripe minimum $1
+                errors.append({"affiliate_user_id": item["affiliate_user_id"], "error": f"Amount too low: ${item['total_amount']:.2f}"})
+                continue
+            try:
+                transfer = stripe.Transfer.create(
+                    amount=total_cents,
+                    currency="usd",
+                    destination=stripe_account_id,
+                    metadata={"affiliate_user_id": item["affiliate_user_id"], "email": item["email"]},
+                )
+                commission_ids = [int(i) for i in item["commission_ids"].split(",")]
+                database.mark_commissions_paid(commission_ids)
+                transferred.append({
+                    "affiliate_user_id": item["affiliate_user_id"],
+                    "email": item["email"],
+                    "amount_usd": item["total_amount"],
+                    "transfer_id": transfer.id,
+                })
+            except Exception as e:
+                errors.append({"affiliate_user_id": item["affiliate_user_id"], "error": str(e)})
+
+        return jsonify({"success": True, "transferred": transferred, "errors": errors})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/admin/affiliate/process-eligible", methods=["POST"])
+def affiliate_process_eligible():
+    """Move commissions from pending→eligible (30-day quarantine) or pending→cancelled."""
+    err = _require_admin(request)
+    if err:
+        return err
+    if not STRIPE_SECRET_KEY:
+        return jsonify({"success": False, "error": "Stripe not configured"}), 500
+    try:
+        pending = database.get_pending_commissions_older_than_days(30)
+        eligible_ids = []
+        cancelled_ids = []
+
+        for row in pending:
+            sub_id = row.get("referred_stripe_sub_id")
+            if not sub_id:
+                # No subscription on file — mark eligible (will be reviewed manually)
+                eligible_ids.append(row["id"])
+                continue
+            try:
+                sub = stripe.Subscription.retrieve(sub_id)
+                if sub.status in ("active", "trialing"):
+                    eligible_ids.append(row["id"])
+                else:
+                    cancelled_ids.append(row["id"])
+            except Exception:
+                # Can't retrieve — mark eligible conservatively
+                eligible_ids.append(row["id"])
+
+        database.mark_commissions_eligible(eligible_ids)
+        database.mark_commissions_cancelled(cancelled_ids)
+
+        return jsonify({
+            "success": True,
+            "processed": len(pending),
+            "eligible": len(eligible_ids),
+            "cancelled": len(cancelled_ids),
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route("/api/admin/debug/affiliates", methods=["GET"])
 def debug_affiliates():
     """Temporary debug route: list all users with their parrain_id to verify referral linking."""

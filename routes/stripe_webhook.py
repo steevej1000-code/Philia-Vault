@@ -89,6 +89,28 @@ def process_successful_payment(session):
     spots_remaining = db_result.get('spots_remaining')
 
     print(f'[Stripe Webhook] ✅ Membre #{new_member_number} enregistré: {customer_email}')
+    # ============================================
+    # COMMISSION AFFILIÉ — 30% si parrain_id présent
+    # ============================================
+    try:
+        referred_user = database.get_user_profile(customer_email)
+        if referred_user and referred_user.get("parrain_id"):
+            parrain_id = referred_user["parrain_id"]
+            referred_id = referred_user.get("id")
+            commission_amount = round(amount_total * 0.30, 2)
+            payment_id = session.get("payment_intent") or session.get("id")
+            if referred_id and payment_id:
+                database.insert_affiliate_commission(
+                    affiliate_user_id=parrain_id,
+                    referred_user_id=referred_id,
+                    payment_id=payment_id,
+                    commission_amount=commission_amount,
+                )
+                print(f"[Affiliate] Commission {commission_amount} USD créée pour parrain_id={parrain_id}")
+    except Exception as e:
+        print(f"[Affiliate] Erreur création commission: {e}")
+
+
 
     # ============================================
     # ENVOYER EVENT META (Conversions API — server-side)
