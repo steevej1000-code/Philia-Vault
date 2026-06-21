@@ -756,6 +756,57 @@ def stripe_checkout():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route("/api/stripe/verify-session", methods=["POST"])
+def stripe_verify_session():
+    """
+    Called by stripe-success.tsx after Stripe redirects back.
+    Verifies the session and activates premium for the user.
+    """
+    user_email = request.headers.get('X-User-Email') or get_current_user_id()
+    data = request.json or {}
+    session_id = data.get("session_id")
+
+    if not session_id or session_id == "mock_session":
+        # Dev mode bypass
+        if user_email:
+            database.set_premium_status(user_email, 1)
+        return jsonify({"success": True, "verified": True})
+
+    try:
+        if STRIPE_SECRET_KEY:
+            session = stripe.checkout.Session.retrieve(session_id)
+            payment_status = session.get("payment_status")  # 'paid' or 'no_payment_required' (trial)
+            subscription_status = None
+            if session.get("subscription"):
+                sub = stripe.Subscription.retrieve(session["subscription"])
+                subscription_status = sub.get("status")  # 'trialing', 'active', etc.
+
+            is_active = payment_status in ("paid", "no_payment_required") or \
+                        subscription_status in ("active", "trialing")
+
+            if is_active:
+                # Activate via email from metadata or header
+                email = session.get("customer_email") or \
+                        (session.get("metadata") or {}).get("user_email") or \
+                        user_email
+                if email:
+                    database.set_premium_status(email, 1,
+                        stripe_customer_id=session.get("customer"))
+                return jsonify({"success": True, "verified": True,
+                                "payment_status": payment_status,
+                                "subscription_status": subscription_status})
+            else:
+                return jsonify({"success": False, "verified": False,
+                                "payment_status": payment_status})
+        else:
+            # Dev mode — no Stripe key
+            if user_email:
+                database.set_premium_status(user_email, 1)
+            return jsonify({"success": True, "verified": True})
+    except Exception as e:
+        print(f"[verify-session] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route("/api/stripe/create-portal-session", methods=["POST"])
 def stripe_portal():
     user_id = get_current_user_id()
