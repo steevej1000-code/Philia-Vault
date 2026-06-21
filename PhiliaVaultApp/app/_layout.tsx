@@ -112,18 +112,23 @@ function AuthGuard() {
 }
 
 function PremiumGuard() {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, isPremium: isPremiumStore } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
-    const isPaywall = segments[0] === 'paywall';
+    const inAuthGroup    = segments[0] === '(auth)';
+    const isPaywall      = segments[0] === 'paywall';
+    const isStripeResult = segments[0] === 'stripe-success'; // skip guard during Stripe redirect
 
-    if (!inAuthGroup && !isPaywall) {
-      // Vérifier le statut premium et founder
+    if (!inAuthGroup && !isPaywall && !isStripeResult) {
+      // Si le store local dit premium, on fait confiance sans appel réseau
+      // @ts-ignore
+      if (isPremiumStore || global.__bypassPaywall) return;
+
+      // Vérifier le statut premium et founder via backend
       const checkAccess = async () => {
         try {
           const res = await fetch(`${API_BASE}/api/user/founder-status?email=${encodeURIComponent(user.email)}`);
@@ -135,19 +140,19 @@ function PremiumGuard() {
 
           if (!isFounder) {
             const { isPremium } = await checkPremiumStatus();
-            // @ts-ignore
-            if (!isPremium && !global.__bypassPaywall) {
+            if (!isPremium) {
               router.replace('/paywall');
             }
           }
         } catch (err) {
           console.error('[PremiumGuard] Erreur de vérification:', err);
+          // En cas d'erreur réseau, ne pas bloquer l'utilisateur
         }
       };
 
       checkAccess();
     }
-  }, [isAuthenticated, user, segments]);
+  }, [isAuthenticated, user, isPremiumStore, segments]);
 
   return null;
 }

@@ -20,7 +20,22 @@ export const restorePurchases = async () => ({
   customerInfo: null,
 });
 
-export const checkPremiumStatus = async () => ({
-  isPremium: false,
-  customerInfo: null,
-});
+export const checkPremiumStatus = async () => {
+  // On web, RevenueCat is unavailable — check premium status via backend API
+  try {
+    const { storage } = await import('./storage');
+    const email = await storage.getItem('user_email');
+    if (!email) return { isPremium: false, customerInfo: null };
+
+    const { API_BASE } = await import('../constants/api');
+    const res = await fetch(`${API_BASE}/api/user`, {
+      headers: { 'X-User-Email': email },
+    });
+    if (!res.ok) return { isPremium: false, customerInfo: null };
+    const data = await res.json();
+    const isPremium = (data.user?.premium_status ?? 0) >= 1;
+    return { isPremium, customerInfo: null };
+  } catch {
+    return { isPremium: false, customerInfo: null };
+  }
+};
