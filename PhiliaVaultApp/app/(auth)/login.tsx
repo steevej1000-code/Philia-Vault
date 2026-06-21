@@ -9,7 +9,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { makeRedirectUri } from 'expo-auth-session';
 // import * as AppleAuthentication from 'expo-apple-authentication';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { IconShield } from '../../components/icons/Icons';
 import { useAuthStore } from '../../store/authStore';
 import { COLORS, RADIUS } from '../../constants/colors';
@@ -77,6 +77,8 @@ function GPSIllustration() {
 export default function LoginScreen() {
   const { login, register, loginWithGoogle, loginWithApple } = useAuthStore();
   const { t } = useUserPreferences();
+  // Read ?ref= from URL (web PWA deep link or native deep link via expo-router)
+  const { ref: refParam } = useLocalSearchParams<{ ref?: string }>();
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [firstName, setFirstName] = useState('');
@@ -206,7 +208,15 @@ export default function LoginScreen() {
     }
   };
 
-  const [referralCode, setReferralCode] = useState('');
+  const [referralCode, setReferralCode] = useState(refParam ? refParam.trim().toUpperCase() : '');
+
+  // Sync refParam into state if it resolves after initial render
+  useEffect(() => {
+    if (refParam && !referralCode) {
+      setReferralCode(refParam.trim().toUpperCase());
+      setMode('register'); // switch to register tab automatically when coming via referral link
+    }
+  }, [refParam]);
 
   const handleSubmit = async (bypassOnboarding = false) => {
     if (!email.trim() || !password) {

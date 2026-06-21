@@ -643,6 +643,29 @@ def affiliation_stats():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+
+@app.route("/api/admin/debug/affiliates", methods=["GET"])
+def debug_affiliates():
+    """Temporary debug route: list all users with their parrain_id to verify referral linking."""
+    import os
+    # Protect with a simple env-var secret to avoid exposing in prod without auth
+    secret = request.headers.get("X-Admin-Secret", "")
+    expected = os.environ.get("ADMIN_DEBUG_SECRET", "philia-debug-2025")
+    if secret != expected:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    try:
+        conn = database.get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT id, email, first_name, last_name, code_parrainage, parrain_id, premium_status, created_at
+               FROM users ORDER BY created_at DESC LIMIT 100"""
+        )
+        rows = [dict(r) for r in cursor.fetchall()]
+        conn.close()
+        return jsonify({"success": True, "users": rows, "count": len(rows)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route("/api/affiliate/network", methods=["GET"])
 def affiliate_network():
     user_id = get_current_user_id()
