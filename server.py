@@ -5,6 +5,10 @@ import json
 from dotenv import load_dotenv
 
 from flask_cors import CORS
+import stripe
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
+if STRIPE_SECRET_KEY:
+    stripe.api_key = STRIPE_SECRET_KEY
 
 load_dotenv()
 
@@ -828,6 +832,24 @@ def affiliate_process_eligible():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+@app.route("/api/admin/fix-referral", methods=["POST"])
+def admin_fix_referral():
+    """Manually link a user to a parrain by email (admin only). For retroactive referral fixes."""
+    err = _require_admin(request)
+    if err:
+        return err
+    data = request.json or {}
+    user_email = (data.get("user_email") or "").strip().lower()
+    parrain_email = (data.get("parrain_email") or "").strip().lower()
+    if not user_email or not parrain_email:
+        return jsonify({"success": False, "error": "user_email and parrain_email required"}), 400
+    try:
+        result = database.fix_referral_link(user_email, parrain_email)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route("/api/admin/debug/affiliates", methods=["GET"])
 def debug_affiliates():
     """Temporary debug route: list all users with their parrain_id to verify referral linking."""
@@ -906,9 +928,6 @@ def update_delete_savings_goal(goal_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 # Stripe Payments Configuration
-import stripe
-STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
-stripe.api_key = STRIPE_SECRET_KEY
 
 # Stripe Checkout / Portal Endpoints
 @app.route("/api/stripe/create-checkout-session", methods=["POST"])
@@ -1008,7 +1027,8 @@ def stripe_verify_session():
                         user_email
                 if email:
                     database.set_premium_status(email, 1,
-                        stripe_customer_id=session.get("customer"))
+                        stripe_customer_id=session.get("customer"),
+                        stripe_subscription_id=session.get("subscription"))
                 return jsonify({"success": True, "verified": True,
                                 "payment_status": payment_status,
                                 "subscription_status": subscription_status})
@@ -1085,7 +1105,29 @@ def webhook_stripe():
         if user:
             database.set_premium_status(user["email"], 0, stripe_customer_id=customer_id)
             database.add_transaction(user["email"], "Abonnement Stripe résilié", "liability_payment", 0.0, "Today")
-            
+
+    elif event_type == "invoice.payment_succeeded":
+        # Recurring subscription renewal — record affiliate commission if applicable
+        customer_id = event_data.get("customer")
+        payment_intent_id = event_data.get("payment_intent")
+        amount_paid = event_data.get("amount_paid", 0) / 100  # cents → dollars
+        billing_reason = event_data.get("billing_reason", "")
+        # Only process renewals (not the initial invoice, already handled by checkout.session.completed)
+        if billing_reason == "subscription_cycle" and customer_id and payment_intent_id:
+            try:
+                user = database.get_user_by_stripe_customer_id(customer_id)
+                if user and user.get("parrain_id"):
+                    commission_amount = round(amount_paid * 0.30, 2)
+                    database.insert_affiliate_commission(
+                        affiliate_user_id=user["parrain_id"],
+                        referred_user_id=user["id"],
+                        payment_id=payment_intent_id,
+                        commission_amount=commission_amount,
+                    )
+                    print(f"[Affiliate] Renewal commission {commission_amount} USD for parrain_id={user['parrain_id']}")
+            except Exception as e:
+                print(f"[Affiliate] Renewal commission error: {e}")
+
     return jsonify({"success": True})
 
 # RevenueCat Webhook Endpoint

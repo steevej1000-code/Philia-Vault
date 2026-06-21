@@ -99,6 +99,7 @@ def init_db():
         notifications_enabled INTEGER DEFAULT 1,
         code_parrainage TEXT UNIQUE,
         parrain_id INTEGER,
+        stripe_subscription_id TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -117,6 +118,7 @@ def init_db():
         ("notifications_enabled", "INTEGER DEFAULT 1"),
         ("code_parrainage", "TEXT"),
         ("parrain_id", "INTEGER"),
+        ("stripe_subscription_id", "TEXT"),
         ("created_at", "TEXT DEFAULT CURRENT_TIMESTAMP"),
         ("language", "TEXT DEFAULT 'en'"),
         ("currency_symbol", "TEXT DEFAULT '$'"),
@@ -464,11 +466,15 @@ def update_user_profile(user_id, first_name, last_name, custom_categories, avata
     conn.close()
     return True
 
-def set_premium_status(user_id, status, stripe_customer_id=None):
+def set_premium_status(user_id, status, stripe_customer_id=None, stripe_subscription_id=None):
     conn = get_db()
     cursor = conn.cursor()
-    if stripe_customer_id:
-        cursor.execute("UPDATE users SET premium_status=?, stripe_customer_id=? WHERE email=? OR id=?", (int(status), stripe_customer_id, user_id, user_id))
+    if stripe_customer_id and stripe_subscription_id:
+        cursor.execute("UPDATE users SET premium_status=?, stripe_customer_id=?, stripe_subscription_id=? WHERE email=? OR id=?",
+                       (int(status), stripe_customer_id, stripe_subscription_id, user_id, user_id))
+    elif stripe_customer_id:
+        cursor.execute("UPDATE users SET premium_status=?, stripe_customer_id=? WHERE email=? OR id=?",
+                       (int(status), stripe_customer_id, user_id, user_id))
     else:
         cursor.execute("UPDATE users SET premium_status=? WHERE email=? OR id=?", (int(status), user_id, user_id))
     conn.commit()
@@ -911,6 +917,33 @@ def get_affiliation_stats(user_id, _retry=False):
 
 
 
+
+def fix_referral_link(user_email, parrain_email):
+    """Retroactively link user to parrain. Used for manual corrections (admin only)."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, email FROM users WHERE email = ?", (user_email,))
+    user_row = cursor.fetchone()
+    if not user_row:
+        conn.close()
+        return {"success": False, "error": f"User not found: {user_email}"}
+    cursor.execute("SELECT id, email, code_parrainage FROM users WHERE email = ?", (parrain_email,))
+    parrain_row = cursor.fetchone()
+    if not parrain_row:
+        conn.close()
+        return {"success": False, "error": f"Parrain not found: {parrain_email}"}
+    parrain_id = parrain_row["id"]
+    user_id = user_row["id"]
+    cursor.execute("UPDATE users SET parrain_id = ? WHERE id = ?", (parrain_id, user_id))
+    conn.commit()
+    conn.close()
+    return {
+        "success": True,
+        "message": f"{user_email} is now linked to parrain {parrain_email} (id={parrain_id})",
+        "user_id": user_id,
+        "parrain_id": parrain_id,
+    }
+
 # ─── Stripe Connect affiliate DB helpers ──────────────────────────────────────
 
 def get_affiliate_account(user_id):
@@ -1002,12 +1035,12 @@ def get_pending_commissions_older_than_days(days=30):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT ac.*, u.email AS referred_email,
-               ru.stripe_customer_id AS referred_stripe_customer_id,
-               ru.stripe_subscription_id AS referred_stripe_sub_id
+        SELECT ac.*,
+               u.email AS referred_email,
+               u.stripe_customer_id AS referred_stripe_customer_id,
+               u.stripe_subscription_id AS referred_stripe_sub_id
         FROM affiliate_commissions ac
         JOIN users u ON u.id = ac.referred_user_id
-        LEFT JOIN users ru ON ru.id = ac.referred_user_id
         WHERE ac.status = 'pending'
           AND ac.created_at <= datetime('now', ?)
     """, (f'-{days} days',))

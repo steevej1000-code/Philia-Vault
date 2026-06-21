@@ -81,16 +81,9 @@ def process_successful_payment(session):
         print(f"[Stripe Webhook] Erreur base de données: {db_result.get('error')}")
         return jsonify({'error': 'database_error'}), 500
 
-    if db_result.get('already_processed'):
-        print(f'[Stripe Webhook] Membre déjà enregistré: {customer_email}')
-        return jsonify({'received': True, 'already_processed': True}), 200
-
-    new_member_number = db_result.get('member_number')
-    spots_remaining = db_result.get('spots_remaining')
-
-    print(f'[Stripe Webhook] ✅ Membre #{new_member_number} enregistré: {customer_email}')
     # ============================================
     # COMMISSION AFFILIÉ — 30% si parrain_id présent
+    # Fired before already_processed guard so renewals via checkout also record commissions
     # ============================================
     try:
         referred_user = database.get_user_profile(customer_email)
@@ -110,7 +103,14 @@ def process_successful_payment(session):
     except Exception as e:
         print(f"[Affiliate] Erreur création commission: {e}")
 
+    if db_result.get('already_processed'):
+        print(f'[Stripe Webhook] Membre déjà enregistré: {customer_email}')
+        return jsonify({'received': True, 'already_processed': True}), 200
 
+    new_member_number = db_result.get('member_number')
+    spots_remaining = db_result.get('spots_remaining')
+
+    print(f'[Stripe Webhook] ✅ Membre #{new_member_number} enregistré: {customer_email}')
 
     # ============================================
     # ENVOYER EVENT META (Conversions API — server-side)
