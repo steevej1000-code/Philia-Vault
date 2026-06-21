@@ -698,21 +698,23 @@ stripe.api_key = STRIPE_SECRET_KEY
 def stripe_checkout():
     user_id = get_current_user_id()
     data = request.json or {}
-    plan_type = data.get("plan", "monthly") # monthly or annual
-    
-    # Define prices or fallback mock mode
-    price_amount = 999 if plan_type == "monthly" else 7999
-    price_name = "Philia Vault Premium Monthly" if plan_type == "monthly" else "Philia Vault Premium Annual"
-    interval = "month" if plan_type == "monthly" else "year"
-    
-    # Domain url
+
+    # Plan unique : mensuel $9.99
+    price_id          = data.get("price_id")          # Stripe Price ID depuis le frontend
+    trial_period_days = int(data.get("trial_period_days", 3))
+    success_url       = data.get("success_url")
+    cancel_url        = data.get("cancel_url")
+
     domain_url = request.host_url.rstrip('/')
-    
+    if not success_url:
+        success_url = domain_url + "/stripe-success?session_id={CHECKOUT_SESSION_ID}"
+    if not cancel_url:
+        cancel_url = domain_url + "/paywall"
+
     try:
         profile = database.get_user_profile(user_id)
         customer_id = profile.get("stripe_customer_id") if profile else None
-        
-        # In real test, if STRIPE_SECRET_KEY is defined:
+
         if STRIPE_SECRET_KEY:
             if not customer_id:
                 customer = stripe.Customer.create(
@@ -721,31 +723,36 @@ def stripe_checkout():
                 )
                 customer_id = customer.id
                 database.set_premium_status(user_id, profile.get("premium_status", 0), stripe_customer_id=customer_id)
-            
-            # Create price on the fly for testing
-            price = stripe.Price.create(
-                unit_amount=price_amount,
-                currency="eur",
-                recurring={"interval": interval},
-                product_data={"name": price_name},
+
+            # Utiliser le Price ID fourni, sinon fallback sur le prix prod configuré
+            STRIPE_PRICE_MONTHLY = os.environ.get(
+                "STRIPE_PRICE_MONTHLY", "price_1TkdtnGB22CTeiDpoTNsaFQM"
             )
-            
-            session = stripe.checkout.Session.create(
+            if not price_id or "placeholder" in price_id:
+                price_id = STRIPE_PRICE_MONTHLY
+
+            session_params = dict(
                 customer=customer_id,
                 payment_method_types=['card'],
-                line_items=[{
-                    'price': price.id,
-                    'quantity': 1,
-                }],
+                line_items=[{'price': price_id, 'quantity': 1}],
                 mode='subscription',
-                success_url=domain_url + "/?stripe_session=success",
-                cancel_url=domain_url + "/?stripe_session=cancel",
+                success_url=success_url,
+                cancel_url=cancel_url,
+                metadata={'user_email': user_id},
             )
+
+            # Essai gratuit 3 jours
+            if trial_period_days > 0:
+                session_params['subscription_data'] = {
+                    'trial_period_days': trial_period_days,
+                }
+
+            session = stripe.checkout.Session.create(**session_params)
             return jsonify({"success": True, "url": session.url})
         else:
-            # Mock redirect for developer local testing
+            # Mode dev sans clé Stripe — bypass immédiat
             database.set_premium_status(user_id, 1)
-            return jsonify({"success": True, "url": domain_url + "/?stripe_session=success_mock"})
+            return jsonify({"success": True, "url": success_url.replace("{CHECKOUT_SESSION_ID}", "mock_session")})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

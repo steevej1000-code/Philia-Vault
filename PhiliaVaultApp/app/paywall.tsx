@@ -18,13 +18,9 @@ import {
 import api from '../services/api';
 
 // ─── Dynamic pricing ──────────────────────────────────────────────────────────
-// Set in .env.local to override. Must match Stripe price IDs + RevenueCat prices.
-const PRICE_MONTHLY       = process.env.EXPO_PUBLIC_PRICE_MONTHLY        ?? '$9.99';
-const PRICE_YEARLY        = process.env.EXPO_PUBLIC_PRICE_YEARLY         ?? '$79.99';
-const PRICE_MONTHLY_EQUIV = process.env.EXPO_PUBLIC_PRICE_MONTHLY_EQUIV  ?? '= $6.67/mo';
+const PRICE_MONTHLY = process.env.EXPO_PUBLIC_PRICE_MONTHLY ?? '$9.99';
+const TRIAL_DAYS    = 3;
 // ─────────────────────────────────────────────────────────────────────────────
-
-type Plan = 'monthly' | 'yearly';
 
 const FEATURES = [
   { Icon: IconSearch, key: 'paywall.benefit_ai'       },
@@ -36,10 +32,9 @@ const FEATURES = [
 export default function PaywallScreen() {
   const router                                     = useRouter();
   const { t }                                      = useUserPreferences();
-  const { setPremium }                             = useAuthStore();
-  const { isFounder, loading: founderLoading }     = useFounderStatus();
-  const [plan, setPlan]                            = useState<Plan>('yearly');
-  const [loading, setLoading]                      = useState(false);
+  const { setPremium }                         = useAuthStore();
+  const { isFounder, loading: founderLoading } = useFounderStatus();
+  const [loading, setLoading]                  = useState(false);
 
   /* ─── Payment handler ─────────────────────────────────────────────────────── */
   const handleSubscribe = async () => {
@@ -48,18 +43,18 @@ export default function PaywallScreen() {
       if (Platform.OS === 'web') {
         // Dynamic import keeps stripe.ts out of the native bundle entirely
         const { stripeCheckout } = await import('../services/stripe');
-        await stripeCheckout(plan);
+        await stripeCheckout();
         return; // browser redirects away — setLoading not needed
       }
 
-      // Native path → RevenueCat
+      // Native path → RevenueCat (monthly package with trial configured in App Store / Play Console)
       const offerings = await getOfferings();
       if (!offerings) {
         Alert.alert(t('error'), 'No offerings available. Check your connection.');
         setLoading(false);
         return;
       }
-      const pkg = plan === 'monthly' ? (offerings as any).monthly : (offerings as any).annual;
+      const pkg = (offerings as any).monthly;
       if (!pkg) {
         Alert.alert(t('error'), 'Plan not found.');
         setLoading(false);
@@ -150,10 +145,6 @@ export default function PaywallScreen() {
   }
 
   /* ─── Standard paywall ────────────────────────────────────────────────────── */
-  const priceLabel = plan === 'monthly'
-    ? `${PRICE_MONTHLY}/mo`
-    : `${PRICE_YEARLY}/yr`;
-
   return (
     <ScrollView
       style={styles.container}
@@ -165,6 +156,10 @@ export default function PaywallScreen() {
         colors={['rgba(204,255,0,0.12)', 'rgba(12,14,18,0)']}
         style={styles.hero}
       >
+        {/* Free trial badge */}
+        <View style={styles.trialBadge}>
+          <Text style={styles.trialBadgeText}>✦ {TRIAL_DAYS} JOURS GRATUITS</Text>
+        </View>
         <View style={styles.heroIcon}>
           <IconCoach size={36} color="#ccff00" />
         </View>
@@ -184,44 +179,19 @@ export default function PaywallScreen() {
         ))}
       </View>
 
-      {/* Plan cards */}
-      <View style={styles.plans}>
-        <TouchableOpacity
-          style={[styles.planCard, plan === 'monthly' && styles.planActive]}
-          onPress={() => setPlan('monthly')}
-          activeOpacity={0.8}
-        >
-          {plan === 'monthly' && (
-            <View style={styles.planCheck}>
-              <Text style={styles.checkMark}>✓</Text>
-            </View>
-          )}
-          <Text style={styles.planPeriod}>Monthly</Text>
-          <Text style={styles.planPrice}>{PRICE_MONTHLY}</Text>
-          <Text style={styles.planUnit}>/month</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.planCard, plan === 'yearly' && styles.planActive]}
-          onPress={() => setPlan('yearly')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.saveBadge}>
-            <Text style={styles.saveBadgeText}>-33%</Text>
-          </View>
-          {plan === 'yearly' && (
-            <View style={styles.planCheck}>
-              <Text style={styles.checkMark}>✓</Text>
-            </View>
-          )}
-          <Text style={styles.planPeriod}>Annual</Text>
-          <Text style={styles.planPrice}>{PRICE_YEARLY}</Text>
-          <Text style={styles.planUnit}>/year</Text>
-          <Text style={styles.planEquiv}>{PRICE_MONTHLY_EQUIV}</Text>
-        </TouchableOpacity>
+      {/* Single plan card */}
+      <View style={styles.planBox}>
+        <View style={styles.planBoxLeft}>
+          <Text style={styles.planBoxTitle}>Premium</Text>
+          <Text style={styles.planBoxSub}>Puis {PRICE_MONTHLY}/mois · Annulez à tout moment</Text>
+        </View>
+        <View style={styles.planBoxRight}>
+          <Text style={styles.planBoxFree}>{TRIAL_DAYS}j gratuits</Text>
+          <Text style={styles.planBoxPrice}>{PRICE_MONTHLY}<Text style={styles.planBoxUnit}>/mo</Text></Text>
+        </View>
       </View>
 
-      {/* Subscribe CTA */}
+      {/* CTA */}
       <TouchableOpacity
         style={[styles.subBtn, loading && { opacity: 0.6 }]}
         onPress={handleSubscribe}
@@ -231,7 +201,12 @@ export default function PaywallScreen() {
         <LinearGradient colors={['#ccff00', '#a3e635']} style={styles.subGrad}>
           {loading
             ? <ActivityIndicator color="#0c0e12" />
-            : <Text style={styles.subText}>Subscribe — {priceLabel}</Text>
+            : (
+              <View style={styles.subBtnInner}>
+                <Text style={styles.subText}>Commencer — {TRIAL_DAYS} jours gratuits</Text>
+                <Text style={styles.subTextSub}>Sans engagement · {PRICE_MONTHLY}/mois ensuite</Text>
+              </View>
+            )
           }
         </LinearGradient>
       </TouchableOpacity>
@@ -310,40 +285,34 @@ const styles = StyleSheet.create({
   },
   featText: { fontSize: 14, fontWeight: '500', color: COLORS.onSurface, flex: 1 },
 
-  /* Plans */
-  plans: {
-    flexDirection: 'row', gap: 12,
-    paddingHorizontal: 20, marginBottom: 20,
+  /* Trial badge */
+  trialBadge: {
+    backgroundColor: 'rgba(204,255,0,0.12)',
+    borderWidth: 1, borderColor: '#ccff00',
+    paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: 99, marginBottom: 20,
   },
-  planCard: {
-    flex: 1, backgroundColor: COLORS.surfaceContainer,
-    borderRadius: RADIUS.xl, padding: 16,
-    borderWidth: 2, borderColor: COLORS.glassBorder,
-    alignItems: 'center', gap: 2,
-    minHeight: 120, justifyContent: 'center',
-    position: 'relative',
+  trialBadgeText: { fontSize: 11, fontWeight: '900', color: '#ccff00', letterSpacing: 1.5 },
+
+  /* Single plan box */
+  planBox: {
+    marginHorizontal: 20, marginBottom: 20,
+    backgroundColor: 'rgba(204,255,0,0.06)',
+    borderWidth: 2, borderColor: '#ccff00',
+    borderRadius: RADIUS.xl, padding: 18,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  planActive: { borderColor: '#ccff00', backgroundColor: 'rgba(204,255,0,0.08)' },
-  planCheck: {
-    position: 'absolute', top: 8, right: 8,
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: '#ccff00',
-    alignItems: 'center', justifyContent: 'center',
+  planBoxLeft: { flex: 1 },
+  planBoxTitle: { fontSize: 16, fontWeight: '800', color: COLORS.onSurface },
+  planBoxSub: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 3 },
+  planBoxRight: { alignItems: 'flex-end' },
+  planBoxFree: {
+    fontSize: 11, fontWeight: '900', color: '#ccff00',
+    backgroundColor: 'rgba(204,255,0,0.15)',
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, marginBottom: 4,
   },
-  checkMark: { fontSize: 10, color: '#0c0e12', fontWeight: '900' },
-  saveBadge: {
-    position: 'absolute', top: -10, alignSelf: 'center',
-    backgroundColor: '#ccff00',
-    paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99,
-  },
-  saveBadgeText: { fontSize: 10, fontWeight: '900', color: '#0c0e12' },
-  planPeriod: {
-    fontSize: 12, fontWeight: '600', color: COLORS.onSurfaceVariant,
-    textTransform: 'uppercase', letterSpacing: 0.5,
-  },
-  planPrice: { fontSize: 22, fontWeight: '900', color: COLORS.onSurface, marginTop: 4 },
-  planUnit: { fontSize: 12, color: COLORS.onSurfaceVariant },
-  planEquiv: { fontSize: 11, color: '#ccff00', fontWeight: '700', marginTop: 2 },
+  planBoxPrice: { fontSize: 20, fontWeight: '900', color: COLORS.onSurface },
+  planBoxUnit: { fontSize: 13, fontWeight: '500', color: COLORS.onSurfaceVariant },
 
   /* CTA */
   subBtn: {
@@ -351,8 +320,10 @@ const styles = StyleSheet.create({
     shadowColor: '#ccff00', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
   },
-  subGrad: { paddingVertical: 18, alignItems: 'center', justifyContent: 'center' },
+  subGrad: { paddingVertical: 18, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  subBtnInner: { alignItems: 'center', gap: 3 },
   subText: { fontSize: 16, fontWeight: '800', color: '#0c0e12' },
+  subTextSub: { fontSize: 11, fontWeight: '600', color: 'rgba(12,14,18,0.6)' },
 
   /* Footer */
   legal: {

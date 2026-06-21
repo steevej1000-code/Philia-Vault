@@ -288,10 +288,10 @@ def init_db():
     # Seed default config values (INSERT OR IGNORE → won't overwrite live edits)
     _config_defaults = [
         ('price_monthly_display',  '$9.99'),
-        ('price_yearly_display',   '$79.99'),
-        ('price_monthly_equiv',    '= $6.67/mo'),
+        ('price_yearly_display',   ''),
+        ('price_monthly_equiv',    ''),
         ('price_founder_display',  '$4.99'),
-        ('stripe_price_monthly',   ''),
+        ('stripe_price_monthly',   'price_1TkdtnGB22CTeiDpoTNsaFQM'),
         ('stripe_price_yearly',    ''),
         ('faq',                    '[]'),
         ('hero_title',             'Your Financial Mirror'),
