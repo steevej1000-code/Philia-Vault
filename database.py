@@ -313,43 +313,6 @@ def init_db():
     )
     """)
 
-    # ── Daily Decision tables ─────────────────────────────────────────────────
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS dilemma_translations (
-        dilemma_id TEXT NOT NULL,
-        lang TEXT NOT NULL,
-        title TEXT NOT NULL,
-        scenario TEXT NOT NULL,
-        choice_liability_label TEXT NOT NULL,
-        choice_liability_feedback TEXT NOT NULL,
-        choice_asset_label TEXT NOT NULL,
-        choice_asset_feedback TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (dilemma_id, lang)
-    )
-    """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS user_dilemma_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        dilemma_id TEXT NOT NULL,
-        choice TEXT NOT NULL CHECK (choice IN ('asset', 'liability')),
-        answered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-    )
-    """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS user_streak (
-        user_id INTEGER PRIMARY KEY,
-        current_streak INTEGER DEFAULT 0,
-        longest_streak INTEGER DEFAULT 0,
-        last_answered_date DATE,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-    )
-    """)
-
     # ── Seed owner email so Google OAuth works on first boot ──────────────────
     _owner_email = os.environ.get("ADMIN_EMAIL", "steevej1000@gmail.com")
     cursor.execute(

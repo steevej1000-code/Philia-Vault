@@ -34,11 +34,18 @@ const CATEGORY_COLORS: Record<string, string> = {
   mentalite: '#FBBF24',
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  cashflow: 'Cash Flow',
-  dette: 'Dette',
-  investissement: 'Investissement',
-  mentalite: 'Mentalité',
+const CATEGORY_LABELS: Record<string, Record<string, string>> = {
+  cashflow:      { fr: 'Cash Flow',       en: 'Cash Flow',   es: 'Flujo de Caja', pt: 'Fluxo de Caixa' },
+  dette:         { fr: 'Dette',           en: 'Debt',        es: 'Deuda',         pt: 'Dívida'         },
+  investissement:{ fr: 'Investissement',  en: 'Investment',  es: 'Inversión',     pt: 'Investimento'   },
+  mentalite:     { fr: 'Mentalité',       en: 'Mindset',     es: 'Mentalidad',    pt: 'Mentalidade'    },
+};
+
+const UI_LABELS: Record<string, Record<string, string>> = {
+  daily_decision: { fr: 'DÉCISION DU JOUR', en: 'DAILY DECISION', es: 'DECISIÓN DEL DÍA', pt: 'DECISÃO DO DIA' },
+  good_reflex:    { fr: 'Bon réflexe !',    en: 'Good reflex!',   es: '¡Buen reflejo!',   pt: 'Bom reflexo!'  },
+  liability_chosen:{ fr: 'Passif choisi',   en: 'Liability chosen',es: 'Pasivo elegido',   pt: 'Passivo escolhido' },
+  next_dilemma:   { fr: 'Prochain dilemme dans', en: 'Next dilemma in', es: 'Próximo dilema en', pt: 'Próximo dilema em' },
 };
 
 function secondsUntilMidnight(): number {
@@ -146,13 +153,15 @@ export default function DailyDecisionCard() {
   if (!dilemma) return null;
 
   const catColor = CATEGORY_COLORS[dilemma.category] || '#4ADE80';
-  const catLabel = CATEGORY_LABELS[dilemma.category] || dilemma.category;
+  const lang2 = (language || 'fr').toLowerCase().slice(0, 2);
+  const catLabel = (CATEGORY_LABELS[dilemma.category]?.[lang2]) || dilemma.category;
+  const ui = (key: string) => UI_LABELS[key]?.[lang2] || UI_LABELS[key]?.['fr'] || key;
 
   return (
     <View style={styles.wrapper}>
       {/* Header row */}
       <View style={styles.headerRow}>
-        <Text style={styles.sectionLabel}>DÉCISION DU JOUR</Text>
+        <Text style={styles.sectionLabel}>{ui('daily_decision')}</Text>
         {streak.current > 0 && (
           <View style={styles.streakBadge}>
             <Text style={styles.streakFire}>🔥</Text>
@@ -210,13 +219,13 @@ export default function DailyDecisionCard() {
         >
           <Text style={styles.resultIcon}>{choice === 'asset' ? '✅' : '⚠️'}</Text>
           <Text style={styles.resultLabel}>
-            {choice === 'asset' ? 'Bon réflexe !' : 'Passif choisi'}
+            {choice === 'asset' ? ui('good_reflex') : ui('liability_chosen')}
           </Text>
           <Text style={styles.feedbackText}>{feedback}</Text>
 
           {alreadyAnswered && (
             <View style={styles.countdownRow}>
-              <Text style={styles.countdownLabel}>Prochain dilemme dans</Text>
+              <Text style={styles.countdownLabel}>{ui('next_dilemma')}</Text>
               <Text style={styles.countdownValue}>{formatCountdown(countdown)}</Text>
             </View>
           )}
