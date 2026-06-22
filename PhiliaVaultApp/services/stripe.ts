@@ -25,18 +25,17 @@
 import { API_BASE } from '../constants/api';
 import { storage } from './storage';
 
-/** Seul plan disponible : mensuel $9.99 avec 3 jours d'essai gratuit. */
 const TRIAL_DAYS = 3;
 
 export const STRIPE_PRICE_ID_MONTHLY =
-  process.env.EXPO_PUBLIC_STRIPE_PRICE_MONTHLY ?? 'price_monthly_placeholder';
+  process.env.EXPO_PUBLIC_STRIPE_PRICE_MONTHLY ?? 'price_1TkdtnGB22CTeiDpoTNsaFQM';
 
-/**
- * Create a Stripe Checkout session and redirect the browser to it.
- * Includes a 3-day free trial via subscription_data.trial_period_days.
- */
-export async function stripeCheckout(): Promise<void> {
+export const STRIPE_PRICE_ID_ANNUAL =
+  process.env.EXPO_PUBLIC_STRIPE_PRICE_ANNUAL ?? 'price_1Tl2igGB22CTeiDpIhVrFyND';
+
+export async function stripeCheckout(plan: 'monthly' | 'annual' = 'monthly'): Promise<void> {
   const userEmail = await storage.getItem('user_email');
+  const priceId = plan === 'annual' ? STRIPE_PRICE_ID_ANNUAL : STRIPE_PRICE_ID_MONTHLY;
 
   const response = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
     method: 'POST',
@@ -45,9 +44,9 @@ export async function stripeCheckout(): Promise<void> {
       ...(userEmail ? { 'X-User-Email': userEmail } : {}),
     },
     body: JSON.stringify({
-      plan:             'monthly',
-      price_id:         STRIPE_PRICE_ID_MONTHLY,
-      trial_period_days: TRIAL_DAYS,
+      plan,
+      price_id:          priceId,
+      trial_period_days: plan === 'annual' ? 0 : TRIAL_DAYS,
       success_url: `${window.location.origin}/stripe-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${window.location.origin}/paywall`,
     }),

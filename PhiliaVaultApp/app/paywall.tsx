@@ -19,6 +19,7 @@ import api from '../services/api';
 
 // ─── Dynamic pricing ──────────────────────────────────────────────────────────
 const PRICE_MONTHLY = process.env.EXPO_PUBLIC_PRICE_MONTHLY ?? '$9.99';
+const PRICE_ANNUAL  = process.env.EXPO_PUBLIC_PRICE_ANNUAL  ?? '$149';
 const TRIAL_DAYS    = 3;
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ export default function PaywallScreen() {
   const { setPremium }                         = useAuthStore();
   const { isFounder, loading: founderLoading } = useFounderStatus();
   const [loading, setLoading]                  = useState(false);
+  const [plan, setPlan]                        = useState<'annual' | 'monthly'>('annual');
 
   /* ─── Payment handler ─────────────────────────────────────────────────────── */
   const handleSubscribe = async () => {
@@ -43,7 +45,7 @@ export default function PaywallScreen() {
       if (Platform.OS === 'web') {
         // Dynamic import keeps stripe.ts out of the native bundle entirely
         const { stripeCheckout } = await import('../services/stripe');
-        await stripeCheckout();
+        await stripeCheckout(plan);
         return; // browser redirects away — setLoading not needed
       }
 
@@ -179,16 +181,35 @@ export default function PaywallScreen() {
         ))}
       </View>
 
-      {/* Single plan card */}
-      <View style={styles.planBox}>
-        <View style={styles.planBoxLeft}>
-          <Text style={styles.planBoxTitle}>Premium</Text>
-          <Text style={styles.planBoxSub}>Puis {PRICE_MONTHLY}/mois · Annulez à tout moment</Text>
-        </View>
-        <View style={styles.planBoxRight}>
-          <Text style={styles.planBoxFree}>{TRIAL_DAYS}j gratuits</Text>
-          <Text style={styles.planBoxPrice}>{PRICE_MONTHLY}<Text style={styles.planBoxUnit}>/mo</Text></Text>
-        </View>
+      {/* Plan selector */}
+      <View style={styles.planSelector}>
+        {/* Annual */}
+        <TouchableOpacity
+          style={[styles.planCard, plan === 'annual' && styles.planCardActive]}
+          onPress={() => setPlan('annual')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.planCardBadge}>
+            <Text style={styles.planCardBadgeText}>BEST VALUE</Text>
+          </View>
+          <Text style={styles.planCardTitle}>Annuel</Text>
+          <Text style={styles.planCardPrice}>{PRICE_ANNUAL}</Text>
+          <Text style={styles.planCardSub}>/ an · ~$12.42/mo</Text>
+        </TouchableOpacity>
+
+        {/* Monthly */}
+        <TouchableOpacity
+          style={[styles.planCard, plan === 'monthly' && styles.planCardActive]}
+          onPress={() => setPlan('monthly')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.planCardBadgeEmpty}>
+            <Text style={styles.planCardBadgeText}>{TRIAL_DAYS}J GRATUITS</Text>
+          </View>
+          <Text style={styles.planCardTitle}>Mensuel</Text>
+          <Text style={styles.planCardPrice}>{PRICE_MONTHLY}</Text>
+          <Text style={styles.planCardSub}>/ mois</Text>
+        </TouchableOpacity>
       </View>
 
       {/* CTA */}
@@ -203,8 +224,16 @@ export default function PaywallScreen() {
             ? <ActivityIndicator color="#0c0e12" />
             : (
               <View style={styles.subBtnInner}>
-                <Text style={styles.subText}>Commencer — {TRIAL_DAYS} jours gratuits</Text>
-                <Text style={styles.subTextSub}>Sans engagement · {PRICE_MONTHLY}/mois ensuite</Text>
+                {plan === 'annual'
+                  ? <Text style={styles.subText}>Commencer — {PRICE_ANNUAL}/an</Text>
+                  : <Text style={styles.subText}>Commencer — {TRIAL_DAYS} jours gratuits</Text>
+                }
+                <Text style={styles.subTextSub}>
+                  {plan === 'annual'
+                    ? 'Économisez 38% vs mensuel · Sans engagement'
+                    : `Sans engagement · ${PRICE_MONTHLY}/mois ensuite`
+                  }
+                </Text>
               </View>
             )
           }
@@ -294,25 +323,31 @@ const styles = StyleSheet.create({
   },
   trialBadgeText: { fontSize: 11, fontWeight: '900', color: '#ccff00', letterSpacing: 1.5 },
 
-  /* Single plan box */
-  planBox: {
-    marginHorizontal: 20, marginBottom: 20,
-    backgroundColor: 'rgba(204,255,0,0.06)',
-    borderWidth: 2, borderColor: '#ccff00',
-    borderRadius: RADIUS.xl, padding: 18,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  /* Plan selector */
+  planSelector: {
+    flexDirection: 'row', marginHorizontal: 20, marginBottom: 20, gap: 12,
   },
-  planBoxLeft: { flex: 1 },
-  planBoxTitle: { fontSize: 16, fontWeight: '800', color: COLORS.onSurface },
-  planBoxSub: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 3 },
-  planBoxRight: { alignItems: 'flex-end' },
-  planBoxFree: {
-    fontSize: 11, fontWeight: '900', color: '#ccff00',
-    backgroundColor: 'rgba(204,255,0,0.15)',
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, marginBottom: 4,
+  planCard: {
+    flex: 1, borderRadius: RADIUS.xl, padding: 16,
+    backgroundColor: COLORS.surfaceContainer,
+    borderWidth: 2, borderColor: COLORS.glassBorder,
+    alignItems: 'center',
   },
-  planBoxPrice: { fontSize: 20, fontWeight: '900', color: COLORS.onSurface },
-  planBoxUnit: { fontSize: 13, fontWeight: '500', color: COLORS.onSurfaceVariant },
+  planCardActive: {
+    borderColor: '#ccff00', backgroundColor: 'rgba(204,255,0,0.06)',
+  },
+  planCardBadge: {
+    backgroundColor: '#ccff00', borderRadius: 99,
+    paddingHorizontal: 8, paddingVertical: 3, marginBottom: 10,
+  },
+  planCardBadgeEmpty: {
+    backgroundColor: 'rgba(204,255,0,0.15)', borderRadius: 99,
+    paddingHorizontal: 8, paddingVertical: 3, marginBottom: 10,
+  },
+  planCardBadgeText: { fontSize: 9, fontWeight: '900', color: '#0c0e12', letterSpacing: 0.8 },
+  planCardTitle: { fontSize: 13, fontWeight: '700', color: COLORS.onSurfaceVariant, marginBottom: 6 },
+  planCardPrice: { fontSize: 24, fontWeight: '900', color: COLORS.onSurface },
+  planCardSub: { fontSize: 11, color: COLORS.onSurfaceVariant, marginTop: 2, textAlign: 'center' },
 
   /* CTA */
   subBtn: {
