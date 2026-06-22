@@ -1105,6 +1105,53 @@ def cancel_subscription():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route("/api/subscription/reactivate", methods=["POST"])
+def reactivate_subscription():
+    user_id = get_current_user_id()
+    profile = database.get_user_profile(user_id)
+    if not profile:
+        return jsonify({"success": False, "error": "Utilisateur introuvable"}), 401
+    subscription_id = profile.get("stripe_subscription_id")
+    try:
+        if STRIPE_SECRET_KEY and subscription_id:
+            stripe.Subscription.modify(subscription_id, cancel_at_period_end=False)
+        database.set_subscription_cancel_at_period_end(user_id, False, cancel_at=None)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/subscription/status", methods=["GET"])
+def subscription_status():
+    user_id = get_current_user_id()
+    profile = database.get_user_profile(user_id)
+    if not profile:
+        return jsonify({"success": False, "error": "Utilisateur introuvable"}), 401
+
+    cancel_at = profile.get("cancel_at")
+    access_until = None
+    if cancel_at:
+        try:
+            import datetime as _dt
+            # cancel_at may be ISO string or unix timestamp
+            if isinstance(cancel_at, (int, float)):
+                dt = _dt.datetime.fromtimestamp(cancel_at)
+            else:
+                dt = _dt.datetime.fromisoformat(str(cancel_at).replace("Z", ""))
+            access_until = dt.strftime("%B %d, %Y")
+        except Exception:
+            access_until = str(cancel_at)
+
+    return jsonify({
+        "success": True,
+        "is_premium": bool(profile.get("premium_status")),
+        "cancel_at_period_end": bool(profile.get("cancel_at_period_end")),
+        "cancel_at": cancel_at,
+        "access_until": access_until,
+        "stripe_subscription_id": profile.get("stripe_subscription_id"),
+    })
+
+
 # Webhook Stripe
 @app.route("/api/webhook/stripe", methods=["POST"])
 def webhook_stripe():

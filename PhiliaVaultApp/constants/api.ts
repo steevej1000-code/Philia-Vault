@@ -26,6 +26,8 @@ export const ENDPOINTS = {
   user:           '/api/user',
   premium:        '/api/user/premium',
   cancelSubscription: '/api/subscription/cancel',
+  reactivateSubscription: '/api/subscription/reactivate',
+  subscriptionStatus: '/api/subscription/status',
   profile:        '/api/user/profile',
   preferences:    '/api/profile/preferences',
   settings:       '/api/user/settings',

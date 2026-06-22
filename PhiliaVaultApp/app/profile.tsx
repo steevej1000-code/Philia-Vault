@@ -52,6 +52,9 @@ export default function ProfileScreen() {
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelDone, setCancelDone] = useState(false);
+  const [cancelAccessUntil, setCancelAccessUntil] = useState<string | null>(null);
+  const [subCancelAtPeriodEnd, setSubCancelAtPeriodEnd] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -183,6 +186,9 @@ export default function ProfileScreen() {
       const result = await api.cancelSubscription();
       if (result?.success) {
         setCancelDone(true);
+        setSubCancelAtPeriodEnd(true);
+        if (result.access_until) setCancelAccessUntil(result.access_until);
+        else if (result.cancel_at) setCancelAccessUntil(result.cancel_at);
       } else {
         Alert.alert(t('error'), result?.error || 'Cancellation failed.');
       }
@@ -190,6 +196,23 @@ export default function ProfileScreen() {
       Alert.alert(t('error'), e.message || 'Cancellation failed.');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    setReactivating(true);
+    try {
+      const result = await api.reactivateSubscription();
+      if (result?.success) {
+        setSubCancelAtPeriodEnd(false);
+        setCancelAccessUntil(null);
+      } else {
+        Alert.alert(t('error'), result?.error || 'Reactivation failed.');
+      }
+    } catch (e: any) {
+      Alert.alert(t('error'), e.message || 'Reactivation failed.');
+    } finally {
+      setReactivating(false);
     }
   };
 
@@ -359,15 +382,35 @@ export default function ProfileScreen() {
           )}
         </TouchableOpacity>
 
-        {/* Cancel Subscription — premium members only */}
-        {isPremium && (
+        {/* Cancel Subscription / Reactivate — premium members only */}
+        {isPremium && !subCancelAtPeriodEnd && (
           <TouchableOpacity
             style={styles.cancelSubBtn}
             onPress={() => setCancelModalVisible(true)}
             activeOpacity={0.7}
           >
-            <Text style={styles.cancelSubText}>Cancel Subscription</Text>
+            <Text style={styles.cancelSubText}>{t('cancel_sub_btn')}</Text>
           </TouchableOpacity>
+        )}
+        {isPremium && subCancelAtPeriodEnd && (
+          <View style={styles.accessUntilRow}>
+            <Text style={styles.accessUntilText}>
+              {cancelAccessUntil
+                ? t('cancel_sub_access_until').replace('{date}', cancelAccessUntil)
+                : t('cancel_sub_access_until').replace('{date}', '...')}
+            </Text>
+            <TouchableOpacity
+              style={styles.reactivateLink}
+              onPress={handleReactivate}
+              disabled={reactivating}
+              activeOpacity={0.6}
+            >
+              {reactivating
+                ? <ActivityIndicator color={COLORS.primary} size="small" />
+                : <Text style={styles.reactivateLinkText}>{t('cancel_sub_reactivate')}</Text>
+              }
+            </TouchableOpacity>
+          </View>
         )}
       </ScrollView>
 
@@ -388,26 +431,24 @@ export default function ProfileScreen() {
           <View style={styles.modalCard}>
             {cancelDone ? (
               <>
-                <Text style={styles.modalTitle}>Cancellation Confirmed</Text>
+                <Text style={styles.modalTitle}>{t('cancel_sub_done_title')}</Text>
                 <Text style={styles.modalBody}>
-                  You will maintain full access to your Philia Holdings and Daily Decisions
-                  until the end of your current billing period.
+                  {cancelAccessUntil
+                    ? t('cancel_sub_done_body').replace('{date}', cancelAccessUntil)
+                    : t('cancel_sub_modal_body')}
                 </Text>
                 <TouchableOpacity
                   style={styles.modalKeepBtn}
                   onPress={closeCancelModal}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.modalKeepText}>Close</Text>
+                  <Text style={styles.modalKeepText}>{t('cancel_sub_done_close')}</Text>
                 </TouchableOpacity>
               </>
             ) : (
               <>
-                <Text style={styles.modalTitle}>Are you sure you want to step back?</Text>
-                <Text style={styles.modalBody}>
-                  You will maintain full access to your Philia Holdings and Daily Decisions
-                  until the end of your current billing period.
-                </Text>
+                <Text style={styles.modalTitle}>{t('cancel_sub_modal_title')}</Text>
+                <Text style={styles.modalBody}>{t('cancel_sub_modal_body')}</Text>
 
                 <TouchableOpacity
                   style={styles.modalKeepBtn}
@@ -415,7 +456,7 @@ export default function ProfileScreen() {
                   disabled={cancelling}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.modalKeepText}>Keep my Access</Text>
+                  <Text style={styles.modalKeepText}>{t('cancel_sub_keep')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -427,7 +468,7 @@ export default function ProfileScreen() {
                   {cancelling ? (
                     <ActivityIndicator color="#8e8e93" size="small" />
                   ) : (
-                    <Text style={styles.modalConfirmText}>Confirm Cancellation</Text>
+                    <Text style={styles.modalConfirmText}>{t('cancel_sub_confirm')}</Text>
                   )}
                 </TouchableOpacity>
               </>
@@ -578,6 +619,27 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: '#ff3b30',
+  },
+
+  accessUntilRow: {
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+  },
+  accessUntilText: {
+    fontSize: 13,
+    color: '#8e8e93',
+    textAlign: 'center',
+  },
+  reactivateLink: {
+    paddingVertical: 4,
+    alignItems: 'center',
+  },
+  reactivateLinkText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+    textDecorationLine: 'underline',
   },
 
   // Cancel subscription — subtle dark-red outline

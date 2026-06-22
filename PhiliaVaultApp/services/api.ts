@@ -215,6 +215,14 @@ class ApiClient {
     });
   }
 
+  async getSubscriptionStatus() {
+    return this.request(ENDPOINTS.subscriptionStatus);
+  }
+
+  async reactivateSubscription() {
+    return this.request(ENDPOINTS.reactivateSubscription, { method: 'POST', body: JSON.stringify({}) });
+  }
+
   async cancelSubscription() {
     return this.request(ENDPOINTS.cancelSubscription, {
       method: 'POST',
