@@ -278,11 +278,60 @@ def auth_login():
         
     user = database.verify_user(email, password)
     if user:
+        # Check subscription access (premium OR within 3-day trial)
+        import datetime as _dt
+        is_premium = bool(user.get("premium_status", 0))
+        created_at_str = user.get("created_at", "")
+        try:
+            created_dt = _dt.datetime.fromisoformat(created_at_str.replace(" ", "T").rstrip("Z"))
+            in_trial = (_dt.datetime.utcnow() - created_dt).total_seconds() < 3 * 86400
+        except Exception:
+            in_trial = False
+        if not is_premium and not in_trial:
+            return jsonify({
+                "success": False,
+                "error": "Ce compte n'a pas d'accès actif. Vérifiez vos identifiants."
+            }), 403
         # Seed default data if they login and somehow have no items
         database.seed_user_data(user["email"])
         return jsonify({"success": True, "user": {"email": user["email"]}, "message": "Connexion réussie"})
     else:
         return jsonify({"success": False, "error": "Email ou mot de passe incorrect"}), 401
+
+
+@app.route("/api/auth/validate", methods=["GET"])
+def auth_validate():
+    """Called by the mobile app on every launch to verify subscription is still active."""
+    email = get_current_user_id()
+    if not email:
+        return jsonify({"valid": False, "error": "Non authentifié"}), 403
+
+    profile = database.get_user_profile(email)
+    if not profile:
+        return jsonify({"valid": False, "error": "Utilisateur introuvable"}), 403
+
+    import datetime as _dt
+    is_premium = bool(profile.get("premium_status", 0))
+    created_at_str = profile.get("created_at", "")
+    try:
+        created_dt = _dt.datetime.fromisoformat(created_at_str.replace(" ", "T").rstrip("Z"))
+        in_trial = (_dt.datetime.utcnow() - created_dt).total_seconds() < 3 * 86400
+    except Exception:
+        in_trial = False
+
+    if not is_premium and not in_trial:
+        return jsonify({"valid": False, "error": "Ce compte n'a pas d'accès actif. Vérifiez vos identifiants."}), 403
+
+    return jsonify({
+        "valid": True,
+        "user": {
+            "email": profile.get("email"),
+            "first_name": profile.get("first_name"),
+            "last_name": profile.get("last_name"),
+            "premium_status": profile.get("premium_status"),
+            "cancel_at_period_end": profile.get("cancel_at_period_end"),
+        }
+    }), 200
 
 @app.route("/api/auth/forgot-password", methods=["POST"])
 def auth_forgot_password():
@@ -1234,32 +1283,6 @@ def webhook_stripe():
                 print(f"[Affiliate] Renewal commission error: {e}")
 
     return jsonify({"success": True})
-
-# RevenueCat Webhook Endpoint
-@app.route("/api/webhooks/revenuecat", methods=["POST"])
-def webhook_revenuecat():
-    data = request.json or {}
-    event = data.get("event", {})
-    event_type = event.get("type")
-    app_user_id = event.get("app_user_id")
-    
-    if not event_type or not app_user_id:
-        return jsonify({"success": False, "error": "Invalid event data"}), 400
-        
-    try:
-        if event_type in ["INITIAL_PURCHASE", "RENEWAL", "SUBSCRIBE"]:
-            # Set user premium
-            database.set_premium_status(app_user_id, 1)
-            database.add_transaction(app_user_id, f"Abonnement Premium activé via RevenueCat", "asset_yield", 0.0, "Today")
-        elif event_type in ["CANCELLATION", "EXPIRATION"]:
-            # Cancel user premium
-            database.set_premium_status(app_user_id, 0)
-            database.add_transaction(app_user_id, f"Abonnement Premium expiré via RevenueCat", "liability_payment", 0.0, "Today")
-            
-        return jsonify({"success": True, "message": f"Processed RevenueCat event {event_type}"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
 # Gemini AI Coach Chat
 @app.route("/api/coach/chat", methods=["POST"])
 def coach_chat():
