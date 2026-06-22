@@ -215,6 +215,13 @@ class ApiClient {
     });
   }
 
+  async cancelSubscription() {
+    return this.request(ENDPOINTS.cancelSubscription, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  }
+
   // ─── Assets ────────────────────────────────────────────────────────────────
 
   async getAssets() {

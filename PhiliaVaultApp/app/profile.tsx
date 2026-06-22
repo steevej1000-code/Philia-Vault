@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Alert, ActivityIndicator, Switch, RefreshControl, Platform
+  Alert, ActivityIndicator, Switch, RefreshControl, Platform, Modal
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,6 +49,9 @@ export default function ProfileScreen() {
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricSupported, setBiometricSupported] = useState(false);
   const [savingBiometric, setSavingBiometric] = useState(false);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelDone, setCancelDone] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -172,6 +175,28 @@ export default function ProfileScreen() {
         ]
       );
     }
+  };
+
+  const handleConfirmCancellation = async () => {
+    setCancelling(true);
+    try {
+      const result = await api.cancelSubscription();
+      if (result?.success) {
+        setCancelDone(true);
+      } else {
+        Alert.alert(t('error'), result?.error || 'Cancellation failed.');
+      }
+    } catch (e: any) {
+      Alert.alert(t('error'), e.message || 'Cancellation failed.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const closeCancelModal = () => {
+    setCancelModalVisible(false);
+    // Reset confirmation state after the modal has closed
+    setTimeout(() => setCancelDone(false), 300);
   };
 
   const name = user ? `${user.first_name} ${user.last_name}` : t('default_user_name');
@@ -333,6 +358,17 @@ export default function ProfileScreen() {
             <Text style={styles.logoutText}>{t('logout')}</Text>
           )}
         </TouchableOpacity>
+
+        {/* Cancel Subscription — premium members only */}
+        {isPremium && (
+          <TouchableOpacity
+            style={styles.cancelSubBtn}
+            onPress={() => setCancelModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cancelSubText}>Cancel Subscription</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       <PreferencesSelectorModal
@@ -340,6 +376,65 @@ export default function ProfileScreen() {
         type={selectorType}
         onClose={() => setSelectorType(null)}
       />
+
+      {/* Cancel Subscription friction modal */}
+      <Modal
+        visible={cancelModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeCancelModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            {cancelDone ? (
+              <>
+                <Text style={styles.modalTitle}>Cancellation Confirmed</Text>
+                <Text style={styles.modalBody}>
+                  You will maintain full access to your Philia Holdings and Daily Decisions
+                  until the end of your current billing period.
+                </Text>
+                <TouchableOpacity
+                  style={styles.modalKeepBtn}
+                  onPress={closeCancelModal}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.modalKeepText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalTitle}>Are you sure you want to step back?</Text>
+                <Text style={styles.modalBody}>
+                  You will maintain full access to your Philia Holdings and Daily Decisions
+                  until the end of your current billing period.
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.modalKeepBtn}
+                  onPress={closeCancelModal}
+                  disabled={cancelling}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.modalKeepText}>Keep my Access</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.modalConfirmLink}
+                  onPress={handleConfirmCancellation}
+                  disabled={cancelling}
+                  activeOpacity={0.6}
+                >
+                  {cancelling ? (
+                    <ActivityIndicator color="#8e8e93" size="small" />
+                  ) : (
+                    <Text style={styles.modalConfirmText}>Confirm Cancellation</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -483,5 +578,80 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: '#ff3b30',
+  },
+
+  // Cancel subscription — subtle dark-red outline
+  cancelSubBtn: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelSubText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8e8e93',
+    textDecorationLine: 'underline',
+  },
+
+  // Friction modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: '#1c1c1e',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: '#2c2c2e',
+    padding: 28,
+    gap: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: -0.4,
+    textAlign: 'center',
+  },
+  modalBody: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#8e8e93',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  modalKeepBtn: {
+    backgroundColor: '#ccff00',
+    borderRadius: 18,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    shadowColor: '#ccff00',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 18,
+    elevation: 10,
+  },
+  modalKeepText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0c0e12',
+    letterSpacing: -0.2,
+  },
+  modalConfirmLink: {
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalConfirmText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8e8e93',
+    textDecorationLine: 'underline',
   },
 });

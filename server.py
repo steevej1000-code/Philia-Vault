@@ -1064,6 +1064,47 @@ def stripe_portal():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# Cancel Subscription — schedules cancellation at the end of the current
+# billing period. The user keeps full access until then; no refund is granted.
+@app.route("/api/subscription/cancel", methods=["POST"])
+def cancel_subscription():
+    user_id = get_current_user_id()
+
+    profile = database.get_user_profile(user_id)
+    if not profile:
+        return jsonify({"success": False, "error": "Utilisateur introuvable"}), 401
+
+    # Must be an active premium member with a Stripe subscription on file
+    if not profile.get("premium_status"):
+        return jsonify({"success": False, "error": "Aucun abonnement actif"}), 400
+
+    subscription_id = profile.get("stripe_subscription_id")
+    cancel_at_ts = None
+
+    try:
+        if STRIPE_SECRET_KEY and subscription_id:
+            sub = stripe.Subscription.modify(
+                subscription_id,
+                cancel_at_period_end=True,
+            )
+            cancel_at_ts = sub.get("cancel_at") or sub.get("current_period_end")
+
+        import datetime as _dt
+        cancel_at_iso = (
+            _dt.datetime.fromtimestamp(cancel_at_ts).isoformat() if cancel_at_ts else None
+        )
+        database.set_subscription_cancel_at_period_end(
+            user_id, True, cancel_at=cancel_at_iso
+        )
+
+        return jsonify({
+            "success": True,
+            "message": "Your subscription will end at period end.",
+            "cancel_at": cancel_at_iso,
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 # Webhook Stripe
 @app.route("/api/webhook/stripe", methods=["POST"])
 def webhook_stripe():
@@ -1090,7 +1131,7 @@ def webhook_stripe():
     if event_type in ["customer.subscription.created", "customer.subscription.updated"]:
         customer_id = event_data.get("customer")
         status = event_data.get("status")
-        
+
         user = database.get_user_by_stripe_customer_id(customer_id)
         if user:
             # active/trialing implies active premium status
@@ -1098,12 +1139,29 @@ def webhook_stripe():
             database.set_premium_status(user["email"], premium, stripe_customer_id=customer_id)
             if premium:
                 database.add_transaction(user["email"], f"Abonnement Stripe activé ({status})", "asset_yield", 0.0, "Today")
-                
+
+            # Track a scheduled cancellation without revoking access. Stripe will
+            # fire customer.subscription.deleted at the real period end.
+            if event_type == "customer.subscription.updated":
+                cancel_flag = bool(event_data.get("cancel_at_period_end"))
+                cancel_at_ts = event_data.get("cancel_at")
+                cancel_at_iso = None
+                if cancel_at_ts:
+                    import datetime as _dt
+                    cancel_at_iso = _dt.datetime.fromtimestamp(cancel_at_ts).isoformat()
+                database.set_subscription_cancel_at_period_end(
+                    user["email"], cancel_flag, cancel_at=cancel_at_iso
+                )
+                if cancel_flag:
+                    database.add_transaction(user["email"], "Résiliation programmée (fin de période)", "liability_payment", 0.0, "Today")
+
     elif event_type == "customer.subscription.deleted":
         customer_id = event_data.get("customer")
         user = database.get_user_by_stripe_customer_id(customer_id)
         if user:
+            # Period actually ended — revoke premium and clear the pending-cancel flag
             database.set_premium_status(user["email"], 0, stripe_customer_id=customer_id)
+            database.set_subscription_cancel_at_period_end(user["email"], False, cancel_at=None)
             database.add_transaction(user["email"], "Abonnement Stripe résilié", "liability_payment", 0.0, "Today")
 
     elif event_type == "invoice.payment_succeeded":
