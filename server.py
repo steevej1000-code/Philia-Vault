@@ -264,7 +264,15 @@ def auth_register():
     
     success = database.create_user(email, password, first_name, last_name, referral_code)
     if success:
-        return jsonify({"success": True, "message": "Compte créé avec succès"})
+        # Registration always grants app access — premium is feature-gated separately,
+        # never at the account/login level (new accounts must never be blocked from entering the app).
+        email_clean = email.lower().strip()
+        return jsonify({
+            "success": True,
+            "user": {"email": email_clean},
+            "token": email_clean,
+            "message": "Compte créé avec succès"
+        })
     else:
         return jsonify({"success": False, "error": "Cet email est déjà utilisé"}), 400
 
@@ -275,26 +283,14 @@ def auth_login():
     password = data.get("password")
     if not email or not password:
         return jsonify({"success": False, "error": "Email et mot de passe requis"}), 400
-        
+
     user = database.verify_user(email, password)
     if user:
-        # Check subscription access (premium OR within 3-day trial)
-        import datetime as _dt
-        is_premium = bool(user.get("premium_status", 0))
-        created_at_str = user.get("created_at", "")
-        try:
-            created_dt = _dt.datetime.fromisoformat(created_at_str.replace(" ", "T").rstrip("Z"))
-            in_trial = (_dt.datetime.utcnow() - created_dt).total_seconds() < 3 * 86400
-        except Exception:
-            in_trial = False
-        if not is_premium and not in_trial:
-            return jsonify({
-                "success": False,
-                "error": "Ce compte n'a pas d'accès actif. Vérifiez vos identifiants."
-            }), 403
+        # Login only authenticates — it never blocks access to the app itself.
+        # Premium-only features (e.g. /api/coach/chat) check premium_status on their own.
         # Seed default data if they login and somehow have no items
         database.seed_user_data(user["email"])
-        return jsonify({"success": True, "user": {"email": user["email"]}, "message": "Connexion réussie"})
+        return jsonify({"success": True, "user": {"email": user["email"]}, "token": user["email"], "message": "Connexion réussie"})
     else:
         return jsonify({"success": False, "error": "Email ou mot de passe incorrect"}), 401
 

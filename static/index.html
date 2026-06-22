@@ -379,6 +379,11 @@
                         <input id="auth-password" type="password" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary/40 focus:bg-[#13161c] transition-all" data-i18n-placeholder="login_password_placeholder" placeholder="••••••••"/>
                     </div>
 
+                    <div id="auth-referral-field" class="space-y-1 hidden">
+                        <label data-i18n="register_referral_label" class="block text-xs font-semibold text-on-surface-variant">Code de parrainage (optionnel)</label>
+                        <input id="auth-referral-code" type="text" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary/40 focus:bg-[#13161c] transition-all uppercase" data-i18n-placeholder="register_referral_placeholder" placeholder="ex: ALEX2024"/>
+                    </div>
+
                     <p id="auth-error" class="hidden text-xs text-error text-center font-semibold"></p>
 
                     <!-- Terms agreement checkbox -->
@@ -1370,6 +1375,8 @@
                 accept_terms_label_prefix: "J'accepte les",
                 accept_terms_link: "mentions légales & conditions d'utilisation",
                 alert_terms_required: "Veuillez accepter les mentions légales et conditions d'utilisation.",
+                register_referral_label: "Code de parrainage (optionnel)",
+                register_referral_placeholder: "ex: ALEX2024",
                 dash_independence_title: "Indice d'Indépendance",
                 dash_iif_score_label: "IIF SCORE",
                 dash_iif_description: "Votre ratio (Revenus Passifs / Dépenses Totales). Visez 100% pour la liberté totale !",
@@ -1567,6 +1574,8 @@
                 accept_terms_label_prefix: "I accept the",
                 accept_terms_link: "legal terms and conditions of use",
                 alert_terms_required: "Please accept the legal terms and conditions of use.",
+                register_referral_label: "Referral code (optional)",
+                register_referral_placeholder: "e.g. ALEX2024",
                 dash_independence_title: "Independence Index",
                 dash_iif_score_label: "IIF SCORE",
                 dash_iif_description: "Your ratio (Passive Income / Total Expenses). Aim for 100% to achieve total freedom!",
@@ -1767,6 +1776,8 @@
                 accept_terms_label_prefix: "Acepto los",
                 accept_terms_link: "términos legales y condiciones de uso",
                 alert_terms_required: "Por favor, acepte los términos legales y condiciones de uso.",
+                register_referral_label: "Código de referido (opcional)",
+                register_referral_placeholder: "ej: ALEX2024",
                 dash_independence_title: "Índice de Independencia",
                 dash_iif_score_label: "IIF SCORE",
                 dash_iif_description: "Su ratio (Ingresos Pasivos / Gastos Totales). ¡Apunte al 100% para lograr la libertad absoluta!",
@@ -1967,6 +1978,8 @@
                 accept_terms_label_prefix: "Aceito os",
                 accept_terms_link: "termos legais e condições de utilização",
                 alert_terms_required: "Por favor, aceite os termos legais e condições de utilização.",
+                register_referral_label: "Código de indicação (opcional)",
+                register_referral_placeholder: "ex: ALEX2024",
                 dash_independence_title: "Índice de Independência",
                 dash_iif_score_label: "IIF SCORE",
                 dash_iif_description: "A sua proporção (Rendimentos Passivos / Despesas Totais). Aponte para 100% para alcançar a liberdade total!",
@@ -2601,6 +2614,8 @@
                 }
                 if (termsContainer) termsContainer.classList.add('hidden');
                 if (nameFields) nameFields.classList.add('hidden');
+                const referralFieldEl = document.getElementById('auth-referral-field');
+                if (referralFieldEl) referralFieldEl.classList.add('hidden');
             } else if (isMobileWrapper) {
                 // In mobile wrapper, register mode is not allowed — force back to login
                 setAuthMode('login');
@@ -2616,6 +2631,8 @@
                 }
                 if (termsContainer) termsContainer.classList.remove('hidden');
                 if (nameFields) nameFields.classList.remove('hidden');
+                const referralFieldEl = document.getElementById('auth-referral-field');
+                if (referralFieldEl) referralFieldEl.classList.remove('hidden');
             }
         }
 
@@ -2628,6 +2645,7 @@
             const password = document.getElementById('auth-password').value;
             const firstName = document.getElementById('auth-first-name')?.value || '';
             const lastName = document.getElementById('auth-last-name')?.value || '';
+            const referralCode = document.getElementById('auth-referral-code')?.value || '';
             const errEl = document.getElementById('auth-error');
             const checkbox = document.getElementById('auth-terms-checkbox');
             
@@ -2648,7 +2666,7 @@
                 const response = await fetch(`/api/auth/${mode}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, first_name: firstName, last_name: lastName })
+                    body: JSON.stringify({ email, password, first_name: firstName, last_name: lastName, referral_code: mode === 'register' ? referralCode.trim() : undefined })
                 });
                 const data = await response.json();
                 
@@ -3996,6 +4014,15 @@
 
             // Handle Stripe checkout redirects / mock session returns
             const urlParams = new URLSearchParams(window.location.search);
+
+            // Pre-fill referral code from ?ref= link and jump straight to registration
+            const refCode = urlParams.get('ref');
+            if (refCode && !isMobileWrapper) {
+                setAuthMode('register');
+                const referralInput = document.getElementById('auth-referral-code');
+                if (referralInput) referralInput.value = refCode.trim().toUpperCase();
+            }
+
             const stripeSession = urlParams.get('stripe_session');
             if (stripeSession) {
                 if (stripeSession === 'success' || stripeSession === 'success_mock') {
