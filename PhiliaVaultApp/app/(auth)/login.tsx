@@ -9,7 +9,8 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { makeRedirectUri } from 'expo-auth-session';
 // import * as AppleAuthentication from 'expo-apple-authentication';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { IconShield } from '../../components/icons/Icons';
 import { useAuthStore } from '../../store/authStore';
 import { COLORS, RADIUS } from '../../constants/colors';
@@ -77,8 +78,6 @@ function GPSIllustration() {
 export default function LoginScreen() {
   const { login, register, loginWithGoogle, loginWithApple } = useAuthStore();
   const { t } = useUserPreferences();
-  // Read ?ref= from URL (web PWA deep link or native deep link via expo-router)
-  const { ref: refParam } = useLocalSearchParams<{ ref?: string }>();
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [firstName, setFirstName] = useState('');
@@ -208,15 +207,28 @@ export default function LoginScreen() {
     }
   };
 
-  const [referralCode, setReferralCode] = useState(refParam ? refParam.trim().toUpperCase() : '');
+  const [referralCode, setReferralCode] = useState('');
 
-  // Sync refParam into state if it resolves after initial render
+  // Auto-fill referral code from URL param ?ref=XXXXXXXX
   useEffect(() => {
-    if (refParam && !referralCode) {
-      setReferralCode(refParam.trim().toUpperCase());
-      setMode('register'); // switch to register tab automatically when coming via referral link
-    }
-  }, [refParam]);
+    const extractRef = async () => {
+      try {
+        if (Platform.OS === 'web') {
+          const params = new URLSearchParams(window.location.search);
+          const ref = params.get('ref');
+          if (ref) { setReferralCode(ref); setMode('register'); }
+        } else {
+          const url = await Linking.getInitialURL();
+          if (url) {
+            const parsed = Linking.parse(url);
+            const ref = parsed.queryParams?.ref as string | undefined;
+            if (ref) { setReferralCode(ref); setMode('register'); }
+          }
+        }
+      } catch (_) {}
+    };
+    extractRef();
+  }, []);
 
   const handleSubmit = async (bypassOnboarding = false) => {
     if (!email.trim() || !password) {
