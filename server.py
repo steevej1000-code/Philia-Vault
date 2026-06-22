@@ -984,8 +984,9 @@ def stripe_checkout():
     user_id = get_current_user_id()
     data = request.json or {}
 
-    # Plan unique : mensuel $9.99
-    price_id          = data.get("price_id")          # Stripe Price ID depuis le frontend
+    # Plan mensuel $14.99 ou annuel $149.90
+    price_id          = data.get("price_id")          # Stripe Price ID depuis le frontend (optionnel)
+    plan              = data.get("plan", "monthly")    # 'monthly' ou 'annual'
     trial_period_days = int(data.get("trial_period_days", 3))
     success_url       = data.get("success_url")
     cancel_url        = data.get("cancel_url")
@@ -1009,12 +1010,16 @@ def stripe_checkout():
                 customer_id = customer.id
                 database.set_premium_status(user_id, profile.get("premium_status", 0), stripe_customer_id=customer_id)
 
-            # Utiliser le Price ID fourni, sinon fallback sur le prix prod configuré
+            # Résoudre le Price ID selon le plan choisi
             STRIPE_PRICE_MONTHLY = os.environ.get(
                 "STRIPE_PRICE_MONTHLY", "price_1TkdtnGB22CTeiDpoTNsaFQM"
             )
+            STRIPE_PRICE_ANNUAL = os.environ.get("STRIPE_ANNUAL_PRICE_ID")
             if not price_id or "placeholder" in price_id:
-                price_id = STRIPE_PRICE_MONTHLY
+                if plan == "annual" and STRIPE_PRICE_ANNUAL:
+                    price_id = STRIPE_PRICE_ANNUAL
+                else:
+                    price_id = STRIPE_PRICE_MONTHLY
 
             session_params = dict(
                 customer=customer_id,
@@ -1271,7 +1276,8 @@ def webhook_stripe():
             try:
                 user = database.get_user_by_stripe_customer_id(customer_id)
                 if user and user.get("parrain_id"):
-                    commission_amount = round(amount_paid * 0.30, 2)
+                    commission_amount = round(amount_paid * 0.50, 2)
+                    plan_type_inv = \'annual\' if amount_paid > 100 else \'monthly\'
                     database.insert_affiliate_commission(
                         affiliate_user_id=user["parrain_id"],
                         referred_user_id=user["id"],

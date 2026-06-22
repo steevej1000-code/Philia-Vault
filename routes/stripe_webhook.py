@@ -82,7 +82,7 @@ def process_successful_payment(session):
         return jsonify({'error': 'database_error'}), 500
 
     # ============================================
-    # COMMISSION AFFILIÉ — 30% si parrain_id présent
+    # COMMISSION AFFILIÉ — 50% si parrain_id présent
     # Fired before already_processed guard so renewals via checkout also record commissions
     # ============================================
     try:
@@ -90,7 +90,9 @@ def process_successful_payment(session):
         if referred_user and referred_user.get("parrain_id"):
             parrain_id = referred_user["parrain_id"]
             referred_id = referred_user.get("id")
-            commission_amount = round(amount_total * 0.30, 2)
+            commission_amount = round(amount_total * 0.50, 2)
+            # Detect plan type by amount: >$100 = annual, otherwise monthly
+            plan_type = 'annual' if amount_total > 100 else 'monthly'
             payment_id = session.get("payment_intent") or session.get("id")
             if referred_id and payment_id:
                 database.insert_affiliate_commission(
@@ -98,8 +100,9 @@ def process_successful_payment(session):
                     referred_user_id=referred_id,
                     payment_id=payment_id,
                     commission_amount=commission_amount,
+                    plan_type=plan_type,
                 )
-                print(f"[Affiliate] Commission {commission_amount} USD créée pour parrain_id={parrain_id}")
+                print(f"[Affiliate] Commission {commission_amount} USD ({plan_type}) créée pour parrain_id={parrain_id}")
     except Exception as e:
         print(f"[Affiliate] Erreur création commission: {e}")
 

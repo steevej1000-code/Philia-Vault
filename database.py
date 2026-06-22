@@ -394,6 +394,12 @@ def init_db():
         except Exception:
             pass
 
+    # Add plan_type to affiliate_commissions (migration for existing DBs)
+    try:
+        cursor.execute("ALTER TABLE affiliate_commissions ADD COLUMN plan_type TEXT DEFAULT 'monthly'")
+    except Exception:
+        pass  # column already present
+
     # ── Seed owner email so Google OAuth works on first boot ──────────────────
     _owner_email = os.environ.get("ADMIN_EMAIL", "steevej1000@gmail.com")
     cursor.execute(
@@ -902,8 +908,8 @@ def get_user_by_stripe_subscription_id(subscription_id):
 # Affiliation / Referral program (Revenu Passif)
 # Commission per active premium referral. Philia Vault Premium Monthly is
 # priced at 9.99 (see price_amount in server.py /api/stripe/create-checkout-session).
-# We pay out ~30% of that monthly subscription price per active referral.
-COMMISSION_PER_REFERRAL = 3.00
+# We pay out ~50% of that subscription price per active referral.
+COMMISSION_PER_REFERRAL = 7.50
 
 def get_affiliation_stats(user_id, _retry=False):
     conn = get_db()
@@ -1024,7 +1030,7 @@ def update_affiliate_onboarding_status(user_id, status):
     conn.commit()
     conn.close()
 
-def insert_affiliate_commission(affiliate_user_id, referred_user_id, payment_id, commission_amount):
+def insert_affiliate_commission(affiliate_user_id, referred_user_id, payment_id, commission_amount, plan_type='monthly'):
     """Insert a pending commission row. Idempotent on payment_id."""
     conn = get_db()
     cursor = conn.cursor()
@@ -1036,9 +1042,9 @@ def insert_affiliate_commission(affiliate_user_id, referred_user_id, payment_id,
         return  # already recorded
     cursor.execute("""
         INSERT INTO affiliate_commissions
-            (affiliate_user_id, referred_user_id, subscription_payment_id, commission_amount, status)
-        VALUES (?, ?, ?, ?, 'pending')
-    """, (affiliate_user_id, referred_user_id, payment_id, commission_amount))
+            (affiliate_user_id, referred_user_id, subscription_payment_id, commission_amount, status, plan_type)
+        VALUES (?, ?, ?, ?, 'pending', ?)
+    """, (affiliate_user_id, referred_user_id, payment_id, commission_amount, plan_type))
     conn.commit()
     conn.close()
 
@@ -1129,9 +1135,15 @@ def get_affiliate_network(user_id):
         return []
     uid = row["id"]
     cursor.execute(
-        """SELECT email, first_name, last_name, created_at, premium_status
-           FROM users WHERE parrain_id = ?
-           ORDER BY created_at DESC""",
+        """SELECT u.id, u.email, u.first_name, u.last_name, u.created_at, u.premium_status,
+                  COALESCE(
+                      (SELECT ac.plan_type FROM affiliate_commissions ac
+                       WHERE ac.referred_user_id = u.id
+                       ORDER BY ac.created_at DESC LIMIT 1),
+                      'monthly'
+                  ) AS plan_type
+           FROM users u WHERE u.parrain_id = ?
+           ORDER BY u.created_at DESC""",
         (uid,)
     )
     rows = cursor.fetchall()
@@ -1140,12 +1152,16 @@ def get_affiliate_network(user_id):
     for r in rows:
         d = dict(r)
         name = ((d.get("first_name") or "") + " " + (d.get("last_name") or "")).strip()
+        plan_type = d.get("plan_type", "monthly")
+        commission = 74.95 if plan_type == "annual" else (COMMISSION_PER_REFERRAL if d["premium_status"] == 1 else 0.0)
         result.append({
+            "id": d["id"],
             "email": d["email"],
             "name": name if name else d["email"].split("@")[0],
-            "created_at": d["created_at"] or "",
-            "subscription_status": "active" if d["premium_status"] == 1 else "inactive",
-            "commission_earned": COMMISSION_PER_REFERRAL if d["premium_status"] == 1 else 0.0,
+            "joined_at": d["created_at"] or "",
+            "status": "active" if d["premium_status"] == 1 else "inactive",
+            "plan_type": plan_type,
+            "commission_earned": commission,
         })
     return result
 
