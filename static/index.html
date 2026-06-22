@@ -955,6 +955,47 @@
             </div>
         </div>
 
+        <!-- HOLDINGS / AFFILIATION VIEW -->
+        <div id="view-holdings" class="view-pane hidden space-y-6">
+            <!-- Header -->
+            <div class="flex items-center gap-3 pt-2">
+                <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings:'FILL' 1">hub</span>
+                <div>
+                    <h2 class="text-headline-md font-headline-md text-on-surface font-bold">My Holdings Network</h2>
+                    <p class="text-xs text-on-surface-variant">Earn 30% recurring commission on every referral</p>
+                </div>
+            </div>
+
+            <!-- YOUR REFERRAL LINK -->
+            <div class="glass-card rounded-3xl p-6 border border-primary/20 relative overflow-hidden">
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+                <p class="text-label-sm text-primary uppercase tracking-widest mb-3" data-i18n="holdings_referral_label">YOUR REFERRAL LINK</p>
+                <div id="holdings-referral-url" class="text-sm text-on-surface bg-black/30 rounded-xl px-4 py-3 font-mono break-all border border-white/10 mb-4">
+                    https://app.philiavault.com/?ref=—
+                </div>
+                <button id="holdings-copy-btn" onclick="holdingsCopyLink()"
+                    class="w-full py-3 vibrant-button rounded-xl text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">content_copy</span>
+                    <span id="holdings-copy-label" data-i18n="holdings_copy_btn">Copy Link</span>
+                </button>
+            </div>
+
+            <!-- STRIPE CONNECT -->
+            <div id="holdings-connect-card" class="glass-card rounded-3xl p-6 border border-white/10 space-y-3">
+                <p class="text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="holdings_connect_label">PAYOUT SETUP</p>
+                <div id="holdings-connect-body" class="text-sm text-on-surface-variant">Loading…</div>
+            </div>
+
+            <!-- ACTIVE NETWORK -->
+            <div class="glass-card rounded-3xl p-6 border border-white/10 space-y-4">
+                <p class="text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="holdings_network_label">ACTIVE NETWORK</p>
+                <div id="holdings-network-body">
+                    <p class="text-xs text-on-surface-variant text-center py-4" data-i18n="holdings_network_empty">No referrals yet. Share your link to start building your network.</p>
+                </div>
+            </div>
+        </div>
+
+
     </main>
 
     <!-- Bottom Navigation Bar -->
@@ -975,6 +1016,10 @@
             <a id="nav-simulator" class="flex flex-col items-center justify-center text-on-surface-variant/70 opacity-60 transition-all cursor-pointer" onclick="switchTab('simulator')">
                 <span class="material-symbols-outlined">calculate</span>
                 <span data-i18n="nav_simulator" class="text-label-sm font-label-sm">Simulateur</span>
+            </a>
+            <a id="nav-holdings" class="flex flex-col items-center justify-center text-on-surface-variant/70 opacity-60 transition-all cursor-pointer" onclick="switchTab('holdings')">
+                <span class="material-symbols-outlined">hub</span>
+                <span data-i18n="nav_holdings" class="text-label-sm font-label-sm">Holdings</span>
             </a>
             <a id="nav-coach" class="flex flex-col items-center justify-center text-on-surface-variant/70 opacity-60 transition-all cursor-pointer" onclick="switchTab('coach')">
                 <span class="material-symbols-outlined">smart_toy</span>
@@ -1096,9 +1141,44 @@
                     <button onclick="closeProfileModal()" data-i18n="profile_close_btn" class="flex-1 py-3 bg-surface-container rounded-xl text-sm font-bold active:scale-95 transition-all text-white border border-white/5">Fermer</button>
                     <button onclick="saveUserProfile()" data-i18n="profile_save_btn" class="flex-1 py-3 vibrant-button text-white rounded-xl text-sm font-bold active:scale-95 transition-all">Enregistrer</button>
                 </div>
+                <!-- Cancel / Reactivate Subscription -->
+                <div id="profile-cancel-section" class="hidden pt-2 border-t border-white/5">
+                    <div id="profile-access-until-badge" class="hidden mb-2 text-xs text-on-surface-variant text-center">
+                        <span data-i18n="cancel_sub_access_until">Access until</span>
+                        <span id="profile-access-until-date" class="font-bold text-primary ml-1"></span>
+                        <button onclick="handleReactivateSub()" class="ml-3 text-xs text-primary underline font-semibold" data-i18n="cancel_sub_reactivate">Reactivate</button>
+                    </div>
+                    <button id="profile-cancel-btn" onclick="openCancelModal()"
+                        class="w-full py-2.5 bg-transparent border border-red-800/40 text-red-400/70 hover:text-red-400 hover:border-red-600/60 rounded-xl text-xs font-semibold active:scale-95 transition-all"
+                        data-i18n="cancel_sub_btn">Cancel Subscription</button>
+                </div>
                 <button onclick="closeProfileModal(); handleLogout();" class="w-full py-3 bg-red-950/40 hover:bg-red-900/40 border border-red-500/30 text-red-400 rounded-xl text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-[18px]">logout</span>
                     <span data-i18n="profile_logout_btn">Déconnexion</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Subscription Modal -->
+    <div id="modal-cancel-sub" class="hidden fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div class="glass-card w-full max-w-md rounded-[28px] p-7 border border-white/10 shadow-2xl space-y-5 mb-4">
+            <h3 class="text-headline-md font-bold text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-yellow-400">warning</span>
+                <span data-i18n="cancel_sub_modal_title">Are you sure?</span>
+            </h3>
+            <p data-i18n="cancel_sub_modal_body" class="text-sm text-on-surface-variant leading-relaxed">
+                You will maintain full access to your Philia Holdings and Daily Decisions until the end of your current billing period.
+            </p>
+            <div class="flex flex-col gap-3 pt-1">
+                <button onclick="closeCancelModal()" data-i18n="cancel_sub_keep"
+                    class="w-full py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-all text-[#0c0e12]"
+                    style="background:#C8FF00">
+                    Keep my Access
+                </button>
+                <button onclick="confirmCancelSub()" data-i18n="cancel_sub_confirm"
+                    class="w-full py-2 text-xs text-red-400/70 hover:text-red-400 underline font-semibold active:scale-95 transition-all bg-transparent border-none">
+                    Confirm Cancellation
                 </button>
             </div>
         </div>
@@ -1358,6 +1438,20 @@
                 nav_liabilities: "Passifs",
                 nav_simulator: "Simulateur",
                 nav_coach: "Coach",
+                nav_holdings: "Holdings",
+                holdings_referral_label: "VOTRE LIEN DE PARRAINAGE",
+                holdings_copy_btn: "Copier le lien",
+                holdings_copy_done: "Lien copié !",
+                holdings_connect_label: "CONFIGURATION DES PAIEMENTS",
+                holdings_connect_not_started: "Configurez votre compte pour recevoir vos commissions.",
+                holdings_connect_btn: "⚙️ Configurer mes paiements",
+                holdings_connect_pending: "Vérification en cours…",
+                holdings_connect_active: "✅ Prêt à recevoir des paiements",
+                holdings_network_label: "RÉSEAU ACTIF",
+                holdings_network_empty: "Aucun filleul pour l'instant. Partagez votre lien pour commencer.",
+                holdings_ping_btn: "⚡ Relancer",
+                holdings_ping_sent: "Ping envoyé !",
+
                 modal_asset_title: "Ajouter un nouvel Actif",
                 modal_asset_name: "Nom de l'actif",
                 modal_asset_name_placeholder: "ex: Actions Vanguard S&P 500",
@@ -1435,6 +1529,13 @@
                 profile_currency: "Devise",
                 profile_save_btn: "Enregistrer",
                 profile_close_btn: "Fermer",
+                cancel_sub_btn: "Annuler l'abonnement",
+                cancel_sub_modal_title: "Êtes-vous sûr ?",
+                cancel_sub_modal_body: "Vous conserverez l'accès complet à Philia Holdings et à vos Décisions Quotidiennes jusqu'à la fin de votre période de facturation.",
+                cancel_sub_keep: "Conserver mon accès",
+                cancel_sub_confirm: "Confirmer l'annulation",
+                cancel_sub_access_until: "Accès jusqu'au",
+                cancel_sub_reactivate: "Réactiver",
                 profile_logout_btn: "Déconnexion",
                 profile_update_success: "Profil mis à jour avec succès !",
                 login_title_text: "Ravi de vous revoir",
@@ -1534,6 +1635,20 @@
                 nav_liabilities: "Liabilities",
                 nav_simulator: "Simulator",
                 nav_coach: "Coach",
+                nav_holdings: "Holdings",
+                holdings_referral_label: "YOUR REFERRAL LINK",
+                holdings_copy_btn: "Copy Link",
+                holdings_copy_done: "Link copied!",
+                holdings_connect_label: "PAYOUT SETUP",
+                holdings_connect_not_started: "Set up your account to receive commissions.",
+                holdings_connect_btn: "⚙️ Configure Payment Info",
+                holdings_connect_pending: "Verification in progress…",
+                holdings_connect_active: "✅ Ready to receive payments",
+                holdings_network_label: "ACTIVE NETWORK",
+                holdings_network_empty: "No referrals yet. Share your link to start building your network.",
+                holdings_ping_btn: "⚡ Nudge",
+                holdings_ping_sent: "Ping sent!",
+
                 modal_asset_title: "Add New Asset",
                 modal_asset_name: "Asset Name",
                 modal_asset_name_placeholder: "e.g., Vanguard S&P 500 ETF",
@@ -1614,6 +1729,13 @@
                 profile_currency: "Currency",
                 profile_save_btn: "Save",
                 profile_close_btn: "Close",
+                cancel_sub_btn: "Cancel Subscription",
+                cancel_sub_modal_title: "Are you sure?",
+                cancel_sub_modal_body: "You will maintain full access to your Philia Holdings and Daily Decisions until the end of your current billing period.",
+                cancel_sub_keep: "Keep my Access",
+                cancel_sub_confirm: "Confirm Cancellation",
+                cancel_sub_access_until: "Access until",
+                cancel_sub_reactivate: "Reactivate",
                 profile_logout_btn: "Log Out",
                 profile_update_success: "Profile updated successfully!",
                 login_title_text: "Welcome back",
@@ -1713,6 +1835,20 @@
                 nav_liabilities: "Pasivos",
                 nav_simulator: "Simulador",
                 nav_coach: "Coach",
+                nav_holdings: "Holdings",
+                holdings_referral_label: "TU ENLACE DE REFERIDO",
+                holdings_copy_btn: "Copiar enlace",
+                holdings_copy_done: "¡Enlace copiado!",
+                holdings_connect_label: "CONFIGURACIÓN DE PAGOS",
+                holdings_connect_not_started: "Configura tu cuenta para recibir comisiones.",
+                holdings_connect_btn: "⚙️ Configurar pagos",
+                holdings_connect_pending: "Verificación en curso…",
+                holdings_connect_active: "✅ Listo para recibir pagos",
+                holdings_network_label: "RED ACTIVA",
+                holdings_network_empty: "Aún no tienes referidos. Comparte tu enlace para empezar.",
+                holdings_ping_btn: "⚡ Contactar",
+                holdings_ping_sent: "¡Ping enviado!",
+
                 modal_asset_title: "Añadir Nuevo Activo",
                 modal_asset_name: "Nombre del activo",
                 modal_asset_name_placeholder: "ej: Vanguard S&P 500 ETF",
@@ -1793,6 +1929,13 @@
                 profile_currency: "Moneda",
                 profile_save_btn: "Guardar",
                 profile_close_btn: "Cerrar",
+                cancel_sub_btn: "Cancelar suscripción",
+                cancel_sub_modal_title: "¿Estás seguro?",
+                cancel_sub_modal_body: "Mantendrás acceso completo a Philia Holdings y Decisiones Diarias hasta el final de tu período de facturación.",
+                cancel_sub_keep: "Mantener mi acceso",
+                cancel_sub_confirm: "Confirmar cancelación",
+                cancel_sub_access_until: "Acceso hasta el",
+                cancel_sub_reactivate: "Reactivar",
                 profile_logout_btn: "Cerrar Sesión",
                 profile_update_success: "¡Perfil actualizado con éxito!",
                 login_title_text: "Bienvenido de nuevo",
@@ -1892,6 +2035,20 @@
                 nav_liabilities: "Passivos",
                 nav_simulator: "Simulador",
                 nav_coach: "Coach",
+                nav_holdings: "Holdings",
+                holdings_referral_label: "SEU LINK DE INDICAÇÃO",
+                holdings_copy_btn: "Copiar link",
+                holdings_copy_done: "Link copiado!",
+                holdings_connect_label: "CONFIGURAÇÃO DE PAGAMENTOS",
+                holdings_connect_not_started: "Configure sua conta para receber comissões.",
+                holdings_connect_btn: "⚙️ Configurar pagamentos",
+                holdings_connect_pending: "Verificação em andamento…",
+                holdings_connect_active: "✅ Pronto para receber pagamentos",
+                holdings_network_label: "REDE ATIVA",
+                holdings_network_empty: "Nenhuma indicação ainda. Compartilhe seu link para começar.",
+                holdings_ping_btn: "⚡ Notificar",
+                holdings_ping_sent: "Ping enviado!",
+
                 modal_asset_title: "Adicionar Novo Ativo",
                 modal_asset_name: "Nome do ativo",
                 modal_asset_name_placeholder: "ex: Vanguard S&P 500 ETF",
@@ -2071,6 +2228,20 @@
                 nav_liabilities: "Passiva",
                 nav_simulator: "Simulator",
                 nav_coach: "Coach",
+                nav_holdings: "Holdings",
+                holdings_referral_label: "IHR EMPFEHLUNGSLINK",
+                holdings_copy_btn: "Link kopieren",
+                holdings_copy_done: "Link kopiert!",
+                holdings_connect_label: "ZAHLUNGSEINRICHTUNG",
+                holdings_connect_not_started: "Richten Sie Ihr Konto ein, um Provisionen zu erhalten.",
+                holdings_connect_btn: "⚙️ Zahlungsinfo konfigurieren",
+                holdings_connect_pending: "Überprüfung läuft…",
+                holdings_connect_active: "✅ Bereit für Zahlungen",
+                holdings_network_label: "AKTIVES NETZWERK",
+                holdings_network_empty: "Noch keine Empfehlungen. Teile deinen Link um anzufangen.",
+                holdings_ping_btn: "⚡ Anschreiben",
+                holdings_ping_sent: "Ping gesendet!",
+
                 modal_asset_title: "Neuen Vermögenswert hinzufügen",
                 modal_asset_name: "Name des Vermögenswerts",
                 modal_asset_name_placeholder: "z.B. Vanguard S&P 500 ETF",
@@ -2151,6 +2322,13 @@
                 profile_currency: "Währung",
                 profile_save_btn: "Speichern",
                 profile_close_btn: "Schließen",
+                cancel_sub_btn: "Abonnement kündigen",
+                cancel_sub_modal_title: "Sind Sie sicher?",
+                cancel_sub_modal_body: "Sie behalten den vollen Zugang zu Philia Holdings und Ihren täglichen Entscheidungen bis zum Ende Ihrer aktuellen Abrechnungsperiode.",
+                cancel_sub_keep: "Meinen Zugang behalten",
+                cancel_sub_confirm: "Kündigung bestätigen",
+                cancel_sub_access_until: "Zugang bis",
+                cancel_sub_reactivate: "Reaktivieren",
                 profile_logout_btn: "Abmelden",
                 profile_update_success: "Profil erfolgreich aktualisiert!",
                 login_title_text: "Willkommen zurück",
@@ -2310,7 +2488,7 @@
             document.getElementById(`view-${tabId}`).classList.remove('hidden');
 
             // Bottom Nav styling update
-            const navIds = ['dashboard', 'assets', 'liabilities', 'simulator', 'coach'];
+            const navIds = ['dashboard', 'assets', 'liabilities', 'simulator', 'coach', 'holdings'];
             navIds.forEach(id => {
                 const navBtn = document.getElementById(`nav-${id}`);
                 if (id === tabId) {
@@ -2329,6 +2507,7 @@
             else if (tabId === 'assets') loadAssets();
             else if (tabId === 'liabilities') loadLiabilities();
             else if (tabId === 'simulator') initSimulator();
+            else if (tabId === 'holdings') { loadHoldings(); }
             else if (tabId === 'coach') {
                 checkPremium().then(() => {
                     scrollChatBottom();
@@ -2691,6 +2870,7 @@
                 document.getElementById('profile-error-msg').classList.add('hidden');
                 
                 document.getElementById('modal-profile').classList.remove('hidden');
+                loadCancelStatus();
             } catch (err) {
                 console.error("Error loading user profile:", err);
             }
@@ -3835,6 +4015,199 @@
                 }).catch(err => console.error("Error fetching auth config:", err));
             }
         });
+
+        async function loadCancelStatus() {
+            try {
+                const res = await fetch('/api/subscription/status');
+                const data = await res.json();
+                const cancelSection = document.getElementById('profile-cancel-section');
+                const cancelBtn = document.getElementById('profile-cancel-btn');
+                const accessBadge = document.getElementById('profile-access-until-badge');
+                if (!cancelSection) return;
+                if (data.premium_status === 1 || data.is_premium) {
+                    cancelSection.classList.remove('hidden');
+                    if (data.cancel_at_period_end) {
+                        const ts = data.cancel_at;
+                        const until = ts ? new Date(ts * 1000).toLocaleDateString() : '—';
+                        document.getElementById('profile-access-until-date').textContent = until;
+                        accessBadge.classList.remove('hidden');
+                        cancelBtn.classList.add('hidden');
+                    } else {
+                        accessBadge.classList.add('hidden');
+                        cancelBtn.classList.remove('hidden');
+                    }
+                } else {
+                    cancelSection.classList.add('hidden');
+                }
+            } catch(e) { /* non-blocking */ }
+        }
+
+        // ==================== HOLDINGS / AFFILIATION ENGINE ====================
+
+        const REFERRAL_BASE_URL = 'https://app.philiavault.com/?ref=';
+
+        async function loadHoldings() {
+            try {
+                const [statsRes, networkRes, connectRes] = await Promise.allSettled([
+                    fetch('/api/affiliate/stats'),
+                    fetch('/api/affiliate/network'),
+                    fetch('/api/affiliate/onboard/status')
+                ]);
+
+                // Referral link
+                if (statsRes.status === 'fulfilled' && statsRes.value.ok) {
+                    const data = await statsRes.value.json();
+                    if (data.code_parrainage) {
+                        const url = REFERRAL_BASE_URL + data.code_parrainage;
+                        document.getElementById('holdings-referral-url').textContent = url;
+                    }
+                }
+
+                // Active network
+                const networkEl = document.getElementById('holdings-network-body');
+                if (networkRes.status === 'fulfilled' && networkRes.value.ok) {
+                    const data = await networkRes.value.json();
+                    const members = data.network || [];
+                    if (members.length === 0) {
+                        const t = window._t || (k => k);
+                        networkEl.innerHTML = `<p class="text-xs text-on-surface-variant text-center py-4">${t('holdings_network_empty')}</p>`;
+                    } else {
+                        networkEl.innerHTML = members.map(m => {
+                            const isActive = m.status === 'active';
+                            const badgeClass = isActive
+                                ? 'bg-green-500/20 text-green-400 border border-green-500/20'
+                                : 'bg-orange-500/20 text-orange-400 border border-orange-500/20';
+                            const badgeText = isActive ? 'Active' : 'Inactive';
+                            const pingBtn = !isActive
+                                ? `<button onclick="pingAffiliate(${m.id}, this)" class="text-[10px] px-2 py-1 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 active:scale-95 transition-all font-semibold" data-i18n="holdings_ping_btn">⚡ Relancer</button>`
+                                : '';
+                            const date = m.joined_at ? new Date(m.joined_at).toLocaleDateString() : '—';
+                            return `<div class="flex items-center justify-between py-2.5 border-b border-white/5 last:border-0 gap-3">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold text-on-surface truncate">${m.email || '—'}</p>
+                                    <p class="text-[10px] text-on-surface-variant">${date}</p>
+                                </div>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass}">${badgeText}</span>
+                                    ${pingBtn}
+                                </div>
+                            </div>`;
+                        }).join('');
+                    }
+                }
+
+                // Stripe Connect status
+                const connectEl = document.getElementById('holdings-connect-body');
+                if (connectRes.status === 'fulfilled' && connectRes.value.ok) {
+                    const data = await connectRes.value.json();
+                    const status = data.status || 'not_started';
+                    if (status === 'active') {
+                        connectEl.innerHTML = `<p class="text-sm text-green-400 font-semibold" data-i18n="holdings_connect_active">✅ Ready to receive payments</p>`;
+                    } else if (status === 'pending') {
+                        connectEl.innerHTML = `<p class="text-sm text-yellow-400" data-i18n="holdings_connect_pending">Verification in progress…</p>`;
+                    } else {
+                        const t = window._t || (k => k);
+                        connectEl.innerHTML = `
+                            <p class="text-xs text-on-surface-variant mb-3" data-i18n="holdings_connect_not_started">Set up your account to receive commissions.</p>
+                            <button onclick="startConnectOnboarding(this)" class="w-full py-2.5 vibrant-button rounded-xl text-xs font-bold active:scale-95 transition-all" data-i18n="holdings_connect_btn">⚙️ Configure Payment Info</button>`;
+                    }
+                }
+            } catch(e) {
+                console.error('loadHoldings error', e);
+            }
+        }
+
+        async function holdingsCopyLink() {
+            const urlEl = document.getElementById('holdings-referral-url');
+            const label = document.getElementById('holdings-copy-label');
+            const url = urlEl ? urlEl.textContent.trim() : '';
+            if (!url || url.endsWith('—')) return;
+            try {
+                await navigator.clipboard.writeText(url);
+            } catch(e) {
+                const ta = document.createElement('textarea');
+                ta.value = url; ta.style.position='fixed'; ta.style.opacity='0';
+                document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+                document.body.removeChild(ta);
+            }
+            const orig = label.textContent;
+            const t = window._t || (k => k);
+            label.textContent = t('holdings_copy_done') || 'Link copied!';
+            setTimeout(() => { label.textContent = orig; }, 2000);
+        }
+
+        async function startConnectOnboarding(btn) {
+            btn.disabled = true;
+            btn.textContent = '…';
+            try {
+                const res = await fetch('/api/affiliate/onboard', { method: 'POST' });
+                const data = await res.json();
+                if (data.url) window.location.href = data.url;
+                else btn.textContent = 'Error — retry';
+            } catch(e) {
+                btn.textContent = 'Error — retry';
+                btn.disabled = false;
+            }
+        }
+
+        async function pingAffiliate(memberId, btn) {
+            const orig = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '…';
+            try {
+                const res = await fetch(`/api/affiliate/ping/${memberId}`, { method: 'POST' });
+                if (res.status === 429) {
+                    btn.textContent = '⏳';
+                    return;
+                }
+                const t = window._t || (k => k);
+                btn.textContent = t('holdings_ping_sent') || 'Ping sent!';
+                setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3000);
+            } catch(e) {
+                btn.textContent = orig;
+                btn.disabled = false;
+            }
+        }
+
+        // ==================== CANCEL SUBSCRIPTION ENGINE ====================
+
+        function openCancelModal() {
+            applyTranslations(currentLang);
+            document.getElementById('modal-cancel-sub').classList.remove('hidden');
+        }
+
+        function closeCancelModal() {
+            document.getElementById('modal-cancel-sub').classList.add('hidden');
+        }
+
+        async function confirmCancelSub() {
+            closeCancelModal();
+            try {
+                const res = await fetch('/api/subscription/cancel', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    // Show access-until badge, hide cancel button
+                    const until = data.cancel_at ? new Date(data.cancel_at * 1000).toLocaleDateString() : '—';
+                    document.getElementById('profile-access-until-date').textContent = until;
+                    document.getElementById('profile-access-until-badge').classList.remove('hidden');
+                    document.getElementById('profile-cancel-btn').classList.add('hidden');
+                }
+            } catch(e) { console.error('confirmCancelSub error', e); }
+        }
+
+        async function handleReactivateSub() {
+            try {
+                const res = await fetch('/api/subscription/reactivate', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('profile-access-until-badge').classList.add('hidden');
+                    document.getElementById('profile-cancel-btn').classList.remove('hidden');
+                }
+            } catch(e) { console.error('handleReactivateSub error', e); }
+        }
+
+
+
     </script>
 </body>
 </html>
