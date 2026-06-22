@@ -1277,12 +1277,13 @@ def webhook_stripe():
                 user = database.get_user_by_stripe_customer_id(customer_id)
                 if user and user.get("parrain_id"):
                     commission_amount = round(amount_paid * 0.50, 2)
-                    plan_type_inv = \'annual\' if amount_paid > 100 else \'monthly\'
+                    plan_type_inv = 'annual' if amount_paid > 100 else 'monthly'
                     database.insert_affiliate_commission(
                         affiliate_user_id=user["parrain_id"],
                         referred_user_id=user["id"],
                         payment_id=payment_intent_id,
                         commission_amount=commission_amount,
+                        plan_type=plan_type_inv,
                     )
                     print(f"[Affiliate] Renewal commission {commission_amount} USD for parrain_id={user['parrain_id']}")
             except Exception as e:
