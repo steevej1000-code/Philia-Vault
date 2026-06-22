@@ -22,6 +22,11 @@ export const translations: Record<Language, Dict> = {
     tab_affiliation: 'My Holdings',
     tab_coach: 'Coach',
 
+    // CGU checkbox (registration)
+    cgu_checkbox_text: 'I have read and accept the ',
+    cgu_link: 'Terms of Service',
+    cgu_checkbox_suffix: 'I understand that Philia Vault is an educational tool and does not provide financial advice.',
+
     // Dashboard
     greeting_morning: 'Good morning',
     greeting_afternoon: 'Good afternoon',
@@ -340,6 +345,11 @@ export const translations: Record<Language, Dict> = {
     tab_affiliation: 'Mon Parc',
     tab_coach: 'Coach',
 
+    // CGU checkbox (inscription)
+    cgu_checkbox_text: 'J\'ai lu et j\'accepte les ',
+    cgu_link: 'Conditions Générales d\'Utilisation',
+    cgu_checkbox_suffix: 'Je comprends que Philia Vault est un outil éducatif et ne fournit pas de conseils financiers.',
+
     greeting_morning: 'Bonjour',
     greeting_afternoon: 'Bon après-midi',
     greeting_evening: 'Bonsoir',
@@ -650,6 +660,11 @@ export const translations: Record<Language, Dict> = {
     tab_affiliation: 'Mis Propiedades',
     tab_coach: 'Coach',
 
+    // Casilla CGU (registro)
+    cgu_checkbox_text: 'He leído y acepto los ',
+    cgu_link: 'Términos de Servicio',
+    cgu_checkbox_suffix: 'Entiendo que Philia Vault es una herramienta educativa y no proporciona asesoramiento financiero.',
+
     greeting_morning: 'Buenos días',
     greeting_afternoon: 'Buenas tardes',
     greeting_evening: 'Buenas noches',
@@ -950,6 +965,11 @@ export const translations: Record<Language, Dict> = {
     tab_liabilities: 'Passivos',
     tab_affiliation: 'Minhas Propriedades',
     tab_coach: 'Coach',
+
+    // Caixa CGU (registo)
+    cgu_checkbox_text: 'Li e aceito os ',
+    cgu_link: 'Termos de Serviço',
+    cgu_checkbox_suffix: 'Compreendo que o Philia Vault é uma ferramenta educativa e não fornece aconselhamento financeiro.',
 
     greeting_morning: 'Bom dia',
     greeting_afternoon: 'Boa tarde',
