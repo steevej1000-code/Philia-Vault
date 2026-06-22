@@ -28,7 +28,7 @@ import { storage } from './storage';
 const TRIAL_DAYS = 3;
 
 export const STRIPE_PRICE_ID_MONTHLY =
-  process.env.EXPO_PUBLIC_STRIPE_PRICE_MONTHLY ?? 'price_1TkdtnGB22CTeiDpoTNsaFQM';
+  process.env.EXPO_PUBLIC_STRIPE_PRICE_MONTHLY ?? 'price_1TlBy2GB22CTeiDphQoC2ZVn';
 
 export const STRIPE_PRICE_ID_ANNUAL =
   process.env.EXPO_PUBLIC_STRIPE_PRICE_ANNUAL ?? 'price_1Tl2igGB22CTeiDpIhVrFyND';

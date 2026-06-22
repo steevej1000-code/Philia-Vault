@@ -735,7 +735,7 @@ def stripe_checkout():
                 database.set_premium_status(user_id, profile.get("premium_status", 0), stripe_customer_id=customer_id)
 
             # Utiliser le Price ID fourni, sinon fallback sur le prix prod configuré
-            STRIPE_PRICE_MONTHLY = os.environ.get("STRIPE_PRICE_MONTHLY", "price_1TkdtnGB22CTeiDpoTNsaFQM")
+            STRIPE_PRICE_MONTHLY = os.environ.get("STRIPE_PRICE_MONTHLY", "price_1TlBy2GB22CTeiDphQoC2ZVn")
             STRIPE_PRICE_ANNUAL  = os.environ.get("STRIPE_PRICE_ANNUAL",  "price_1Tl2igGB22CTeiDpIhVrFyND")
             if not price_id or "placeholder" in price_id:
                 price_id = STRIPE_PRICE_MONTHLY

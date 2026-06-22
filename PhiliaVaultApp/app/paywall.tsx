@@ -230,7 +230,7 @@ export default function PaywallScreen() {
                 }
                 <Text style={styles.subTextSub}>
                   {plan === 'annual'
-                    ? 'Économisez 38% vs mensuel · Sans engagement'
+                    ? 'Économisez 17% vs mensuel · Sans engagement'
                     : `Sans engagement · ${PRICE_MONTHLY}/mois ensuite`
                   }
                 </Text>

@@ -83,7 +83,7 @@ function PaywallScreen({ onSubscribe, onRestore, onDevBypass, loading }: { onSub
         >
           {plan === 'monthly' && <View style={pw.planCheck}><Text style={{ fontSize: 10, color: '#0c0e12', fontWeight: '900' }}>✓</Text></View>}
           <Text style={pw.planPeriod}>{t('coach_plan_monthly')}</Text>
-          <Text style={pw.planPrice}>$9.99</Text>
+          <Text style={pw.planPrice}>$14.99</Text>
           <Text style={pw.planUnit}>{t('coach_plan_per_month')}</Text>
         </TouchableOpacity>
 
@@ -112,7 +112,7 @@ function PaywallScreen({ onSubscribe, onRestore, onDevBypass, loading }: { onSub
           {loading
             ? <ActivityIndicator color="#0c0e12" />
             : <Text style={pw.subText}>
-                {t('coach_subscribe').replace('{price}', plan === 'monthly' ? `$9.99${t('coach_plan_per_month')}` : `$149${t('coach_plan_per_year')}`)}
+                {t('coach_subscribe').replace('{price}', plan === 'monthly' ? `$14.99${t('coach_plan_per_month')}` : `$149${t('coach_plan_per_year')}`)}
               </Text>
           }
         </LinearGradient>
