@@ -1160,13 +1160,13 @@ def get_affiliate_network(user_id):
         d = dict(r)
         name = ((d.get("first_name") or "") + " " + (d.get("last_name") or "")).strip()
         plan_type = d.get("plan_type", "monthly")
-        commission = 74.95 if plan_type == "annual" else (COMMISSION_PER_REFERRAL if d["premium_status"] == 1 else 0.0)
+        commission = 74.50 if plan_type == "annual" else (COMMISSION_PER_REFERRAL if d["premium_status"] == 1 else 0.0)
         result.append({
             "id": d["id"],
             "email": d["email"],
             "name": name if name else d["email"].split("@")[0],
-            "joined_at": d["created_at"] or "",
-            "status": "active" if d["premium_status"] == 1 else "inactive",
+            "created_at": d["created_at"] or "",
+            "subscription_status": "active" if d["premium_status"] == 1 else "inactive",
             "plan_type": plan_type,
             "commission_earned": commission,
         })
