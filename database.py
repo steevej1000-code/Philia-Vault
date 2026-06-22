@@ -100,6 +100,8 @@ def init_db():
         code_parrainage TEXT UNIQUE,
         parrain_id INTEGER,
         stripe_subscription_id TEXT,
+        cancel_at_period_end INTEGER DEFAULT 0,
+        cancel_at TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -119,6 +121,8 @@ def init_db():
         ("code_parrainage", "TEXT"),
         ("parrain_id", "INTEGER"),
         ("stripe_subscription_id", "TEXT"),
+        ("cancel_at_period_end", "INTEGER DEFAULT 0"),
+        ("cancel_at", "TEXT"),
         ("created_at", "TEXT DEFAULT CURRENT_TIMESTAMP"),
         ("language", "TEXT DEFAULT 'en'"),
         ("currency_symbol", "TEXT DEFAULT '$'"),
@@ -443,6 +447,9 @@ def get_user_profile(user_id):
             "email": d["email"],
             "premium_status": d["premium_status"],
             "stripe_customer_id": d["stripe_customer_id"],
+            "stripe_subscription_id": d.get("stripe_subscription_id"),
+            "cancel_at_period_end": bool(d.get("cancel_at_period_end")),
+            "cancel_at": d.get("cancel_at"),
             "currency": d["currency"] or "EUR",
             "id": d["id"],
             "first_name": d["first_name"] or "",
@@ -477,6 +484,21 @@ def set_premium_status(user_id, status, stripe_customer_id=None, stripe_subscrip
                        (int(status), stripe_customer_id, user_id, user_id))
     else:
         cursor.execute("UPDATE users SET premium_status=? WHERE email=? OR id=?", (int(status), user_id, user_id))
+    conn.commit()
+    conn.close()
+
+def set_subscription_cancel_at_period_end(user_id, cancel_at_period_end, cancel_at=None):
+    """Flag a subscription as scheduled to cancel at period end.
+
+    Does NOT touch premium_status — the user keeps access until Stripe fires
+    customer.subscription.deleted at the real period end.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE users SET cancel_at_period_end=?, cancel_at=? WHERE email=? OR id=?",
+        (1 if cancel_at_period_end else 0, cancel_at, user_id, user_id),
+    )
     conn.commit()
     conn.close()
 
@@ -865,6 +887,14 @@ def get_user_by_stripe_customer_id(customer_id):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE stripe_customer_id=?", (customer_id,))
+    user = cursor.fetchone()
+    conn.close()
+    return dict(user) if user else None
+
+def get_user_by_stripe_subscription_id(subscription_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE stripe_subscription_id=?", (subscription_id,))
     user = cursor.fetchone()
     conn.close()
     return dict(user) if user else None
