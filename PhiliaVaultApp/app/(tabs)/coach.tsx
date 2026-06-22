@@ -7,8 +7,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import api from '../../services/api';
-// @ts-ignore — global défini dans paywall.tsx pour le bypass dev
-import { purchasePlan, restorePurchases, hasCoachEntitlement } from '../../services/purchases';
+import * as Linking from 'expo-linking';
+import { API_BASE } from '../../constants/api';
+// RevenueCat conservé uniquement pour restore sur natif
+import { restorePurchases, hasCoachEntitlement } from '../../services/purchases';
+
+const STRIPE_PRICE_MONTHLY = process.env.EXPO_PUBLIC_STRIPE_PRICE_MONTHLY ?? 'price_1TkdtnGB22CTeiDpoTNsaFQM';
+const STRIPE_PRICE_ANNUAL  = process.env.EXPO_PUBLIC_STRIPE_PRICE_ANNUAL  ?? 'price_1Tl2igGB22CTeiDpIhVrFyND';
 import { useAuthStore } from '../../store/authStore';
 import { COLORS, RADIUS } from '../../constants/colors';
 import {
@@ -90,7 +95,7 @@ function PaywallScreen({ onSubscribe, onRestore, onDevBypass, loading }: { onSub
           <View style={pw.badge}><Text style={pw.badgeText}>{t('coach_plan_discount')}</Text></View>
           {plan === 'annual' && <View style={pw.planCheck}><Text style={{ fontSize: 10, color: '#0c0e12', fontWeight: '900' }}>✓</Text></View>}
           <Text style={pw.planPeriod}>{t('coach_plan_annual')}</Text>
-          <Text style={pw.planPrice}>$79.99</Text>
+          <Text style={pw.planPrice}>$149</Text>
           <Text style={pw.planUnit}>{t('coach_plan_per_year')}</Text>
           <Text style={pw.planSave}>{t('coach_plan_equivalent')}</Text>
         </TouchableOpacity>
@@ -107,7 +112,7 @@ function PaywallScreen({ onSubscribe, onRestore, onDevBypass, loading }: { onSub
           {loading
             ? <ActivityIndicator color="#0c0e12" />
             : <Text style={pw.subText}>
-                {t('coach_subscribe').replace('{price}', plan === 'monthly' ? `$9.99${t('coach_plan_per_month')}` : `$79.99${t('coach_plan_per_year')}`)}
+                {t('coach_subscribe').replace('{price}', plan === 'monthly' ? `$9.99${t('coach_plan_per_month')}` : `$149${t('coach_plan_per_year')}`)}
               </Text>
           }
         </LinearGradient>
@@ -293,15 +298,25 @@ export default function CoachScreen() {
   const handleSubscribe = async (plan: 'monthly' | 'annual') => {
     setSubscribing(true);
     try {
-      const customerInfo = await purchasePlan(plan === 'annual' ? 'yearly' : 'monthly');
-      if (!customerInfo) return;
+      const priceId = plan === 'annual' ? STRIPE_PRICE_ANNUAL : STRIPE_PRICE_MONTHLY;
+      const successUrl = 'https://app.philiavault.com/stripe-success?session_id={CHECKOUT_SESSION_ID}';
+      const cancelUrl  = 'https://app.philiavault.com/paywall';
 
-      if (hasCoachEntitlement(customerInfo)) {
-        await api.setPremiumStatus(1).catch(() => {});
-        setPremium(true);
-        Alert.alert(t('coach_premium_activated_title'), t('coach_premium_activated_message'));
+      const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Email': user?.email ?? '',
+        },
+        body: JSON.stringify({ price_id: priceId, trial_period_days: 3, success_url: successUrl, cancel_url: cancelUrl }),
+      });
+      const data = await res.json();
+      if (!data.success || !data.url) throw new Error(data.error || 'Erreur Stripe');
+      // Ouvrir le checkout Stripe dans le navigateur
+      if (Platform.OS === 'web') {
+        window.location.href = data.url;
       } else {
-        Alert.alert(t('coach_short_title'), t('coach_premium_pending'));
+        await Linking.openURL(data.url);
       }
     } catch (e: any) {
       Alert.alert(t('error'), e.message || t('coach_purchase_error'));

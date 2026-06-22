@@ -5,10 +5,6 @@ import json
 from dotenv import load_dotenv
 
 from flask_cors import CORS
-import stripe
-STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
-if STRIPE_SECRET_KEY:
-    stripe.api_key = STRIPE_SECRET_KEY
 
 load_dotenv()
 
@@ -264,15 +260,7 @@ def auth_register():
     
     success = database.create_user(email, password, first_name, last_name, referral_code)
     if success:
-        # Registration always grants app access — premium is feature-gated separately,
-        # never at the account/login level (new accounts must never be blocked from entering the app).
-        email_clean = email.lower().strip()
-        return jsonify({
-            "success": True,
-            "user": {"email": email_clean},
-            "token": email_clean,
-            "message": "Compte créé avec succès"
-        })
+        return jsonify({"success": True, "message": "Compte créé avec succès"})
     else:
         return jsonify({"success": False, "error": "Cet email est déjà utilisé"}), 400
 
@@ -283,51 +271,14 @@ def auth_login():
     password = data.get("password")
     if not email or not password:
         return jsonify({"success": False, "error": "Email et mot de passe requis"}), 400
-
+        
     user = database.verify_user(email, password)
     if user:
-        # Login only authenticates — it never blocks access to the app itself.
-        # Premium-only features (e.g. /api/coach/chat) check premium_status on their own.
         # Seed default data if they login and somehow have no items
         database.seed_user_data(user["email"])
-        return jsonify({"success": True, "user": {"email": user["email"]}, "token": user["email"], "message": "Connexion réussie"})
+        return jsonify({"success": True, "user": {"email": user["email"]}, "message": "Connexion réussie"})
     else:
         return jsonify({"success": False, "error": "Email ou mot de passe incorrect"}), 401
-
-
-@app.route("/api/auth/validate", methods=["GET"])
-def auth_validate():
-    """Called by the mobile app on every launch to verify subscription is still active."""
-    email = get_current_user_id()
-    if not email:
-        return jsonify({"valid": False, "error": "Non authentifié"}), 403
-
-    profile = database.get_user_profile(email)
-    if not profile:
-        return jsonify({"valid": False, "error": "Utilisateur introuvable"}), 403
-
-    import datetime as _dt
-    is_premium = bool(profile.get("premium_status", 0))
-    created_at_str = profile.get("created_at", "")
-    try:
-        created_dt = _dt.datetime.fromisoformat(created_at_str.replace(" ", "T").rstrip("Z"))
-        in_trial = (_dt.datetime.utcnow() - created_dt).total_seconds() < 3 * 86400
-    except Exception:
-        in_trial = False
-
-    if not is_premium and not in_trial:
-        return jsonify({"valid": False, "error": "Ce compte n'a pas d'accès actif. Vérifiez vos identifiants."}), 403
-
-    return jsonify({
-        "valid": True,
-        "user": {
-            "email": profile.get("email"),
-            "first_name": profile.get("first_name"),
-            "last_name": profile.get("last_name"),
-            "premium_status": profile.get("premium_status"),
-            "cancel_at_period_end": profile.get("cancel_at_period_end"),
-        }
-    }), 200
 
 @app.route("/api/auth/forgot-password", methods=["POST"])
 def auth_forgot_password():
@@ -691,241 +642,6 @@ def affiliation_stats():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# STRIPE CONNECT — AFFILIATE ONBOARDING & PAYOUTS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-STRIPE_CONNECT_RETURN_URL  = os.environ.get("STRIPE_CONNECT_RETURN_URL",  "https://app.philiavault.com/affiliate-onboarding-return")
-STRIPE_CONNECT_REFRESH_URL = os.environ.get("STRIPE_CONNECT_REFRESH_URL", "https://app.philiavault.com/affiliate-onboarding-refresh")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "steevej1000@gmail.com")
-
-def _require_admin(req):
-    """Return None if authorized, or a JSON error response."""
-    caller = req.headers.get("X-Admin-Email", "")
-    if caller != ADMIN_EMAIL:
-        return jsonify({"success": False, "error": "Unauthorized"}), 403
-    return None
-
-
-@app.route("/api/affiliate/onboard", methods=["POST"])
-def affiliate_onboard():
-    """Create (or re-create) a Stripe Connect Express account and return the onboarding URL."""
-    user_id = get_current_user_id()
-    if not STRIPE_SECRET_KEY:
-        return jsonify({"success": False, "error": "Stripe not configured"}), 500
-    try:
-        existing = database.get_affiliate_account(user_id)
-        if existing and existing.get("stripe_account_id") and existing.get("onboarding_status") == "active":
-            return jsonify({"success": True, "status": "active", "onboarding_url": None})
-
-        # Re-use existing account id if already created but not yet active
-        if existing and existing.get("stripe_account_id"):
-            account_id = existing["stripe_account_id"]
-        else:
-            account = stripe.Account.create(
-                type="express",
-                country="US",
-                capabilities={"transfers": {"requested": True}},
-            )
-            account_id = account.id
-            database.upsert_affiliate_account(user_id, account_id, status="pending")
-
-        link = stripe.AccountLink.create(
-            account=account_id,
-            refresh_url=STRIPE_CONNECT_REFRESH_URL,
-            return_url=STRIPE_CONNECT_RETURN_URL,
-            type="account_onboarding",
-        )
-        return jsonify({"success": True, "onboarding_url": link.url, "stripe_account_id": account_id})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@app.route("/api/affiliate/onboard/status", methods=["GET"])
-def affiliate_onboard_status():
-    """Return current onboarding status, syncing with Stripe if an account exists."""
-    user_id = get_current_user_id()
-    acc = database.get_affiliate_account(user_id)
-    if not acc or not acc.get("stripe_account_id"):
-        return jsonify({"success": True, "status": "not_started", "stripe_account_id": None})
-
-    account_id = acc["stripe_account_id"]
-    current_status = acc.get("onboarding_status", "pending")
-
-    if STRIPE_SECRET_KEY and current_status != "active":
-        try:
-            sa = stripe.Account.retrieve(account_id)
-            if sa.charges_enabled:
-                current_status = "active"
-            elif sa.requirements and (sa.requirements.currently_due or sa.requirements.past_due):
-                current_status = "restricted"
-            # else stays "pending"
-            database.update_affiliate_onboarding_status(user_id, current_status)
-        except Exception as e:
-            print(f"[Affiliate] Stripe account retrieve error: {e}")
-
-    return jsonify({"success": True, "status": current_status, "stripe_account_id": account_id})
-
-
-@app.route("/api/admin/affiliate/payout-batch", methods=["GET"])
-def affiliate_payout_batch():
-    """List all eligible commissions grouped by affiliate (admin only)."""
-    err = _require_admin(request)
-    if err:
-        return err
-    try:
-        rows = database.get_eligible_commissions_batch()
-        return jsonify({"success": True, "batch": rows, "count": len(rows)})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@app.route("/api/admin/affiliate/payout-execute", methods=["POST"])
-def affiliate_payout_execute():
-    """Execute Stripe transfers for eligible commissions (admin only)."""
-    err = _require_admin(request)
-    if err:
-        return err
-    data = request.json or {}
-    target_user_id = data.get("affiliate_user_id")
-    execute_all = data.get("all", False)
-
-    if not STRIPE_SECRET_KEY:
-        return jsonify({"success": False, "error": "Stripe not configured"}), 500
-
-    try:
-        batch = database.get_eligible_commissions_batch()
-        if not execute_all and target_user_id:
-            batch = [b for b in batch if str(b["affiliate_user_id"]) == str(target_user_id)]
-
-        transferred = []
-        errors = []
-
-        for item in batch:
-            stripe_account_id = item.get("stripe_account_id")
-            if not stripe_account_id:
-                errors.append({"affiliate_user_id": item["affiliate_user_id"], "error": "No Stripe account linked"})
-                continue
-            total_cents = int(round(item["total_amount"] * 100))
-            if total_cents < 100:  # Stripe minimum $1
-                errors.append({"affiliate_user_id": item["affiliate_user_id"], "error": f"Amount too low: ${item['total_amount']:.2f}"})
-                continue
-            try:
-                transfer = stripe.Transfer.create(
-                    amount=total_cents,
-                    currency="usd",
-                    destination=stripe_account_id,
-                    metadata={"affiliate_user_id": item["affiliate_user_id"], "email": item["email"]},
-                )
-                commission_ids = [int(i) for i in item["commission_ids"].split(",")]
-                database.mark_commissions_paid(commission_ids)
-                transferred.append({
-                    "affiliate_user_id": item["affiliate_user_id"],
-                    "email": item["email"],
-                    "amount_usd": item["total_amount"],
-                    "transfer_id": transfer.id,
-                })
-            except Exception as e:
-                errors.append({"affiliate_user_id": item["affiliate_user_id"], "error": str(e)})
-
-        return jsonify({"success": True, "transferred": transferred, "errors": errors})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@app.route("/api/admin/affiliate/process-eligible", methods=["POST"])
-def affiliate_process_eligible():
-    """Move commissions from pending→eligible (30-day quarantine) or pending→cancelled."""
-    err = _require_admin(request)
-    if err:
-        return err
-    if not STRIPE_SECRET_KEY:
-        return jsonify({"success": False, "error": "Stripe not configured"}), 500
-    try:
-        pending = database.get_pending_commissions_older_than_days(30)
-        eligible_ids = []
-        cancelled_ids = []
-
-        for row in pending:
-            sub_id = row.get("referred_stripe_sub_id")
-            if not sub_id:
-                # No subscription on file — mark eligible (will be reviewed manually)
-                eligible_ids.append(row["id"])
-                continue
-            try:
-                sub = stripe.Subscription.retrieve(sub_id)
-                if sub.status in ("active", "trialing"):
-                    eligible_ids.append(row["id"])
-                else:
-                    cancelled_ids.append(row["id"])
-            except Exception:
-                # Can't retrieve — mark eligible conservatively
-                eligible_ids.append(row["id"])
-
-        database.mark_commissions_eligible(eligible_ids)
-        database.mark_commissions_cancelled(cancelled_ids)
-
-        return jsonify({
-            "success": True,
-            "processed": len(pending),
-            "eligible": len(eligible_ids),
-            "cancelled": len(cancelled_ids),
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@app.route("/api/admin/fix-referral", methods=["POST"])
-def admin_fix_referral():
-    """Manually link a user to a parrain by email (admin only). For retroactive referral fixes."""
-    err = _require_admin(request)
-    if err:
-        return err
-    data = request.json or {}
-    user_email = (data.get("user_email") or "").strip().lower()
-    parrain_email = (data.get("parrain_email") or "").strip().lower()
-    if not user_email or not parrain_email:
-        return jsonify({"success": False, "error": "user_email and parrain_email required"}), 400
-    try:
-        result = database.fix_referral_link(user_email, parrain_email)
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route("/api/admin/debug/affiliates", methods=["GET"])
-def debug_affiliates():
-    """Temporary debug route: list all users with their parrain_id to verify referral linking."""
-    import os
-    # Protect with a simple env-var secret to avoid exposing in prod without auth
-    secret = request.headers.get("X-Admin-Secret", "")
-    expected = os.environ.get("ADMIN_DEBUG_SECRET", "philia-debug-2025")
-    if secret != expected:
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
-    try:
-        conn = database.get_db()
-        cursor = conn.cursor()
-        cursor.execute(
-            """SELECT id, email, first_name, last_name, code_parrainage, parrain_id, premium_status, created_at
-               FROM users ORDER BY created_at DESC LIMIT 100"""
-        )
-        rows = [dict(r) for r in cursor.fetchall()]
-        conn.close()
-        return jsonify({"success": True, "users": rows, "count": len(rows)})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route("/api/affiliate/network", methods=["GET"])
-def affiliate_network():
-    user_id = get_current_user_id()
-    try:
-        network = database.get_affiliate_network(user_id)
-        return jsonify({"success": True, "network": network})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
 @app.route("/api/savings_goals", methods=["GET", "POST"])
 def manage_savings_goals():
     user_id = get_current_user_id()
@@ -973,6 +689,9 @@ def update_delete_savings_goal(goal_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 # Stripe Payments Configuration
+import stripe
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
+stripe.api_key = STRIPE_SECRET_KEY
 
 # Stripe Checkout / Portal Endpoints
 @app.route("/api/stripe/create-checkout-session", methods=["POST"])
@@ -980,9 +699,8 @@ def stripe_checkout():
     user_id = get_current_user_id()
     data = request.json or {}
 
-    # Plan mensuel $14.99 ou annuel $149.90
-    price_id          = data.get("price_id")          # Stripe Price ID depuis le frontend (optionnel)
-    plan              = data.get("plan", "monthly")    # 'monthly' ou 'annual'
+    # Plan unique : mensuel $9.99
+    price_id          = data.get("price_id")          # Stripe Price ID depuis le frontend
     trial_period_days = int(data.get("trial_period_days", 3))
     success_url       = data.get("success_url")
     cancel_url        = data.get("cancel_url")
@@ -1006,16 +724,11 @@ def stripe_checkout():
                 customer_id = customer.id
                 database.set_premium_status(user_id, profile.get("premium_status", 0), stripe_customer_id=customer_id)
 
-            # Résoudre le Price ID selon le plan choisi
-            STRIPE_PRICE_MONTHLY = os.environ.get(
-                "STRIPE_PRICE_MONTHLY", "price_1TkdtnGB22CTeiDpoTNsaFQM"
-            )
-            STRIPE_PRICE_ANNUAL = os.environ.get("STRIPE_ANNUAL_PRICE_ID")
+            # Utiliser le Price ID fourni, sinon fallback sur le prix prod configuré
+            STRIPE_PRICE_MONTHLY = os.environ.get("STRIPE_PRICE_MONTHLY", "price_1TkdtnGB22CTeiDpoTNsaFQM")
+            STRIPE_PRICE_ANNUAL  = os.environ.get("STRIPE_PRICE_ANNUAL",  "price_1Tl2igGB22CTeiDpIhVrFyND")
             if not price_id or "placeholder" in price_id:
-                if plan == "annual" and STRIPE_PRICE_ANNUAL:
-                    price_id = STRIPE_PRICE_ANNUAL
-                else:
-                    price_id = STRIPE_PRICE_MONTHLY
+                price_id = STRIPE_PRICE_MONTHLY
 
             session_params = dict(
                 customer=customer_id,
@@ -1077,8 +790,7 @@ def stripe_verify_session():
                         user_email
                 if email:
                     database.set_premium_status(email, 1,
-                        stripe_customer_id=session.get("customer"),
-                        stripe_subscription_id=session.get("subscription"))
+                        stripe_customer_id=session.get("customer"))
                 return jsonify({"success": True, "verified": True,
                                 "payment_status": payment_status,
                                 "subscription_status": subscription_status})
@@ -1114,94 +826,6 @@ def stripe_portal():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# Cancel Subscription — schedules cancellation at the end of the current
-# billing period. The user keeps full access until then; no refund is granted.
-@app.route("/api/subscription/cancel", methods=["POST"])
-def cancel_subscription():
-    user_id = get_current_user_id()
-
-    profile = database.get_user_profile(user_id)
-    if not profile:
-        return jsonify({"success": False, "error": "Utilisateur introuvable"}), 401
-
-    # Must be an active premium member with a Stripe subscription on file
-    if not profile.get("premium_status"):
-        return jsonify({"success": False, "error": "Aucun abonnement actif"}), 400
-
-    subscription_id = profile.get("stripe_subscription_id")
-    cancel_at_ts = None
-
-    try:
-        if STRIPE_SECRET_KEY and subscription_id:
-            sub = stripe.Subscription.modify(
-                subscription_id,
-                cancel_at_period_end=True,
-            )
-            cancel_at_ts = sub.get("cancel_at") or sub.get("current_period_end")
-
-        import datetime as _dt
-        cancel_at_iso = (
-            _dt.datetime.fromtimestamp(cancel_at_ts).isoformat() if cancel_at_ts else None
-        )
-        database.set_subscription_cancel_at_period_end(
-            user_id, True, cancel_at=cancel_at_iso
-        )
-
-        return jsonify({
-            "success": True,
-            "message": "Your subscription will end at period end.",
-            "cancel_at": cancel_at_iso,
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route("/api/subscription/reactivate", methods=["POST"])
-def reactivate_subscription():
-    user_id = get_current_user_id()
-    profile = database.get_user_profile(user_id)
-    if not profile:
-        return jsonify({"success": False, "error": "Utilisateur introuvable"}), 401
-    subscription_id = profile.get("stripe_subscription_id")
-    try:
-        if STRIPE_SECRET_KEY and subscription_id:
-            stripe.Subscription.modify(subscription_id, cancel_at_period_end=False)
-        database.set_subscription_cancel_at_period_end(user_id, False, cancel_at=None)
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@app.route("/api/subscription/status", methods=["GET"])
-def subscription_status():
-    user_id = get_current_user_id()
-    profile = database.get_user_profile(user_id)
-    if not profile:
-        return jsonify({"success": False, "error": "Utilisateur introuvable"}), 401
-
-    cancel_at = profile.get("cancel_at")
-    access_until = None
-    if cancel_at:
-        try:
-            import datetime as _dt
-            # cancel_at may be ISO string or unix timestamp
-            if isinstance(cancel_at, (int, float)):
-                dt = _dt.datetime.fromtimestamp(cancel_at)
-            else:
-                dt = _dt.datetime.fromisoformat(str(cancel_at).replace("Z", ""))
-            access_until = dt.strftime("%B %d, %Y")
-        except Exception:
-            access_until = str(cancel_at)
-
-    return jsonify({
-        "success": True,
-        "is_premium": bool(profile.get("premium_status")),
-        "cancel_at_period_end": bool(profile.get("cancel_at_period_end")),
-        "cancel_at": cancel_at,
-        "access_until": access_until,
-        "stripe_subscription_id": profile.get("stripe_subscription_id"),
-    })
-
-
 # Webhook Stripe
 @app.route("/api/webhook/stripe", methods=["POST"])
 def webhook_stripe():
@@ -1228,7 +852,7 @@ def webhook_stripe():
     if event_type in ["customer.subscription.created", "customer.subscription.updated"]:
         customer_id = event_data.get("customer")
         status = event_data.get("status")
-
+        
         user = database.get_user_by_stripe_customer_id(customer_id)
         if user:
             # active/trialing implies active premium status
@@ -1236,56 +860,41 @@ def webhook_stripe():
             database.set_premium_status(user["email"], premium, stripe_customer_id=customer_id)
             if premium:
                 database.add_transaction(user["email"], f"Abonnement Stripe activé ({status})", "asset_yield", 0.0, "Today")
-
-            # Track a scheduled cancellation without revoking access. Stripe will
-            # fire customer.subscription.deleted at the real period end.
-            if event_type == "customer.subscription.updated":
-                cancel_flag = bool(event_data.get("cancel_at_period_end"))
-                cancel_at_ts = event_data.get("cancel_at")
-                cancel_at_iso = None
-                if cancel_at_ts:
-                    import datetime as _dt
-                    cancel_at_iso = _dt.datetime.fromtimestamp(cancel_at_ts).isoformat()
-                database.set_subscription_cancel_at_period_end(
-                    user["email"], cancel_flag, cancel_at=cancel_at_iso
-                )
-                if cancel_flag:
-                    database.add_transaction(user["email"], "Résiliation programmée (fin de période)", "liability_payment", 0.0, "Today")
-
+                
     elif event_type == "customer.subscription.deleted":
         customer_id = event_data.get("customer")
         user = database.get_user_by_stripe_customer_id(customer_id)
         if user:
-            # Period actually ended — revoke premium and clear the pending-cancel flag
             database.set_premium_status(user["email"], 0, stripe_customer_id=customer_id)
-            database.set_subscription_cancel_at_period_end(user["email"], False, cancel_at=None)
             database.add_transaction(user["email"], "Abonnement Stripe résilié", "liability_payment", 0.0, "Today")
-
-    elif event_type == "invoice.payment_succeeded":
-        # Recurring subscription renewal — record affiliate commission if applicable
-        customer_id = event_data.get("customer")
-        payment_intent_id = event_data.get("payment_intent")
-        amount_paid = event_data.get("amount_paid", 0) / 100  # cents → dollars
-        billing_reason = event_data.get("billing_reason", "")
-        # Only process renewals (not the initial invoice, already handled by checkout.session.completed)
-        if billing_reason == "subscription_cycle" and customer_id and payment_intent_id:
-            try:
-                user = database.get_user_by_stripe_customer_id(customer_id)
-                if user and user.get("parrain_id"):
-                    commission_amount = round(amount_paid * 0.50, 2)
-                    plan_type_inv = 'annual' if amount_paid > 100 else 'monthly'
-                    database.insert_affiliate_commission(
-                        affiliate_user_id=user["parrain_id"],
-                        referred_user_id=user["id"],
-                        payment_id=payment_intent_id,
-                        commission_amount=commission_amount,
-                        plan_type=plan_type_inv,
-                    )
-                    print(f"[Affiliate] Renewal commission {commission_amount} USD for parrain_id={user['parrain_id']}")
-            except Exception as e:
-                print(f"[Affiliate] Renewal commission error: {e}")
-
+            
     return jsonify({"success": True})
+
+# RevenueCat Webhook Endpoint
+@app.route("/api/webhooks/revenuecat", methods=["POST"])
+def webhook_revenuecat():
+    data = request.json or {}
+    event = data.get("event", {})
+    event_type = event.get("type")
+    app_user_id = event.get("app_user_id")
+    
+    if not event_type or not app_user_id:
+        return jsonify({"success": False, "error": "Invalid event data"}), 400
+        
+    try:
+        if event_type in ["INITIAL_PURCHASE", "RENEWAL", "SUBSCRIBE"]:
+            # Set user premium
+            database.set_premium_status(app_user_id, 1)
+            database.add_transaction(app_user_id, f"Abonnement Premium activé via RevenueCat", "asset_yield", 0.0, "Today")
+        elif event_type in ["CANCELLATION", "EXPIRATION"]:
+            # Cancel user premium
+            database.set_premium_status(app_user_id, 0)
+            database.add_transaction(app_user_id, f"Abonnement Premium expiré via RevenueCat", "liability_payment", 0.0, "Today")
+            
+        return jsonify({"success": True, "message": f"Processed RevenueCat event {event_type}"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 # Gemini AI Coach Chat
 @app.route("/api/coach/chat", methods=["POST"])
 def coach_chat():
