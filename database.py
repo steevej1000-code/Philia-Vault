@@ -942,11 +942,18 @@ def get_affiliation_stats(user_id, _retry=False):
         (d["id"],)
     )
     active_referrals = cursor.fetchone()["cnt"]
+
+    cursor.execute(
+        "SELECT COUNT(*) AS cnt FROM users WHERE parrain_id = ?",
+        (d["id"],)
+    )
+    total_invited = cursor.fetchone()["cnt"]
     conn.close()
 
     return {
         "code_parrainage": code,
         "active_referrals": active_referrals,
+        "total_invited": total_invited,
         "estimated_monthly_gain": round(active_referrals * COMMISSION_PER_REFERRAL, 2),
         "commission_per_referral": COMMISSION_PER_REFERRAL,
     }

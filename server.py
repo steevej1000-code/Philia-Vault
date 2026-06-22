@@ -642,6 +642,16 @@ def affiliation_stats():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route("/api/affiliate/network", methods=["GET"])
+def affiliate_network():
+    """Retourne la liste des filleuls de l'utilisateur connecté."""
+    user_id = get_current_user_id()
+    try:
+        members = database.get_affiliate_network(user_id)
+        return jsonify({"success": True, "network": members})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e), "network": []}), 500
+
 @app.route("/api/savings_goals", methods=["GET", "POST"])
 def manage_savings_goals():
     user_id = get_current_user_id()
