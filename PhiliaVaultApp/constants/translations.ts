@@ -153,6 +153,8 @@ export const translations: Record<Language, Dict> = {
     asset_type_real_estate_sub: '(REAL ESTATE)',
     asset_type_other: 'OTHER ASSETS',
     asset_type_other_sub: '(OTHER)',
+    asset_type_revenue: 'RECURRING INCOME',
+    asset_type_revenue_sub: '(SIDE HUSTLE/RENTAL)',
     edit_asset_title: 'Edit Asset',
     add_asset_title: 'Add Asset',
     asset_name_label: 'Asset Name',
@@ -197,6 +199,7 @@ export const translations: Record<Language, Dict> = {
     asset_type_commerce_short: 'Commerce',
     asset_type_real_estate_short: 'Real Estate',
     asset_type_other_short: 'Other',
+    asset_type_revenue_short: 'Income',
 
     // Affiliation
     affiliation_title: 'MY PHILIA HOLDINGS',
@@ -472,6 +475,8 @@ export const translations: Record<Language, Dict> = {
     asset_type_real_estate_sub: '(REAL ESTATE)',
     asset_type_other: 'AUTRES ACTIFS',
     asset_type_other_sub: '(AUTRES)',
+    asset_type_revenue: 'REVENU RÉCURRENT',
+    asset_type_revenue_sub: '(SIDE HUSTLE/LOYERS)',
     edit_asset_title: "Modifier l'Actif",
     add_asset_title: 'Ajouter un Actif',
     asset_name_label: "Nom de l'actif",
@@ -515,6 +520,7 @@ export const translations: Record<Language, Dict> = {
     asset_type_commerce_short: 'Commerce',
     asset_type_real_estate_short: 'Immobilier',
     asset_type_other_short: 'Autres',
+    asset_type_revenue_short: 'Revenu',
 
     affiliation_title: 'MON PARC PHILIA',
     affiliation_subtitle: 'Votre Actif Numérique (Affiliation Éducative)',
@@ -787,6 +793,8 @@ export const translations: Record<Language, Dict> = {
     asset_type_real_estate_sub: '(INMUEBLES)',
     asset_type_other: 'OTROS ACTIVOS',
     asset_type_other_sub: '(OTROS)',
+    asset_type_revenue: 'INGRESOS RECURRENTES',
+    asset_type_revenue_sub: '(INGRESOS EXTRAS/ALQUILERES)',
     edit_asset_title: 'Editar Activo',
     add_asset_title: 'Añadir Activo',
     asset_name_label: 'Nombre del Activo',
@@ -830,6 +838,7 @@ export const translations: Record<Language, Dict> = {
     asset_type_commerce_short: 'Comercio',
     asset_type_real_estate_short: 'Bienes Raíces',
     asset_type_other_short: 'Otros',
+    asset_type_revenue_short: 'Ingresos',
 
     affiliation_title: 'MIS PROPIEDADES PHILIA',
     affiliation_subtitle: 'Tu Activo Digital (Afiliación Educativa)',
@@ -1093,6 +1102,8 @@ export const translations: Record<Language, Dict> = {
     asset_type_real_estate_sub: '(IMOBILIÁRIO)',
     asset_type_other: 'OUTROS ATIVOS',
     asset_type_other_sub: '(OUTROS)',
+    asset_type_revenue: 'RENDIMENTOS RECORRENTES',
+    asset_type_revenue_sub: '(RENDIMENTOS EXTRAS/ALUGUÉIS)',
     edit_asset_title: 'Editar Ativo',
     add_asset_title: 'Adicionar Ativo',
     asset_name_label: 'Nome do Ativo',
@@ -1136,6 +1147,7 @@ export const translations: Record<Language, Dict> = {
     asset_type_commerce_short: 'Comércio',
     asset_type_real_estate_short: 'Imóveis',
     asset_type_other_short: 'Outros',
+    asset_type_revenue_short: 'Rendimento',
 
     affiliation_title: 'MINHAS PROPRIEDADES PHILIA',
     affiliation_subtitle: 'Seu Ativo Digital (Afiliação Educativa)',
