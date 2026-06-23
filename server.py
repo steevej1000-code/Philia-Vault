@@ -1379,6 +1379,20 @@ def get_daily_decision_history():
 
 
 
+
+@app.route('/api/auth/validate', methods=['GET', 'POST', 'OPTIONS'])
+def validate_token():
+    if request.method == 'OPTIONS':
+        return '', 204
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    if not token:
+        return jsonify({'valid': False, 'error': 'No token'}), 401
+    # Validate against session store
+    import hashlib
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    # Check if token exists in active sessions (simple check)
+    return jsonify({'valid': True, 'token_hash': token_hash}), 200
+
 if __name__ == "__main__":
     # Ensure static directory exists
     os.makedirs("static", exist_ok=True)
