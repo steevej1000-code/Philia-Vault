@@ -208,20 +208,10 @@ def require_jwt(f):
     return decorated
 
 # User Session Helper to get current user_id
-# Private routes are protected by @require_jwt, which sets g.current_user_email.
-# The legacy params/body fallback below remains only for the two server-to-server
-# webhooks (Shopify/TikTok) that carry no user JWT and aren't behind @require_jwt.
+# Every caller of this function sits behind @require_jwt, which sets
+# g.current_user_email before the view runs — no header/param fallback.
 def get_current_user_id():
-    user_id = getattr(g, "current_user_email", None)
-    if user_id:
-        return user_id
-    user_id = request.args.get("user_id")
-    if not user_id and request.is_json:
-        try:
-            user_id = request.json.get("user_id")
-        except Exception:
-            pass
-    return user_id or "alex@philiavault.com" # fallback default to keep webhook/local scripts working
+    return g.current_user_email
 
 # Google Auth Verification helper
 from google.oauth2 import id_token
@@ -570,67 +560,6 @@ def manage_transactions():
     try:
         database.add_transaction(user_id, data["description"], data["type"], float(data["amount"]), data["date"])
         return jsonify({"success": True, "message": "Transaction added successfully"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-# Webhooks Endpoints
-@app.route("/api/webhooks/shopify", methods=["POST"])
-def webhook_shopify():
-    user_id = get_current_user_id()
-    data = request.json
-    if not data or "store_name" not in data or "monthly_profit" not in data or "value" not in data:
-        return jsonify({"success": False, "error": "Invalid payload"}), 400
-    
-    try:
-        # Check if Shopify store already exists in assets
-        assets = database.get_assets(user_id)
-        store_asset = None
-        for a in assets:
-            if a["type"] == "Commerce" and data["store_name"] in a["name"]:
-                store_asset = a
-                break
-                
-        if store_asset:
-            database.update_asset(user_id, store_asset["id"], store_asset["name"], "Commerce", float(data["value"]), float(data["monthly_profit"]))
-            action = "updated"
-        else:
-            database.add_asset(user_id, f"Shopify Store - {data['store_name']}", "Commerce", float(data["value"]), float(data["monthly_profit"]))
-            action = "created"
-            
-        # Add notification transaction
-        database.add_transaction(user_id, f"Webhook Update: Shopify Store '{data['store_name']}' synced", "asset_yield", float(data["monthly_profit"]), "Today")
-        
-        return jsonify({"success": True, "action": action, "message": f"Shopify asset {action} successfully"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route("/api/webhooks/tiktok", methods=["POST"])
-def webhook_tiktok():
-    user_id = get_current_user_id()
-    data = request.json
-    if not data or "store_name" not in data or "monthly_profit" not in data or "value" not in data:
-        return jsonify({"success": False, "error": "Invalid payload"}), 400
-    
-    try:
-        # Check if TikTok Shop already exists in assets
-        assets = database.get_assets(user_id)
-        store_asset = None
-        for a in assets:
-            if a["type"] == "Commerce" and data["store_name"] in a["name"]:
-                store_asset = a
-                break
-                
-        if store_asset:
-            database.update_asset(user_id, store_asset["id"], store_asset["name"], "Commerce", float(data["value"]), float(data["monthly_profit"]))
-            action = "updated"
-        else:
-            database.add_asset(user_id, f"TikTok Shop - {data['store_name']}", "Commerce", float(data["value"]), float(data["monthly_profit"]))
-            action = "created"
-            
-        # Add notification transaction
-        database.add_transaction(user_id, f"Webhook Update: TikTok Shop '{data['store_name']}' synced", "asset_yield", float(data["monthly_profit"]), "Today")
-        
-        return jsonify({"success": True, "action": action, "message": f"TikTok Shop asset {action} successfully"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

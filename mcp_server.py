@@ -6,6 +6,8 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import database
 
+DEFAULT_USER_EMAIL = "alex@philiavault.com"
+
 def calculate_corrected_fi_indices(active_cashflow_m, fixed_expenses_m):
     # Sécurité anti-division par zéro si les dépenses sont nulles
     if fixed_expenses_m == 0:
@@ -36,8 +38,8 @@ def calculate_corrected_fi_indices(active_cashflow_m, fixed_expenses_m):
 
 def get_financial_summary():
     try:
-        assets = database.get_assets()
-        liabilities = database.get_liabilities()
+        assets = database.get_assets(DEFAULT_USER_EMAIL)
+        liabilities = database.get_liabilities(DEFAULT_USER_EMAIL)
         
         total_assets_val = sum(a["value"] for a in assets)
         total_passive_income = sum(a["monthly_yield"] for a in assets)
@@ -66,8 +68,8 @@ def get_financial_summary():
 
 def simulate_purchase(cost=0.0, yield_amount=0.0):
     try:
-        assets = database.get_assets()
-        liabilities = database.get_liabilities()
+        assets = database.get_assets(DEFAULT_USER_EMAIL)
+        liabilities = database.get_liabilities(DEFAULT_USER_EMAIL)
         
         total_passive_income = sum(a["monthly_yield"] for a in assets) + float(yield_amount)
         total_monthly_cost = sum(l["monthly_cost"] for l in liabilities) + float(cost)
@@ -95,7 +97,7 @@ def sync_webhook_data(source, store_name, monthly_profit, value):
             return {"content": [{"type": "text", "text": "Error: Source must be shopify or tiktok"}], "isError": True}
         
         # Check if store already exists
-        assets = database.get_assets()
+        assets = database.get_assets(DEFAULT_USER_EMAIL)
         store_asset = None
         for a in assets:
             if a["type"] == "Commerce" and store_name in a["name"]:
@@ -106,7 +108,7 @@ def sync_webhook_data(source, store_name, monthly_profit, value):
             database.update_asset(store_asset["id"], store_asset["name"], "Commerce", float(value), float(monthly_profit))
             action = "updated"
         else:
-            database.add_asset(f"{source.capitalize()} Store - {store_name}", "Commerce", float(value), float(monthly_profit))
+            database.add_asset(DEFAULT_USER_EMAIL, f"{source.capitalize()} Store - {store_name}", "Commerce", float(value), float(monthly_profit))
             action = "created"
             
         database.add_transaction(f"MCP Webhook Sync ({source}): {store_name}", "asset_yield", float(monthly_profit), "Today")

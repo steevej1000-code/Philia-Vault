@@ -24,15 +24,30 @@ def test_auth():
         data = res.json()
         assert data["success"] is True
         assert data["user"]["email"] == email
+        token = data.get("token")
+        assert token, "Login response must include a JWT"
         print(f"Login success! Message: {data['message']}")
-        
+
         # 3. Test logging in with wrong password
         print("Testing login with incorrect credentials...")
         res = requests.post(f"{base_url}/api/auth/login", json={"email": email, "password": "wrongpassword"})
         assert res.status_code == 401
         assert res.json()["success"] is False
         print("Auth blocks incorrect credentials successfully.")
-        
+
+        # 4. Test that the issued JWT actually unlocks a private route
+        print("Testing GET /api/user with Authorization: Bearer <token>...")
+        res = requests.get(f"{base_url}/api/user", headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 200, "Token should grant access to a private route"
+        assert res.json()["success"] is True
+        print("JWT correctly authorizes a private route.")
+
+        # 5. Test that the same route rejects requests with no token
+        print("Testing GET /api/user without a token (expect 401)...")
+        res = requests.get(f"{base_url}/api/user")
+        assert res.status_code == 401, "Private route must reject requests with no JWT"
+        print("Private route correctly rejects unauthenticated requests.")
+
         print("\nAll User Authentication integration tests passed successfully! [x]")
         
     except Exception as e:

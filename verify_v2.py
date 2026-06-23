@@ -8,30 +8,33 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import database
 
+TEST_USER_EMAIL = "alex@philiavault.com"
+
 def test_db_encryption():
     print("--- 1. Testing DB Column Encryption ---")
-    
-    # Initialize DB (creates and seeds if empty)
+
+    # Initialize DB and seed a known asset for the test user
     database.init_db()
-    
+    database.add_asset(TEST_USER_EMAIL, "Test Asset V2", "Commerce", 10000.0, 800.0)
+
     # Check directly inside the sqlite3 DB to verify values are stored ENCRYPTED (text starting with gAAAAA)
     conn = sqlite3.connect(database.DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT value, monthly_yield FROM assets LIMIT 1")
+    cursor.execute("SELECT value, monthly_yield FROM assets WHERE user_id = ? LIMIT 1", (TEST_USER_EMAIL,))
     row = cursor.fetchone()
     conn.close()
-    
+
     val, yld = row[0], row[1]
     print(f"Direct SQL row check - raw value: '{val}', raw monthly_yield: '{yld}'")
-    
+
     # Ensure they are strings and look like Fernet ciphertexts
     assert isinstance(val, str), "Database value is not a string!"
     assert val.startswith("gAAAAA"), "Database value is not encrypted!"
     assert yld.startswith("gAAAAA"), "Database monthly_yield is not encrypted!"
     print("✓ Confirmed: Raw DB values are stored as Fernet-encrypted strings.")
-    
+
     # Verify that python helper automatically decrypts them to float
-    assets = database.get_assets()
+    assets = database.get_assets(TEST_USER_EMAIL)
     assert len(assets) > 0, "No assets found!"
     first_asset = assets[0]
     print(f"Decrypted Python API - value: {first_asset['value']} (type {type(first_asset['value'])}), yield: {first_asset['monthly_yield']}")
