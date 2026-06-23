@@ -1,7 +1,10 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory, redirect
+from datetime import datetime, timedelta, timezone
+from functools import wraps
+from flask import Flask, request, jsonify, send_from_directory, redirect, g
 import database
 import json
+import jwt as pyjwt
 from dotenv import load_dotenv
 
 from flask_cors import CORS
@@ -52,9 +55,9 @@ allowed_origins = [
     'http://localhost:8082',
     'http://localhost:5173'
 ]
-CORS(app, 
+CORS(app,
      origins=allowed_origins,
-     allow_headers=["Content-Type", "X-User-Email", "Authorization"],
+     allow_headers=["Content-Type", "Authorization"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
      supports_credentials=False)
 
@@ -168,20 +171,57 @@ def get_public_config():
         "faq":                    faq,
     })
 
-# User Session / Auth Helper to get current user_id
-# For maximum robustness in this single-page client, we accept a X-User-Email header or user parameter.
-# We also support a fallback mock if not supplied to keep local verification scripts working smoothly.
+# --- JWT Authentication ---
+# Replaces the legacy X-User-Email header for all private routes. The decoded
+# email is stashed on Flask's request-scoped `g` by @require_jwt and read back
+# by get_current_user_id(), so existing route bodies don't need to change.
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or app.secret_key
+JWT_ALGORITHM = "HS256"
+JWT_EXP_DELTA = timedelta(days=7)
+
+def generate_jwt(email):
+    payload = {
+        "sub": email,
+        "iat": datetime.now(timezone.utc),
+        "exp": datetime.now(timezone.utc) + JWT_EXP_DELTA,
+    }
+    return pyjwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+def decode_jwt(token):
+    try:
+        payload = pyjwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        return payload.get("sub")
+    except pyjwt.PyJWTError:
+        return None
+
+def require_jwt(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "error": "Authentification requise"}), 401
+        email = decode_jwt(auth_header[len("Bearer "):].strip())
+        if not email:
+            return jsonify({"success": False, "error": "Session invalide ou expirée"}), 401
+        g.current_user_email = email
+        return f(*args, **kwargs)
+    return decorated
+
+# User Session Helper to get current user_id
+# Private routes are protected by @require_jwt, which sets g.current_user_email.
+# The legacy params/body fallback below remains only for the two server-to-server
+# webhooks (Shopify/TikTok) that carry no user JWT and aren't behind @require_jwt.
 def get_current_user_id():
-    # Attempt to extract user email from headers or parameters
-    user_id = request.headers.get("X-User-Email") or request.args.get("user_id")
-    if not user_id:
-        # Check request json body if applicable
-        if request.is_json:
-            try:
-                user_id = request.json.get("user_id")
-            except Exception:
-                pass
-    return user_id or "alex@philiavault.com" # fallback default to prevent crash, but front-end will send X-User-Email
+    user_id = getattr(g, "current_user_email", None)
+    if user_id:
+        return user_id
+    user_id = request.args.get("user_id")
+    if not user_id and request.is_json:
+        try:
+            user_id = request.json.get("user_id")
+        except Exception:
+            pass
+    return user_id or "alex@philiavault.com" # fallback default to keep webhook/local scripts working
 
 # Google Auth Verification helper
 from google.oauth2 import id_token
@@ -190,7 +230,6 @@ from google.auth.transport import requests as google_requests
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 
 # Apple Sign In verification helper
-import jwt as pyjwt
 from jwt import PyJWKClient
 
 APPLE_CLIENT_ID = os.environ.get("APPLE_CLIENT_ID")
@@ -233,7 +272,7 @@ def auth_google():
                     pass
                     
         user_email = database.create_or_get_google_user(email, google_id)
-        return jsonify({"success": True, "user": {"email": user_email}, "message": "Connexion Google réussie"})
+        return jsonify({"success": True, "user": {"email": user_email}, "token": generate_jwt(user_email), "message": "Connexion Google réussie"})
     except Exception as e:
         return jsonify({"success": False, "error": f"Échec de validation Google: {str(e)}"}), 401
 
@@ -269,7 +308,7 @@ def auth_apple():
         user_email = database.create_or_get_apple_user(email, apple_id)
         if not user_email:
             return jsonify({"success": False, "error": "Compte Apple introuvable, veuillez réessayer la connexion"}), 401
-        return jsonify({"success": True, "user": {"email": user_email}, "message": "Connexion Apple réussie"})
+        return jsonify({"success": True, "user": {"email": user_email}, "token": generate_jwt(user_email), "message": "Connexion Apple réussie"})
     except Exception as e:
         return jsonify({"success": False, "error": f"Échec de validation Apple: {str(e)}"}), 401
 
@@ -287,7 +326,7 @@ def auth_register():
     
     success = database.create_user(email, password, first_name, last_name, referral_code)
     if success:
-        return jsonify({"success": True, "message": "Compte créé avec succès"})
+        return jsonify({"success": True, "token": generate_jwt(email), "message": "Compte créé avec succès"})
     else:
         return jsonify({"success": False, "error": "Cet email est déjà utilisé"}), 400
 
@@ -303,20 +342,18 @@ def auth_login():
     if user:
         # Seed default data if they login and somehow have no items
         database.seed_user_data(user["email"])
-        return jsonify({"success": True, "user": {"email": user["email"]}, "message": "Connexion réussie"})
+        return jsonify({"success": True, "user": {"email": user["email"]}, "token": generate_jwt(user["email"]), "message": "Connexion réussie"})
     else:
         return jsonify({"success": False, "error": "Email ou mot de passe incorrect"}), 401
 
 @app.route("/api/auth/validate", methods=["GET"])
+@require_jwt
 def auth_validate():
     # Called by the native Reader App wrapper on every cold launch to confirm
     # the account still has an active subscription. The web PWA owns billing
     # (Option A), so this endpoint never mentions Stripe — it's a plain gate.
-    # Unlike get_current_user_id(), this never falls back to a default user:
-    # a missing header must fail closed, since this is a security boundary.
-    user_id = request.headers.get("X-User-Email")
-    if not user_id:
-        return jsonify({"valid": False}), 401
+    # @require_jwt already fails closed on a missing/invalid token.
+    user_id = get_current_user_id()
     profile = database.get_user_profile(user_id)
     if profile and profile.get("premium_status") == 1:
         return jsonify({"valid": True})
@@ -356,6 +393,7 @@ def auth_reset_password():
     return jsonify({"success": False, "error": error_messages.get(error, "Échec de la réinitialisation")}), 400
 
 @app.route("/api/auth/change-password", methods=["POST"])
+@require_jwt
 def auth_change_password():
     data = request.json or {}
     current_password = data.get("current_password")
@@ -404,6 +442,7 @@ def calculate_corrected_fi_indices(active_cashflow_m, fixed_expenses_m):
 
 # API Summary
 @app.route("/api/summary", methods=["GET"])
+@require_jwt
 def get_summary():
     try:
         user_id = get_current_user_id()
@@ -449,6 +488,7 @@ def get_summary():
 
 # Assets API
 @app.route("/api/assets", methods=["GET", "POST"])
+@require_jwt
 def manage_assets():
     user_id = get_current_user_id()
     if request.method == "GET":
@@ -465,6 +505,7 @@ def manage_assets():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/assets/<int:asset_id>", methods=["PUT", "DELETE"])
+@require_jwt
 def update_delete_asset(asset_id):
     user_id = get_current_user_id()
     if request.method == "DELETE":
@@ -483,6 +524,7 @@ def update_delete_asset(asset_id):
 
 # Liabilities API
 @app.route("/api/liabilities", methods=["GET", "POST"])
+@require_jwt
 def manage_liabilities():
     user_id = get_current_user_id()
     if request.method == "GET":
@@ -499,6 +541,7 @@ def manage_liabilities():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/liabilities/<int:lib_id>", methods=["PUT", "DELETE"])
+@require_jwt
 def update_delete_liability(lib_id):
     user_id = get_current_user_id()
     if request.method == "DELETE":
@@ -517,6 +560,7 @@ def update_delete_liability(lib_id):
 
 # Transactions API
 @app.route("/api/transactions", methods=["GET", "POST"])
+@require_jwt
 def manage_transactions():
     user_id = get_current_user_id()
     if request.method == "GET":
@@ -592,6 +636,7 @@ def webhook_tiktok():
 
 # User profile and Premium status endpoints
 @app.route("/api/user", methods=["GET"])
+@require_jwt
 def get_user():
     user_id = get_current_user_id()
     try:
@@ -606,6 +651,7 @@ def get_user():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/user/premium", methods=["POST"])
+@require_jwt
 def toggle_user_premium():
     user_id = get_current_user_id()
     data = request.json or {}
@@ -617,6 +663,7 @@ def toggle_user_premium():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/user/profile", methods=["POST"])
+@require_jwt
 def update_profile():
     user_id = get_current_user_id()
     data = request.json or {}
@@ -631,6 +678,7 @@ def update_profile():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/user/settings", methods=["GET", "POST", "PUT"])
+@require_jwt
 def manage_settings():
     user_id = get_current_user_id()
     if request.method == "GET":
@@ -653,6 +701,7 @@ def manage_settings():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/profile/preferences", methods=["GET", "PUT"])
+@require_jwt
 def manage_preferences():
     user_id = get_current_user_id()
     if request.method == "GET":
@@ -676,6 +725,7 @@ def manage_preferences():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/affiliation/stats", methods=["GET"])
+@require_jwt
 def affiliation_stats():
     user_id = get_current_user_id()
     try:
@@ -685,6 +735,7 @@ def affiliation_stats():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/affiliate/network", methods=["GET"])
+@require_jwt
 def affiliate_network():
     """Retourne la liste des filleuls de l'utilisateur connecté."""
     user_id = get_current_user_id()
@@ -695,6 +746,7 @@ def affiliate_network():
         return jsonify({"success": False, "error": str(e), "network": []}), 500
 
 @app.route("/api/savings_goals", methods=["GET", "POST"])
+@require_jwt
 def manage_savings_goals():
     user_id = get_current_user_id()
     if request.method == "GET":
@@ -719,6 +771,7 @@ def manage_savings_goals():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/savings_goals/<int:goal_id>", methods=["PUT", "DELETE"])
+@require_jwt
 def update_delete_savings_goal(goal_id):
     user_id = get_current_user_id()
     if request.method == "DELETE":
@@ -747,6 +800,7 @@ stripe.api_key = STRIPE_SECRET_KEY
 
 # Stripe Checkout / Portal Endpoints
 @app.route("/api/stripe/create-checkout-session", methods=["POST"])
+@require_jwt
 def stripe_checkout():
     user_id = get_current_user_id()
     data = request.json or {}
@@ -808,12 +862,13 @@ def stripe_checkout():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/stripe/verify-session", methods=["POST"])
+@require_jwt
 def stripe_verify_session():
     """
     Called by stripe-success.tsx after Stripe redirects back.
     Verifies the session and activates premium for the user.
     """
-    user_email = request.headers.get('X-User-Email') or get_current_user_id()
+    user_email = get_current_user_id()
     data = request.json or {}
     session_id = data.get("session_id")
 
@@ -859,6 +914,7 @@ def stripe_verify_session():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/stripe/create-portal-session", methods=["POST"])
+@require_jwt
 def stripe_portal():
     user_id = get_current_user_id()
     domain_url = request.host_url.rstrip('/')
@@ -949,6 +1005,7 @@ def webhook_revenuecat():
 
 # Gemini AI Coach Chat
 @app.route("/api/coach/chat", methods=["POST"])
+@require_jwt
 def coach_chat():
     user_id = get_current_user_id()
     data = request.json or {}
@@ -1261,6 +1318,7 @@ def _pick_dilemma_for_user(user_id, today_str):
 
 
 @app.route("/api/daily-decision", methods=["GET"])
+@require_jwt
 def get_daily_decision():
     user_id = get_current_user_id()
     today_str = request.args.get("date") or __import__("datetime").date.today().isoformat()
@@ -1313,6 +1371,7 @@ def get_daily_decision():
 
 
 @app.route("/api/daily-decision/answer", methods=["POST"])
+@require_jwt
 def post_daily_decision():
     user_id = get_current_user_id()
     data = request.json or {}
@@ -1390,6 +1449,7 @@ def post_daily_decision():
 
 
 @app.route("/api/daily-decision/history", methods=["GET"])
+@require_jwt
 def get_daily_decision_history():
     user_id = get_current_user_id()
     conn = database.get_db()

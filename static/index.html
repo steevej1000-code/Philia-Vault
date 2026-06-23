@@ -2573,11 +2573,13 @@
                 headers = {};
             }
             
-            const loggedInEmail = localStorage.getItem('philia_vault_user_email');
-            if (loggedInEmail && loggedInEmail !== "undefined") {
-                headers['X-User-Email'] = loggedInEmail;
+            if (!headers['Authorization']) {
+                const token = localStorage.getItem('philia_vault_token');
+                if (token && token !== "undefined") {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
             }
-            
+
             options.headers = headers;
             return originalFetch(url, options);
         };
@@ -2653,11 +2655,12 @@
         // Calls the server to confirm the account still has an active subscription.
         // Used by the native Reader App wrapper, which must never let an inactive
         // account sit on the dashboard (Option A: zero IAP, web PWA owns billing).
-        async function validateActiveSubscription(email) {
+        async function validateActiveSubscription(token) {
+            if (!token) return false;
             try {
                 const res = await fetch('/api/auth/validate', {
                     method: 'GET',
-                    headers: { 'X-User-Email': email }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (!res.ok) return false;
                 const data = await res.json();
@@ -2676,8 +2679,8 @@
 
             if (isLoggedIn) {
                 if (isMobileWrapper) {
-                    const email = localStorage.getItem('philia_vault_user_email');
-                    const isActive = await validateActiveSubscription(email);
+                    const token = localStorage.getItem('philia_vault_token');
+                    const isActive = await validateActiveSubscription(token);
                     if (!isActive) {
                         handleLogout();
                         return;
@@ -2791,7 +2794,7 @@
                 
                 if (data.success) {
                     if (isMobileWrapper) {
-                        const isActive = await validateActiveSubscription(email);
+                        const isActive = await validateActiveSubscription(data.token);
                         if (!isActive) {
                             // Neutral message: never mention Stripe, billing, or the web site
                             // inside the native Reader App login screen.
@@ -2802,6 +2805,7 @@
                     }
                     errEl.classList.add('hidden');
                     localStorage.setItem('philia_vault_user_email', email);
+                    localStorage.setItem('philia_vault_token', data.token);
                     localStorage.setItem('philia_vault_logged_in', 'true');
                     checkSession();
                 } else {
@@ -2832,6 +2836,7 @@
                 const data = await response.json();
                 if (data.success) {
                     localStorage.setItem('philia_vault_user_email', data.user.email);
+                    localStorage.setItem('philia_vault_token', data.token);
                     localStorage.setItem('philia_vault_logged_in', 'true');
                     checkSession();
                 } else {
@@ -2853,6 +2858,7 @@
         function handleLogout() {
             localStorage.removeItem('philia_vault_logged_in');
             localStorage.removeItem('philia_vault_user_email');
+            localStorage.removeItem('philia_vault_token');
             checkSession();
         }
 
