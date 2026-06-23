@@ -27,6 +27,7 @@ interface DashboardData {
   timeline?: number;
   monthly_income: number;
   available_cashflow: number;
+  hemorragie_rate: number | null;
 }
 
 const formatBadgeValue = (v: number) => {
@@ -108,14 +109,16 @@ export default function DashboardScreen() {
   const iifScore = data?.iif_score ?? 0;
   const netCashflow = data?.net_cashflow ?? 0;
 
-  // Income & Available Revenue variables
+  // Income & Available Cashflow variables
   const monthlyIncome = data?.monthly_income ?? 0;
   const availableCashflow = data?.available_cashflow ?? 0;
+  const hemorragieRate = data?.hemorragie_rate ?? null;
 
   const [showRatRaceModal, setShowRatRaceModal] = useState(false);
   const [ratRaceShown, setRatRaceShown] = useState(false);
 
   const blinkAnim = useRef(new Animated.Value(0.3)).current;
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
     if (availableCashflow < 0) {
@@ -137,6 +140,20 @@ export default function DashboardScreen() {
       blinkAnim.setValue(0.3);
     }
   }, [availableCashflow]);
+
+  // Pulse for Urgence (>75%) Hemorragie
+  useEffect(() => {
+    if (hemorragieRate && hemorragieRate > 75) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.0, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1.0);
+    }
+  }, [hemorragieRate]);
 
   // Show rat race congratulations modal if IIF score hits 100%+
   useEffect(() => {
@@ -240,40 +257,45 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            {/* Revenu Disponible Card */}
-            <View style={styles.revenuCard}>
-              <Text style={styles.revenuLabel}>Revenu disponible</Text>
-              <Text style={[
-                styles.revenuVal,
-                { color: availableCashflow > 0 ? '#39FF14' : availableCashflow === 0 ? '#FF9500' : '#FF4444' }
-              ]}>
-                {formatAmount(availableCashflow)}
-              </Text>
-              <Text style={styles.revenuHelper}>
-                {availableCashflow > 0 
-                  ? `Tu génères ${formatAmount(availableCashflow)}/mois de revenu disponible`
-                  : availableCashflow === 0 
-                    ? "Tu es à l'équilibre — aucune marge de manœuvre"
-                    : `Tu es en déficit de ${formatAmount(Math.abs(availableCashflow))}/mois`
-                }
-              </Text>
-              
-              <View style={styles.revenuActions}>
-                <TouchableOpacity
-                  style={styles.revenuBtn}
-                  onPress={() => router.push({ pathname: '/onboarding-salary', params: { editMode: 'true' } })}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.revenuBtnText}>Modifier Salaire ✎</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[styles.revenuBtn, { borderColor: '#ccff00' }]}
-                  onPress={() => router.push({ pathname: '/assets', params: { openAdd: 'true' } })}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.revenuBtnText, { color: '#ccff00' }]}>Ajouter Revenu ＋</Text>
-                </TouchableOpacity>
+            {/* Row of two widgets: Cashflow Disponible & Taux d'hémorragie */}
+            <View style={styles.metricsRow}>
+              {/* Cashflow disponible */}
+              <View style={styles.metricBox}>
+                <Text style={styles.boxLabel}>Cashflow Disponible</Text>
+                <Text style={[
+                  styles.boxVal,
+                  { color: availableCashflow > 0 ? '#39FF14' : availableCashflow < 0 ? '#FF4444' : '#FF9500' }
+                ]}>
+                  {formatLargeAmount(availableCashflow)}
+                </Text>
+                <Text style={styles.boxHelper}>
+                  {availableCashflow > 0 ? `Tu génères ${formatLargeAmount(availableCashflow)}/mois de cashflow libre` :
+                   availableCashflow < 0 ? `Tu es en déficit de ${formatLargeAmount(Math.abs(availableCashflow))}/mois` :
+                   "Tu es à l'équilibre — aucune marge"}
+                </Text>
+              </View>
+
+              {/* Taux d'hémorragie */}
+              <View style={styles.metricBox}>
+                <Text style={styles.boxLabel}>Taux d'Hémorragie</Text>
+                {monthlyIncome === 0 ? (
+                  <Text style={[styles.boxVal, { color: '#8E8E93' }]}>—</Text>
+                ) : (
+                  <Animated.Text style={[
+                    styles.boxVal,
+                    { color: hemorragieRate! <= 30 ? '#39FF14' : hemorragieRate! <= 50 ? '#FF9500' : '#FF4444' },
+                    hemorragieRate! > 75 && { opacity: pulseAnim }
+                  ]}>
+                    {Math.round(hemorragieRate!)}%
+                  </Animated.Text>
+                )}
+                <Text style={styles.boxHelper}>
+                  {monthlyIncome === 0 ? "Définis ton revenu pour calculer" :
+                   hemorragieRate! <= 30 ? "Sain" :
+                   hemorragieRate! <= 50 ? "Attention" :
+                   hemorragieRate! <= 75 ? "Critique" :
+                   "Urgence ⚠️"}
+                </Text>
               </View>
             </View>
 
@@ -529,56 +551,36 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.1)',
   },
 
-  // Revenu Disponible Card styles
-  revenuCard: {
-    backgroundColor: '#0c0e12',
-    borderWidth: 1,
-    borderColor: '#1c222d',
-    borderRadius: 24,
-    padding: 20,
-    marginTop: 8,
-    gap: 8,
-  },
-  revenuLabel: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 12,
-    color: '#ffffff',
-    textTransform: 'uppercase',
-    opacity: 0.6,
-    letterSpacing: 0.5,
-  },
-  revenuVal: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 32,
-    letterSpacing: -1,
-  },
-  revenuHelper: {
-    fontFamily: 'PlusJakartaSans-Medium',
-    fontSize: 13,
-    color: '#8e8e93',
-  },
-  revenuActions: {
+  // Two metrics boxes styling (Cashflow Disponible & Taux d'hémorragie)
+  metricsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
-    paddingTop: 14,
   },
-  revenuBtn: {
+  metricBox: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: '#1c1c1e',
     borderWidth: 1,
     borderColor: '#2c2c2e',
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 24,
+    padding: 16,
+    gap: 6,
   },
-  revenuBtnText: {
+  boxLabel: {
     fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 12,
     color: '#ffffff',
+    opacity: 0.8,
+  },
+  boxVal: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 20,
+  },
+  boxHelper: {
+    fontFamily: 'PlusJakartaSans-Regular',
+    fontSize: 10,
+    color: '#8e8e93',
+    lineHeight: 14,
   },
 
   // AI Insights

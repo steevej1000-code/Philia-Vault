@@ -10,7 +10,6 @@ import { COLORS, RADIUS } from '../../constants/colors';
 import Svg, { Path } from 'react-native-svg';
 import { IconTrendUp, IconCoin, IconBag, IconBuilding, IconBriefcase, IconTrash, IconSeedling, IconClose, IconProps } from '../../components/icons/Icons';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 
 interface Asset {
   id: number;
@@ -20,7 +19,7 @@ interface Asset {
   monthly_yield: number;
 }
 
-const ASSET_TYPES = ['Stocks', 'Crypto', 'Commerce', 'Real Estate', 'Revenue', 'Other'];
+const ASSET_TYPES = ['Stocks', 'Crypto', 'Commerce', 'Real Estate', 'Other'];
 
 // Type translations for display matching user screenshot
 const TYPE_ICONS: Record<string, React.ComponentType<IconProps>> = {
@@ -28,7 +27,6 @@ const TYPE_ICONS: Record<string, React.ComponentType<IconProps>> = {
   Crypto: IconCoin,
   Commerce: IconBag,
   'Real Estate': IconBuilding,
-  Revenue: IconSeedling,
   Other: IconBriefcase,
 };
 
@@ -37,7 +35,6 @@ const TYPE_LABEL_KEYS: Record<string, { label: string; subLabel: string }> = {
   Crypto: { label: 'asset_type_crypto', subLabel: 'asset_type_crypto_sub' },
   Commerce: { label: 'asset_type_commerce', subLabel: 'asset_type_commerce_sub' },
   'Real Estate': { label: 'asset_type_real_estate', subLabel: 'asset_type_real_estate_sub' },
-  Revenue: { label: 'asset_type_revenue', subLabel: 'asset_type_revenue_sub' },
   Other: { label: 'asset_type_other', subLabel: 'asset_type_other_sub' },
 };
 
@@ -46,16 +43,12 @@ const ASSET_TYPE_LABEL_KEYS: Record<string, string> = {
   Crypto: 'asset_type_crypto_short',
   Commerce: 'asset_type_commerce_short',
   'Real Estate': 'asset_type_real_estate_short',
-  Revenue: 'asset_type_revenue_short',
   Other: 'asset_type_other_short',
 };
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
   const { t, formatAmount } = useUserPreferences();
-  const params = useLocalSearchParams();
-  const router = useRouter();
-
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -85,20 +78,13 @@ export default function AssetsScreen() {
 
   useEffect(() => { load(); }, []);
 
-  useEffect(() => {
-    if (params.openAdd === 'true') {
-      router.setParams({ openAdd: undefined });
-      handleOpenAdd();
-    }
-  }, [params.openAdd]);
-
   const onRefresh = () => { setRefreshing(true); load(); };
 
   const handleOpenAdd = () => {
     setEditingAssetId(null);
     setName('');
-    setType('Revenue'); // Default to Revenue if opened via shortcut, otherwise standard
-    setValue('0');
+    setType('Stocks');
+    setValue('');
     setYield('');
     setShowModal(true);
   };
