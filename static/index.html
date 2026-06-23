@@ -2,8 +2,34 @@
 <html class="light" lang="fr">
 <head>
     <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
     <title>Philia Vault - Wealth Engine</title>
+
+    <!-- PWA manifest + theme -->
+    <link rel="manifest" href="/manifest.json"/>
+    <meta name="theme-color" content="#000000"/>
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png"/>
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png"/>
+
+    <!-- iOS: standalone app behavior, no URL bar, custom title -->
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <meta name="apple-mobile-web-app-title" content="Philia Vault"/>
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"/>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Philia Vault — Your Ruthless Financial Mirror"/>
+    <meta property="og:description" content="Track your assets, liabilities and IIF score. Build real financial independence."/>
+    <meta property="og:image" content="https://app.philiavault.com/og-image.png"/>
+    <meta property="og:url" content="https://app.philiavault.com"/>
+    <meta property="og:type" content="website"/>
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image"/>
+    <meta name="twitter:title" content="Philia Vault — Your Ruthless Financial Mirror"/>
+    <meta name="twitter:description" content="Track your assets, liabilities and IIF score. Build real financial independence."/>
+    <meta name="twitter:image" content="https://app.philiavault.com/og-image.png"/>
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect"/>
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -166,10 +192,47 @@
         }
         .vibrant-button:active {
             transform: translateY(0px);
-            box-shadow: 
+            box-shadow:
                 0 4px 10px rgba(204, 255, 0, 0.3),
                 inset 0 1px 1px rgba(255, 255, 255, 0.8),
                 inset 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ---- App splash screen ---- */
+        #app-splash {
+            transition: opacity 0.4s ease-out;
+        }
+        #app-splash.splash-hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .splash-mark {
+            animation: splash-pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes splash-pulse {
+            0%, 100% { opacity: 0.85; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.06); }
+        }
+
+        /* ---- Native-feel tap feedback on every actionable control ---- */
+        button, .tap-feedback, [role="button"] {
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease;
+        }
+        button:active, .tap-feedback:active, [role="button"]:active {
+            transform: scale(0.97);
+            opacity: 0.9;
+        }
+
+        /* ---- View transitions (slide/fade between tabs and screens) ---- */
+        .view-pane {
+            animation: view-fade-in 0.25s ease-out;
+        }
+        @keyframes view-fade-in {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #app-content, #login-screen {
+            transition: opacity 0.3s ease-in-out;
         }
 
         .iif-gauge {
@@ -274,6 +337,12 @@
     </style>
 </head>
 <body class="font-body-md text-on-surface">
+
+    <!-- App splash screen (shown briefly on cold launch when installed/standalone) -->
+    <div id="app-splash" class="fixed inset-0 z-[999] bg-black flex flex-col items-center justify-center gap-4">
+        <img src="/icons/icon-192x192.png" alt="" class="w-20 h-20 splash-mark"/>
+        <p class="text-white/80 text-xs font-semibold tracking-wide">Your Ruthless Financial Mirror</p>
+    </div>
 
     <!-- Login / Registration Screen -->
     <div id="login-screen" class="fixed inset-0 z-50 w-full h-full min-h-screen bg-[#07090e] overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-12 text-white">
@@ -2456,6 +2525,30 @@
             applyMobileWrapperRestrictions();
         });
 
+        // Splash screen: shown instantly via inline HTML, hidden once the app has
+        // decided which screen (login or dashboard) to render. Floored at 900ms so
+        // it never reads as a flicker on a fast connection.
+        const SPLASH_MIN_DISPLAY_MS = 900;
+        const splashShownAt = Date.now();
+        function hideAppSplash() {
+            const splash = document.getElementById('app-splash');
+            if (!splash) return;
+            const elapsed = Date.now() - splashShownAt;
+            const wait = Math.max(0, SPLASH_MIN_DISPLAY_MS - elapsed);
+            setTimeout(() => splash.classList.add('splash-hidden'), wait);
+        }
+
+        // Register the service worker for offline resilience (cached shell +
+        // offline.html fallback). Not supported in the Capacitor webview sandbox,
+        // but harmless there since 'serviceWorker' is simply absent.
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch((err) => {
+                    console.error('Service worker registration failed:', err);
+                });
+            });
+        }
+
         // Override fetch to include authorization headers and convert relative URLs for Capacitor
         const originalFetch = window.fetch;
         window.fetch = function(url, options) {
@@ -2557,13 +2650,39 @@
             }
         }
 
+        // Calls the server to confirm the account still has an active subscription.
+        // Used by the native Reader App wrapper, which must never let an inactive
+        // account sit on the dashboard (Option A: zero IAP, web PWA owns billing).
+        async function validateActiveSubscription(email) {
+            try {
+                const res = await fetch('/api/auth/validate', {
+                    method: 'GET',
+                    headers: { 'X-User-Email': email }
+                });
+                if (!res.ok) return false;
+                const data = await res.json();
+                return !!data.valid;
+            } catch (err) {
+                console.error('Session validation failed:', err);
+                return false; // fail closed in the native wrapper
+            }
+        }
+
         // Check Auth session
-        function checkSession() {
+        async function checkSession() {
             const isLoggedIn = localStorage.getItem('philia_vault_logged_in') === 'true';
             const loginScr = document.getElementById('login-screen');
             const appCont = document.getElementById('app-content');
-            
+
             if (isLoggedIn) {
+                if (isMobileWrapper) {
+                    const email = localStorage.getItem('philia_vault_user_email');
+                    const isActive = await validateActiveSubscription(email);
+                    if (!isActive) {
+                        handleLogout();
+                        return;
+                    }
+                }
                 loginScr.classList.add('hidden');
                 appCont.classList.remove('hidden');
                 loadDashboard();
@@ -2671,6 +2790,16 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    if (isMobileWrapper) {
+                        const isActive = await validateActiveSubscription(email);
+                        if (!isActive) {
+                            // Neutral message: never mention Stripe, billing, or the web site
+                            // inside the native Reader App login screen.
+                            errEl.textContent = "Ce compte n'a pas d'accès actif. Vérifiez vos identifiants.";
+                            errEl.classList.remove('hidden');
+                            return;
+                        }
+                    }
                     errEl.classList.add('hidden');
                     localStorage.setItem('philia_vault_user_email', email);
                     localStorage.setItem('philia_vault_logged_in', 'true');
@@ -4007,10 +4136,11 @@
             }
 
             applyTranslations(savedLang);
-            
+
             checkSession();
             initChat();
             checkPremium();
+            hideAppSplash();
 
             // Handle Stripe checkout redirects / mock session returns
             const urlParams = new URLSearchParams(window.location.search);
@@ -4032,6 +4162,30 @@
                     alert(savedLang === 'fr' ? "Abonnement annulé." : "Subscription cancelled.");
                 }
                 window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            // Real Stripe Checkout redirect: /stripe-success?session_id=cs_xxx
+            // The webhook activates premium asynchronously, but we don't make the
+            // user wait on it — verify the session directly and flip premium now.
+            const stripeCheckoutSessionId = urlParams.get('session_id');
+            if (stripeCheckoutSessionId) {
+                fetch('/api/stripe/verify-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: stripeCheckoutSessionId })
+                })
+                    .then((res) => res.json())
+                    .then((data) => {
+                        if (data.success && data.verified) {
+                            checkPremium();
+                            checkSession();
+                            alert(savedLang === 'fr' ? "Félicitations ! Votre abonnement Philia Vault Premium est activé." : "Congratulations! Your Philia Vault Premium subscription is active.");
+                        }
+                    })
+                    .catch((err) => console.error('Stripe session verification failed:', err))
+                    .finally(() => {
+                        window.history.replaceState({}, document.title, '/app');
+                    });
             }
 
             selectPlan('monthly');

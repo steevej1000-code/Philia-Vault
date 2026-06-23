@@ -98,6 +98,13 @@ def serve_index():
 def serve_app():
     return send_from_directory("static", "index.html")
 
+@app.route("/stripe-success")
+def serve_stripe_success():
+    # Stripe Checkout redirects here with ?session_id=... after a real payment.
+    # The SPA itself reads session_id and calls /api/stripe/verify-session —
+    # this route just has to serve the app shell instead of 404ing.
+    return send_from_directory("static", "index.html")
+
 @app.route("/admin")
 @app.route("/admin/")
 def serve_admin():
@@ -114,6 +121,26 @@ def serve_favicon():
 @app.route("/icons.svg")
 def serve_icons():
     return send_from_directory("static", "icons.svg")
+
+@app.route("/icons/<path:filename>")
+def serve_icon_assets(filename):
+    return send_from_directory(os.path.join("static", "icons"), filename)
+
+@app.route("/manifest.json")
+def serve_manifest():
+    return send_from_directory("static", "manifest.json", mimetype="application/manifest+json")
+
+@app.route("/sw.js")
+def serve_service_worker():
+    return send_from_directory("static", "sw.js", mimetype="application/javascript")
+
+@app.route("/offline.html")
+def serve_offline():
+    return send_from_directory("static", "offline.html")
+
+@app.route("/og-image.png")
+def serve_og_image():
+    return send_from_directory("static", "og-image.png")
 
 @app.route("/static/<path:path>")
 def serve_static(path):
@@ -279,6 +306,21 @@ def auth_login():
         return jsonify({"success": True, "user": {"email": user["email"]}, "message": "Connexion réussie"})
     else:
         return jsonify({"success": False, "error": "Email ou mot de passe incorrect"}), 401
+
+@app.route("/api/auth/validate", methods=["GET"])
+def auth_validate():
+    # Called by the native Reader App wrapper on every cold launch to confirm
+    # the account still has an active subscription. The web PWA owns billing
+    # (Option A), so this endpoint never mentions Stripe — it's a plain gate.
+    # Unlike get_current_user_id(), this never falls back to a default user:
+    # a missing header must fail closed, since this is a security boundary.
+    user_id = request.headers.get("X-User-Email")
+    if not user_id:
+        return jsonify({"valid": False}), 401
+    profile = database.get_user_profile(user_id)
+    if profile and profile.get("premium_status") == 1:
+        return jsonify({"valid": True})
+    return jsonify({"valid": False}), 403
 
 @app.route("/api/auth/forgot-password", methods=["POST"])
 def auth_forgot_password():
