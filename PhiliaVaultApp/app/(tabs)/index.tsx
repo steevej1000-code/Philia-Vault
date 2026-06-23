@@ -261,7 +261,7 @@ export default function DashboardScreen() {
             <View style={styles.metricsRow}>
               {/* Cashflow disponible */}
               <View style={styles.metricBox}>
-                <Text style={styles.boxLabel}>Cashflow Disponible</Text>
+                <Text style={styles.boxLabel}>Revenue Disponible</Text>
                 <Text style={[
                   styles.boxVal,
                   { color: availableCashflow > 0 ? '#39FF14' : availableCashflow < 0 ? '#FF4444' : '#FF9500' }
@@ -269,7 +269,7 @@ export default function DashboardScreen() {
                   {formatLargeAmount(availableCashflow)}
                 </Text>
                 <Text style={styles.boxHelper}>
-                  {availableCashflow > 0 ? `Tu génères ${formatLargeAmount(availableCashflow)}/mois de cashflow libre` :
+                  {availableCashflow > 0 ? `Tu génères ${formatLargeAmount(availableCashflow)}/mois de revenu disponible` :
                    availableCashflow < 0 ? `Tu es en déficit de ${formatLargeAmount(Math.abs(availableCashflow))}/mois` :
                    "Tu es à l'équilibre — aucune marge"}
                 </Text>
