@@ -102,6 +102,8 @@ def init_db():
         stripe_subscription_id TEXT,
         cancel_at_period_end INTEGER DEFAULT 0,
         cancel_at TEXT,
+        monthly_income REAL DEFAULT 0,
+        income_updated_at TIMESTAMP,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -129,7 +131,9 @@ def init_db():
         ("is_blocked", "INTEGER DEFAULT 0"),
         ("apple_id", "TEXT"),
         ("password_reset_code", "TEXT"),
-        ("password_reset_expires", "TEXT")
+        ("password_reset_expires", "TEXT"),
+        ("monthly_income", "REAL DEFAULT 0"),
+        ("income_updated_at", "TIMESTAMP")
     ]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")
@@ -463,6 +467,8 @@ def get_user_profile(user_id):
             "custom_categories": d["custom_categories"] or "",
             "avatar": d.get("avatar") or "",
             "parrain_id": d.get("parrain_id"),
+            "monthly_income": d.get("monthly_income", 0.0),
+            "income_updated_at": d.get("income_updated_at")
         }
     return None
 
@@ -540,6 +546,39 @@ def update_user_settings(user_id, currency=None, notifications_enabled=None):
         cursor.execute("UPDATE users SET notifications_enabled=? WHERE email=? OR id=?", (1 if notifications_enabled else 0, user_id, user_id))
     conn.commit()
     conn.close()
+
+def update_user_income(user_id, monthly_income: float) -> bool:
+    """Met à jour le revenu mensuel net de l'utilisateur"""
+    conn = get_db()
+    try:
+        conn.execute("""
+            UPDATE users 
+            SET monthly_income = ?,
+                income_updated_at = CURRENT_TIMESTAMP
+            WHERE email = ? OR id = ?
+        """, (monthly_income, user_id, user_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Erreur update_user_income: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_user_income(user_id) -> float:
+    """Retourne le revenu mensuel net de l'utilisateur"""
+    conn = get_db()
+    try:
+        result = conn.execute(
+            "SELECT monthly_income FROM users WHERE email = ? OR id = ?",
+            (user_id, user_id)
+        ).fetchone()
+        return result['monthly_income'] if result else 0.0
+    except Exception as e:
+        print(f"Erreur get_user_income: {e}")
+        return 0.0
+    finally:
+        conn.close()
 
 # Profile preferences (language / currency) helpers
 def get_user_preferences(user_id):

@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
-  TouchableOpacity, ActivityIndicator, Animated
+  TouchableOpacity, ActivityIndicator, Animated, Modal
 } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
@@ -25,7 +26,59 @@ interface DashboardData {
   iif_score: number;
   net_cashflow: number;
   timeline?: number;
+  monthly_income: number;
+  available_cashflow: number;
+  hemorragie_rate: number | null;
+  freedom_progression: number;
+  verdict?: string;
 }
+
+const CircularProgress = ({ score }: { score: number }) => {
+  const size = 110;
+  const strokeWidth = 8;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const progress = Math.min(Math.max(score, 0), 100);
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+  let strokeColor = '#39FF14'; // Neon Green
+  if (score === 0) strokeColor = '#FF4444'; // Red
+  else if (score < 25) strokeColor = '#FF4444'; // Red
+  else if (score < 50) strokeColor = '#FF9500'; // Orange
+  else if (score < 100) strokeColor = '#39FF14'; // Neon Green
+  else strokeColor = '#ccff00'; // Lime Gold
+
+  return (
+    <View style={styles.gaugeContainer}>
+      <Svg width={size} height={size}>
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#1C1C1E"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+        />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          fill="transparent"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </Svg>
+      <View style={styles.gaugeCenterText}>
+        <Text style={[styles.gaugeScoreText, { color: strokeColor }]}>{Math.round(score)}%</Text>
+        <Text style={styles.gaugeLabelText}>IIF</Text>
+      </View>
+    </View>
+  );
+};
 
 const formatBadgeValue = (v: number) => {
   const absVal = Math.abs(v);
@@ -106,28 +159,56 @@ export default function DashboardScreen() {
   const iifScore = data?.iif_score ?? 0;
   const netCashflow = data?.net_cashflow ?? 0;
 
+  // New variables
+  const monthlyIncome = data?.monthly_income ?? 0;
+  const hemorragieRate = data?.hemorragie_rate ?? null;
+  const availableCashflow = data?.available_cashflow ?? 0;
+  const freedomProgression = data?.freedom_progression ?? 0;
+
+  const [showRatRaceModal, setShowRatRaceModal] = useState(false);
+  const [ratRaceShown, setRatRaceShown] = useState(false);
+
   const blinkAnim = useRef(new Animated.Value(0.3)).current;
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
-    if (netCashflow < 0) {
+    if (availableCashflow < 0) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(blinkAnim, {
-            toValue: 1,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(blinkAnim, {
-            toValue: 0.3,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
+          Animated.timing(blinkAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+          Animated.timing(blinkAnim, { toValue: 0.3, duration: 1500, useNativeDriver: true }),
         ])
       ).start();
     } else {
       blinkAnim.setValue(0.3);
     }
-  }, [netCashflow]);
+  }, [availableCashflow]);
+
+  // Pulse for Urgence (>75%) Hemorragie
+  useEffect(() => {
+    if (hemorragieRate && hemorragieRate > 75) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.0, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1.0);
+    }
+  }, [hemorragieRate]);
+
+  // Show rat race congratulations modal if IIF score hits 100%+
+  useEffect(() => {
+    if (data && data.iif_score >= 100 && !ratRaceShown) {
+      setShowRatRaceModal(true);
+    }
+  }, [data, ratRaceShown]);
+
+  let progressionText = `Tes actifs couvrent ${Math.round(freedomProgression)}% de tes dépenses`;
+  if (freedomProgression === 0) progressionText = "Tes actifs ne couvrent aucune dépense";
+  else if (Math.round(freedomProgression) === 50) progressionText = "Tes actifs couvrent la moitié de tes dépenses";
+  else if (freedomProgression >= 100) progressionText = "Tes actifs couvrent toutes tes dépenses — tu es libre";
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -171,57 +252,68 @@ export default function DashboardScreen() {
           </View>
         ) : (
           <>
-            {/* Dribbble Style Hero Recommendation Card */}
-            <View style={[styles.heroCard, netCashflow < 0 && { backgroundColor: '#FF3B30' }]}>
-              {netCashflow < 0 && (
-                <View style={styles.badgeContainer}>
-                  <Animated.View style={[styles.animatedCircle, { opacity: blinkAnim, borderColor: '#ffffff' }]} />
-                  <View style={styles.textContainer}>
-                    <Text
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      style={[
-                        styles.badgeText,
-                        { color: '#ffffff' },
-                        { fontSize: formatBadgeValue(netCashflow).length > 3 ? 12 : formatBadgeValue(netCashflow).length > 2 ? 14 : 16 }
-                      ]}
-                    >
-                      {formatBadgeValue(netCashflow)}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              <Text style={[styles.heroLabel, netCashflow < 0 && { color: '#ffffff' }]}>{t('simulation_summary')}</Text>
-              
-              <Text style={[styles.heroSubText, netCashflow < 0 && { color: '#ffffff' }]}>{t('iif_full_name')}</Text>
-              <Text style={[styles.heroValue, netCashflow < 0 && { color: '#ffffff' }]}>
-                {iifScore.toFixed(0)}%
+            {/* 1. IIF Score Card with circular ring */}
+            <View style={styles.iifCard}>
+              <Text style={styles.metricLabelTitle}>Indice d'Indépendance Financière (IIF)</Text>
+              <CircularProgress score={iifScore} />
+              <Text style={styles.iifInterpretText}>
+                {iifScore === 0 ? "Dépendance totale (aucun actif générant des revenus)" :
+                 iifScore < 25 ? "Débutant (premiers actifs en place)" :
+                 iifScore < 50 ? "Intermédiaire (cashflow partiel)" :
+                 iifScore < 100 ? "Avancé (quasi-indépendant)" :
+                 "LIBRE (indépendance financière totale) 🎉"}
               </Text>
-              <Text style={[styles.heroHelperText, netCashflow < 0 && { color: '#ffffff' }]}>
-                {t('iif_goal')}
-              </Text>
+            </View>
 
-              {/* Internal metrics inside hero */}
-              <View style={[styles.heroMetrics, netCashflow < 0 && { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-                <View style={styles.metricItem}>
-                  <Text style={[styles.metricLabel, netCashflow < 0 && { color: '#ffffff' }]}>{t('monthly_cost')}</Text>
-                  <Text style={[styles.metricVal, netCashflow < 0 && { color: '#ffffff' }]}>
-                    {formatLargeAmount(totalMonthlyCost)}
-                  </Text>
-                </View>
-                <View style={[styles.metricDivider, netCashflow < 0 && { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
-                <View style={styles.metricItem}>
-                  <Text style={[styles.metricLabel, netCashflow < 0 && { color: '#ffffff' }]}>{t('timeline')}</Text>
-                  <Text style={[styles.metricVal, netCashflow < 0 && { color: '#ffffff' }]}>
-                    {data?.timeline !== undefined ? `${data.timeline} ${t('years_suffix')}` : `0 ${t('years_suffix')}`}
-                  </Text>
-                </View>
-                <View style={[styles.metricDivider, netCashflow < 0 && { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
-                <View style={styles.metricItem}>
-                  <Text style={[styles.metricLabel, netCashflow < 0 && { color: '#ffffff' }]}>{t('portfolio')}</Text>
-                  <Text style={[styles.metricVal, netCashflow < 0 && { color: '#ffffff' }]}>{formatLargeAmount(totalAssets)}</Text>
-                </View>
+            {/* Row of two widgets: Cashflow Disponible & Taux d'hémorragie */}
+            <View style={styles.metricsRow}>
+              {/* 2. Cashflow disponible */}
+              <View style={styles.metricBox}>
+                <Text style={styles.boxLabel}>Cashflow Disponible</Text>
+                <Text style={[styles.boxVal, { color: availableCashflow > 0 ? '#39FF14' : availableCashflow < 0 ? '#FF4444' : '#FF9500' }]}>
+                  {formatLargeAmount(availableCashflow)}
+                </Text>
+                <Text style={styles.boxHelper}>
+                  {availableCashflow > 0 ? `Tu génères ${formatLargeAmount(availableCashflow)}/mois de cashflow libre` :
+                   availableCashflow < 0 ? `Tu es en déficit de ${formatLargeAmount(Math.abs(availableCashflow))}/mois` :
+                   "Tu es à l'équilibre — aucune marge"}
+                </Text>
               </View>
+
+              {/* 3. Taux d'hémorragie */}
+              <View style={styles.metricBox}>
+                <Text style={styles.boxLabel}>Taux d'Hémorragie</Text>
+                {monthlyIncome === 0 ? (
+                  <Text style={[styles.boxVal, { color: '#8E8E93' }]}>—</Text>
+                ) : (
+                  <Animated.Text style={[
+                    styles.boxVal,
+                    { color: hemorragieRate! <= 30 ? '#39FF14' : hemorragieRate! <= 50 ? '#FF9500' : '#FF4444' },
+                    hemorragieRate! > 75 && { opacity: pulseAnim }
+                  ]}>
+                    {Math.round(hemorragieRate!)}%
+                  </Animated.Text>
+                )}
+                <Text style={styles.boxHelper}>
+                  {monthlyIncome === 0 ? "Définis ton revenu pour calculer" :
+                   hemorragieRate! <= 30 ? "Sain" :
+                   hemorragieRate! <= 50 ? "Attention" :
+                   hemorragieRate! <= 75 ? "Critique" :
+                   "Urgence ⚠️"}
+                </Text>
+              </View>
+            </View>
+
+            {/* 4. Progression Liberté Card */}
+            <View style={styles.freedomCard}>
+              <View style={styles.freedomHeader}>
+                <Text style={styles.freedomTitle}>Progression Liberté</Text>
+                <Text style={styles.freedomPercent}>{Math.round(freedomProgression)}%</Text>
+              </View>
+              <View style={styles.progressBarBg}>
+                <View style={[styles.progressBarFill, { width: `${Math.min(Math.max(freedomProgression, 0), 100)}%` }]} />
+              </View>
+              <Text style={styles.freedomHelper}>{progressionText}</Text>
             </View>
 
             {/* AI Insights - Dribbble Style */}
@@ -258,15 +350,15 @@ export default function DashboardScreen() {
             {/* Sub Stats Row */}
             <View style={styles.subStatsContainer}>
               <View style={styles.statBox}>
-                <Text style={styles.statBoxLabel}>{t('passive_income')} {t('per_month_suffix')}</Text>
+                <Text style={styles.statBoxLabel}>Actifs Totaux</Text>
                 <Text style={[styles.statBoxVal, { color: '#ccff00' }]}>
-                  {formatLargeAmount(totalPassiveIncome)}
+                  {formatLargeAmount(totalAssets)}
                 </Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statBoxLabel}>{t('monthly_cost')} {t('per_month_suffix')}</Text>
+                <Text style={styles.statBoxLabel}>Dettes Totales</Text>
                 <Text style={[styles.statBoxVal, { color: '#ff3b30' }]}>
-                  -{formatLargeAmount(totalMonthlyCost)}
+                  {formatLargeAmount(data?.total_liabilities ?? 0)}
                 </Text>
               </View>
             </View>
@@ -300,6 +392,35 @@ export default function DashboardScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Congratulations Rat Race Modal */}
+      <Modal
+        visible={showRatRaceModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setRatRaceShown(true);
+          setShowRatRaceModal(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Tu as quitté la Rat Race 🎉</Text>
+            <Text style={styles.modalBody}>
+              Félicitations ! Tes revenus d'actifs ({formatLargeAmount(totalPassiveIncome)}/mois) couvrent l'intégralité de tes dépenses fixes ({formatLargeAmount(totalMonthlyCost)}/mois). Tu es officiellement libre !
+            </Text>
+            <TouchableOpacity
+              style={styles.modalCloseBtn}
+              onPress={() => {
+                setRatRaceShown(true);
+                setShowRatRaceModal(false);
+              }}
+            >
+              <Text style={styles.modalCloseBtnText}>C'est parti !</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -574,5 +695,177 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#48484a',
     textAlign: 'center',
+  },
+  
+  // New circular jauge styles
+  gaugeContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 16,
+    position: 'relative',
+  },
+  gaugeCenterText: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gaugeScoreText: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 28,
+  },
+  gaugeLabelText: {
+    fontFamily: 'PlusJakartaSans-Regular',
+    fontSize: 12,
+    color: '#8E8E93',
+  },
+
+  // IIF Card styles
+  iifCard: {
+    backgroundColor: '#0C0C0E',
+    borderWidth: 1,
+    borderColor: '#1C1C1E',
+    borderRadius: 24,
+    padding: 20,
+    alignItems: 'center',
+  },
+  metricLabelTitle: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 14,
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  iifInterpretText: {
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 13,
+    color: '#8E8E93',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+
+  // Metrics Row & Box styles
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  metricBox: {
+    flex: 1,
+    backgroundColor: '#0C0C0E',
+    borderWidth: 1,
+    borderColor: '#1C1C1E',
+    borderRadius: 24,
+    padding: 16,
+    gap: 6,
+  },
+  boxLabel: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 12,
+    color: '#FFFFFF',
+    opacity: 0.8,
+  },
+  boxVal: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 20,
+  },
+  boxHelper: {
+    fontFamily: 'PlusJakartaSans-Regular',
+    fontSize: 10,
+    color: '#8E8E93',
+    lineHeight: 14,
+  },
+
+  // Freedom Progression styles
+  freedomCard: {
+    backgroundColor: '#0C0C0E',
+    borderWidth: 1,
+    borderColor: '#1C1C1E',
+    borderRadius: 24,
+    padding: 20,
+    gap: 12,
+  },
+  freedomHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  freedomTitle: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  freedomPercent: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 16,
+    color: '#39FF14',
+  },
+  progressBarBg: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#1C1C1E',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#39FF14',
+    borderRadius: 4,
+  },
+  freedomHelper: {
+    fontFamily: 'PlusJakartaSans-Regular',
+    fontSize: 12,
+    color: '#8E8E93',
+  },
+
+  // Rat Race congrats modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#0C0C0E',
+    borderWidth: 1,
+    borderColor: '#39FF14',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#39FF14',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 22,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalBody: {
+    fontFamily: 'PlusJakartaSans-Regular',
+    fontSize: 14,
+    color: '#8E8E93',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  modalCloseBtn: {
+    backgroundColor: '#39FF14',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalCloseBtnText: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 15,
+    color: '#000000',
   },
 });

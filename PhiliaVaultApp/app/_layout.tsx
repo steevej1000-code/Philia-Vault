@@ -157,6 +157,32 @@ function PremiumGuard() {
   return null;
 }
 
+function OnboardingSalaryGuard() {
+  const { isAuthenticated, user, isLoading } = useAuthStore();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || !user) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+    const isOnboardingSalary = segments[0] === 'onboarding-salary';
+    const isPaywall = segments[0] === 'paywall';
+    const isStripeResult = segments[0] === 'stripe-success';
+
+    if (!inAuthGroup && !isOnboardingSalary && !isPaywall && !isStripeResult) {
+      const monthlyIncome = user.monthly_income ?? 0;
+      const incomeUpdatedAt = user.income_updated_at;
+      if (monthlyIncome === 0 || !incomeUpdatedAt) {
+        router.replace('/onboarding-salary');
+      }
+    }
+  }, [isAuthenticated, user, isLoading, segments]);
+
+  return null;
+}
+
+
 export default function RootLayout() {
   const { loadSession } = useAuthStore();
 
@@ -199,9 +225,11 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <AuthGuard />
         <PremiumGuard />
+        <OnboardingSalaryGuard />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.background } }}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="onboarding-salary" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
           <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
         </Stack>
         <BiometricGate />

@@ -4,7 +4,13 @@ import requests
 import sys
 
 def run_tests():
-    print("Starting Flask test server on port 5055...")
+    import database
+    # Ensure test user exists, is premium, and has monthly income configured
+    database.get_user_profile("alex@philiavault.com")
+    database.set_premium_status("alex@philiavault.com", 1)
+    database.update_user_income("alex@philiavault.com", 5000.0)
+
+    print("Starting Flask test server...")
     server_process = subprocess.Popen(
         [sys.executable, "server.py"],
         env={"PORT": "5055"},

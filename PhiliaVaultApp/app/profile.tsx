@@ -281,6 +281,15 @@ export default function ProfileScreen() {
                 {LANGUAGES.find((l) => l.code === language)?.flag} {LANGUAGES.find((l) => l.code === language)?.label}
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.optionRow} 
+              onPress={() => router.push({ pathname: '/onboarding-salary', params: { editMode: 'true' } })}
+            >
+              <Text style={styles.optionLabel}>Mon revenu mensuel net</Text>
+              <Text style={styles.optionValue}>
+                {user?.monthly_income ? `${formatAmount(user.monthly_income)}` : '$0'} — Modifier ›
+              </Text>
+            </TouchableOpacity>
             <View style={styles.optionRow}>
               <Text style={styles.optionLabel}>{t('notifications')}</Text>
               {loadingSettings ? (

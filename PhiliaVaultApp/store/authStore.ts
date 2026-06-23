@@ -9,6 +9,8 @@ export interface User {
   avatar_url?: string;
   premium_status: number;
   currency?: string;
+  monthly_income?: number;
+  income_updated_at?: string;
 }
 
 interface AuthState {

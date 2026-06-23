@@ -20,12 +20,12 @@ export default function NotificationsScreen() {
   const handleAccept = async () => {
     // Request permission, then continue to tabs
     await requestPermissions();
-    router.replace('/(tabs)/');
+    router.replace('/(tabs)');
   };
 
   const handleSkip = () => {
     // Continue without requesting permission
-    router.replace('/(tabs)/');
+    router.replace('/(tabs)');
   };
 
   return (

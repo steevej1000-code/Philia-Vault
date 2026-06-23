@@ -297,6 +297,17 @@ class ApiClient {
     });
   }
 
+  async getIncome() {
+    return this.request('/api/user/income');
+  }
+
+  async setIncome(monthlyIncome: number) {
+    return this.request('/api/user/income', {
+      method: 'POST',
+      body: JSON.stringify({ monthly_income: monthlyIncome }),
+    });
+  }
+
   // ─── Transactions ──────────────────────────────────────────────────────────
 
   async getTransactions() {
@@ -372,11 +383,14 @@ Fais des phrases courtes et utilise des sauts de ligne simples pour aérer.
 ---
 DONNÉES RÉELLES DE L'UTILISATEUR (RUNTIME CONTEXT) :
 Tu dois ABSOLUMENT utiliser ces données pour ton analyse. Ne donne jamais de chiffres imaginaires.
+- Revenu mensuel net : ${summary.monthly_income || 0} $
 - Actifs totaux : ${summary.total_assets || 0} $ (Revenus passifs mensuels : ${summary.total_passive_income || 0} $)
 - Dettes totales (capital restant dû) : ${summary.total_liabilities || 0} $
 - Coût mensuel des passifs (charges/abonnements) : ${summary.total_monthly_cost || 0} $
 - Indice d'Indépendance Financière (IIF) : ${summary.iif_score || 0}%
-- Cashflow Net Mensuel : ${summary.net_cashflow || 0} $
+- Cashflow disponible libre : ${summary.available_cashflow || 0} $
+- Progression vers la liberté financière : ${summary.freedom_progression || 0}%
+- Verdict diagnostic calculé : ${summary.verdict || ''}
 Actifs : ${JSON.stringify(assets)}
 Passifs : ${JSON.stringify(liabilities)}
 ---`;

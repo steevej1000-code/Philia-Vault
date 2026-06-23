@@ -360,6 +360,39 @@ def calculate_corrected_fi_indices(active_cashflow_m, fixed_expenses_m):
 
     return indice_percent, timeline_years, active_cashflow_m
 
+def generate_financial_verdict(user_id) -> str:
+    income = database.get_user_income(user_id)
+    assets = database.get_assets(user_id)
+    liabilities = database.get_liabilities(user_id)
+    
+    cashflow_assets = sum(a["monthly_yield"] for a in assets)
+    liability_costs = sum(l["monthly_cost"] for l in liabilities)
+    
+    if income == 0:
+        return "Entre ton revenu mensuel pour voir ton diagnostic complet."
+    
+    iif = (cashflow_assets / income) * 100
+    hemorragie = (liability_costs / income) * 100
+    cashflow_net = cashflow_assets - liability_costs
+    
+    verdict = (
+        f"Revenu mensuel : ${income:,.2f}\n"
+        f"Tes passifs absorbent {hemorragie:.1f}% de ton revenu.\n"
+        f"Ton cashflow d'actifs couvre {iif:.1f}% de ton revenu.\n"
+        f"Cashflow net : ${cashflow_net:,.2f}/mois.\n"
+    )
+    
+    if iif >= 100:
+        verdict += "Tu as quitté la Rat Race. Tes actifs travaillent pour toi."
+    elif iif >= 50:
+        verdict += "Tu es sur la bonne voie. Continue à accumuler des actifs."
+    elif iif >= 25:
+        verdict += "Tes premiers actifs sont en place. Accélère maintenant."
+    else:
+        verdict += "Commence par un premier actif générateur de cashflow."
+    
+    return verdict
+
 # API Summary
 @app.route("/api/summary", methods=["GET"])
 def get_summary():
@@ -374,8 +407,16 @@ def get_summary():
         total_liabilities_val = sum(l["remaining_amount"] for l in liabilities) + sum(l["monthly_cost"] for l in liabilities if l["type"] == "Subscription")
         total_monthly_cost = sum(l["monthly_cost"] for l in liabilities)
         
-        # Calculate standardized index and timeline
-        iif_score, timeline_years, _ = calculate_corrected_fi_indices(total_passive_income, total_monthly_cost)
+        monthly_income = database.get_user_income(user_id)
+        
+        # New IIF formulas
+        iif_score = (total_passive_income / monthly_income * 100) if monthly_income > 0 else 0.0
+        hemorragie_rate = (total_monthly_cost / monthly_income * 100) if monthly_income > 0 else None
+        available_cashflow = monthly_income - total_monthly_cost + total_passive_income
+        freedom_progression = (total_passive_income / total_monthly_cost * 100) if total_monthly_cost > 0 else 100.0
+        
+        # Keep calculate_corrected_fi_indices for timeline
+        _, timeline_years, _ = calculate_corrected_fi_indices(total_passive_income, total_monthly_cost)
             
         net_cashflow = total_passive_income - total_monthly_cost
         
@@ -399,6 +440,11 @@ def get_summary():
             "iif_score": iif_score,
             "timeline": timeline_years,
             "net_cashflow": net_cashflow,
+            "monthly_income": monthly_income,
+            "hemorragie_rate": hemorragie_rate,
+            "available_cashflow": available_cashflow,
+            "freedom_progression": freedom_progression,
+            "verdict": generate_financial_verdict(user_id),
             "asset_types": asset_types,
             "liability_types": liability_types
         })
@@ -562,6 +608,33 @@ def get_user():
         return jsonify({"success": True, "user": profile})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/user/income', methods=['POST'])
+def set_income():
+    data = request.get_json() or {}
+    monthly_income = data.get('monthly_income')
+    
+    if monthly_income is None:
+        return jsonify({"error": "Revenu invalide"}), 400
+    try:
+        monthly_income_val = float(monthly_income)
+        if monthly_income_val <= 0:
+            return jsonify({"error": "Revenu invalide"}), 400
+    except ValueError:
+        return jsonify({"error": "Revenu invalide"}), 400
+    
+    user_id = get_current_user_id()
+    success = database.update_user_income(user_id, monthly_income_val)
+    
+    if success:
+        return jsonify({"success": True, "monthly_income": monthly_income_val}), 200
+    return jsonify({"error": "Erreur serveur"}), 500
+
+@app.route('/api/user/income', methods=['GET'])
+def get_income():
+    user_id = get_current_user_id()
+    income = database.get_user_income(user_id)
+    return jsonify({"monthly_income": income}), 200
 
 @app.route("/api/user/premium", methods=["POST"])
 def toggle_user_premium():
@@ -939,10 +1012,14 @@ def coach_chat():
     total_passive = sum(a["monthly_yield"] for a in assets)
     total_liabilities = sum(l["remaining_amount"] for l in liabilities) + sum(l["monthly_cost"] for l in liabilities if l["type"] == "Subscription")
     total_cost = sum(l["monthly_cost"] for l in liabilities)
-    iif, _, _ = calculate_corrected_fi_indices(total_passive, total_cost)
+    
+    monthly_income = database.get_user_income(user_id)
+    iif = (total_passive / monthly_income * 100) if monthly_income > 0 else 0.0
+    verdict = generate_financial_verdict(user_id)
     
     context_str = f"""
     Données financières réelles de l'utilisateur:
+    - Revenu mensuel net : {monthly_income} $
     - Actifs totaux: {total_assets} $ (Revenus passifs mensuels: {total_passive} $)
     Détail des actifs: {', '.join([f"{a['name']} ({a['type']}): Val={a['value']}$, Yield={a['monthly_yield']}$" for a in assets])}
     
@@ -952,6 +1029,8 @@ def coach_chat():
     
     - Indice d'Indépendance Financière (IIF): {iif}%
     - Cashflow Net Mensuel: {total_passive - total_cost} $
+    - Verdict Diagnostic Coach :
+    {verdict}
     """
     
     first_name = profile.get("first_name", "") if profile else ""
