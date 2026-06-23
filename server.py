@@ -410,9 +410,9 @@ def get_summary():
         monthly_income = database.get_user_income(user_id)
         
         # New IIF formulas
-        iif_score = (total_passive_income / total_monthly_cost * 100) if total_monthly_cost > 0 else 100.0
+        iif_score = (total_passive_income / monthly_income * 100) if monthly_income > 0 else 0.0
         hemorragie_rate = (total_monthly_cost / monthly_income * 100) if monthly_income > 0 else None
-        available_cashflow = total_passive_income - total_monthly_cost
+        available_cashflow = monthly_income - total_monthly_cost + total_passive_income
         freedom_progression = (total_passive_income / total_monthly_cost * 100) if total_monthly_cost > 0 else 100.0
         
         # Keep calculate_corrected_fi_indices for timeline
