@@ -416,6 +416,36 @@ def init_db():
         (_owner_email,)
     )
 
+    # Create push_subscriptions table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        device_type TEXT DEFAULT 'unknown',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_used_at TIMESTAMP,
+        is_active INTEGER DEFAULT 1,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
+    # Create daily_discipline table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS daily_discipline (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('success', 'failed')),
+        amount_spent REAL NOT NULL,
+        freedom_days_earned REAL NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        UNIQUE(user_id, date)
+    )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -468,7 +498,8 @@ def get_user_profile(user_id):
             "avatar": d.get("avatar") or "",
             "parrain_id": d.get("parrain_id"),
             "monthly_income": d.get("monthly_income", 0.0),
-            "income_updated_at": d.get("income_updated_at")
+            "income_updated_at": d.get("income_updated_at"),
+            "created_at": d.get("created_at")
         }
     return None
 
@@ -1785,4 +1816,216 @@ def get_payment_history():
             'stripe_url': f"https://dashboard.stripe.com/customers/{r[2]}" if r[2] else None,
         })
     return payments
+
+# ─── Push Notifications Helpers ───────────────────────────────────────────────
+
+def save_push_subscription(user_id: int, subscription: dict) -> bool:
+    """Enregistre ou met à jour une subscription push"""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO push_subscriptions
+            (user_id, endpoint, p256dh, auth, device_type, last_used_at, is_active)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 1)
+        """, (
+            user_id,
+            subscription['endpoint'],
+            subscription['keys']['p256dh'],
+            subscription['keys']['auth'],
+            subscription.get('device_type', 'unknown')
+        ))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Erreur save_push_subscription: {e}")
+        return False
+    finally:
+        conn.close()
+
+def deactivate_push_subscription(endpoint: str) -> bool:
+    """Marque une subscription push comme inactive"""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE push_subscriptions SET is_active = 0
+            WHERE endpoint = ?
+        """, (endpoint,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Erreur deactivate_push_subscription: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_user_subscriptions(user_id: int) -> list:
+    """Retourne toutes les subscriptions actives d'un utilisateur"""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        rows = cursor.execute("""
+            SELECT endpoint, p256dh, auth
+            FROM push_subscriptions
+            WHERE user_id = ? AND is_active = 1
+        """, (user_id,)).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+def get_users_for_daily_decision_reminder() -> list:
+    """Retourne les users qui n'ont pas encore répondu au dilemme du jour"""
+    conn = get_db()
+    try:
+        import datetime
+        today = datetime.date.today().isoformat()
+        rows = conn.execute("""
+            SELECT DISTINCT u.id
+            FROM users u
+            JOIN push_subscriptions ps ON ps.user_id = u.id
+            WHERE u.premium_status = 1
+            AND ps.is_active = 1
+            AND u.id NOT IN (
+                SELECT user_id FROM user_dilemma_history
+                WHERE DATE(answered_at) = ?
+            )
+        """, (today,)).fetchall()
+        return [row['id'] for row in rows]
+    finally:
+        conn.close()
+
+def get_users_negative_cashflow() -> list:
+    """Retourne les users avec cashflow négatif (actifs < passifs)"""
+    conn = get_db()
+    try:
+        # Get users with active subscription and premium_status = 1
+        rows = conn.execute("""
+            SELECT DISTINCT u.id, u.email
+            FROM users u
+            JOIN push_subscriptions ps ON ps.user_id = u.id
+            WHERE u.premium_status = 1
+            AND ps.is_active = 1
+        """).fetchall()
+        
+        users_neg = []
+        for r in rows:
+            user_id_int = r["id"]
+            user_email = r["email"]
+            
+            assets_id = get_assets(str(user_id_int))
+            assets_email = get_assets(user_email)
+            all_assets = assets_id + [a for a in assets_email if a["id"] not in {x["id"] for x in assets_id}]
+            
+            liab_id = get_liabilities(str(user_id_int))
+            liab_email = get_liabilities(user_email)
+            all_liab = liab_id + [l for l in liab_email if l["id"] not in {x["id"] for x in liab_id}]
+            
+            total_passive_income = sum(a["monthly_yield"] for a in all_assets)
+            total_monthly_cost = sum(l["monthly_cost"] for l in all_liab)
+            
+            if total_passive_income < total_monthly_cost:
+                users_neg.append(user_id_int)
+        return users_neg
+    finally:
+        conn.close()
+
+def get_users_renewal_reminder() -> list:
+    """Retourne les users dont l'abonnement se renouvelle/expire dans 24h"""
+    conn = get_db()
+    try:
+        rows = conn.execute("""
+            SELECT u.id
+            FROM users u
+            JOIN push_subscriptions ps ON ps.user_id = u.id
+            WHERE u.premium_status = 1
+            AND ps.is_active = 1
+            AND DATE(u.premium_expires) = DATE('now', '+1 day')
+        """).fetchall()
+        return [row['id'] for row in rows]
+    finally:
+        conn.close()
+
+
+# ─── Discipline Helpers ───────────────────────────────────────────────────────
+
+def save_discipline_entry(user_id: int, date_str: str, status: str, amount_spent: float, freedom_days_earned: float) -> bool:
+    """Enregistre ou met à jour une entrée de discipline quotidienne"""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO daily_discipline
+            (user_id, date, status, amount_spent, freedom_days_earned)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, date_str, status, amount_spent, freedom_days_earned))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Erreur save_discipline_entry: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_discipline_history(user_id: int, start_date: str, end_date: str) -> list:
+    """Retourne l'historique des entrées de discipline pour un intervalle de dates"""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        rows = cursor.execute("""
+            SELECT date, status, amount_spent, freedom_days_earned
+            FROM daily_discipline
+            WHERE user_id = ? AND date BETWEEN ? AND ?
+            ORDER BY date ASC
+        """, (user_id, start_date, end_date)).fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print(f"Erreur get_discipline_history: {e}")
+        return []
+    finally:
+        conn.close()
+
+def get_discipline_streak(user_id: int) -> int:
+    """Calcule le streak actuel d'entrées success"""
+    conn = get_db()
+    try:
+        import datetime
+        cursor = conn.cursor()
+        rows = cursor.execute("""
+            SELECT date FROM daily_discipline
+            WHERE user_id = ? AND status = 'success'
+            ORDER BY date DESC
+        """, (user_id,)).fetchall()
+        
+        dates = [r[0] for r in rows]
+        if not dates:
+            return 0
+            
+        today = datetime.date.today()
+        yesterday = today - datetime.timedelta(days=1)
+        
+        success_dates = set()
+        for d_str in dates:
+            try:
+                d = datetime.datetime.strptime(d_str, "%Y-%m-%d").date()
+                success_dates.add(d)
+            except ValueError:
+                pass
+        
+        current = today
+        if current not in success_dates:
+            current = yesterday
+            if current not in success_dates:
+                return 0
+        
+        streak = 0
+        while current in success_dates:
+            streak += 1
+            current -= datetime.timedelta(days=1)
+        return streak
+    except Exception as e:
+        print(f"Erreur get_discipline_streak: {e}")
+        return 0
+    finally:
+        conn.close()
 

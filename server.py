@@ -139,6 +139,7 @@ def get_public_config():
         "hero_title":             cfg.get('hero_title',             'Your Financial Mirror'),
         "hero_subtitle":          cfg.get('hero_subtitle',          'AI-powered wealth management'),
         "faq":                    faq,
+        "vapid_public_key":       os.environ.get('VAPID_PUBLIC_KEY', '')
     })
 
 # User Session / Auth Helper to get current user_id
@@ -1471,6 +1472,250 @@ def validate_token():
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     # Check if token exists in active sessions (simple check)
     return jsonify({'valid': True, 'token_hash': token_hash}), 200
+
+# ─── Push Notifications Endpoints ─────────────────────────────────────────────
+from pywebpush import webpush, WebPushException
+import json
+import os
+
+def send_push_notification(user_id: int, title: str, body: str,
+                           url: str = "/", icon: str = "/icons/icon-192x192.png"):
+    """Envoie une push notification à tous les appareils d'un utilisateur"""
+    subscriptions = database.get_user_subscriptions(user_id)
+    vapid_claims = {"sub": f"mailto:{os.environ.get('VAPID_CLAIMS_EMAIL', 'steeve@philiavault.com')}"}
+
+    for sub in subscriptions:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": sub['endpoint'],
+                    "keys": {
+                        "p256dh": sub['p256dh'],
+                        "auth": sub['auth']
+                    }
+                },
+                data=json.dumps({
+                    "title": title,
+                    "body": body,
+                    "icon": icon,
+                    "url": url,
+                    "badge": "/icons/badge-72x72.png"
+                }),
+                vapid_private_key=os.environ.get('VAPID_PRIVATE_KEY'),
+                vapid_claims=vapid_claims
+            )
+        except WebPushException as e:
+            if "410" in str(e) or "404" in str(e):
+                # Subscription expirée — désactiver
+                database.deactivate_push_subscription(sub['endpoint'])
+            print(f"Erreur push pour user {user_id}: {e}")
+
+@app.route('/api/push/subscribe', methods=['POST'])
+def push_subscribe():
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+
+    data = request.get_json() or {}
+    subscription = data.get('subscription')
+    device_type = data.get('device_type', 'unknown')
+
+    if not subscription:
+        return jsonify({"error": "Subscription manquante"}), 400
+
+    subscription['device_type'] = device_type
+    success = database.save_push_subscription(user_id, subscription)
+
+    if success:
+        return jsonify({"success": True}), 200
+    return jsonify({"error": "Erreur serveur"}), 500
+
+@app.route('/api/push/unsubscribe', methods=['POST'])
+def push_unsubscribe():
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+
+    data = request.get_json() or {}
+    endpoint = data.get('endpoint')
+    if not endpoint:
+        return jsonify({"error": "Endpoint manquant"}), 400
+        
+    database.deactivate_push_subscription(endpoint)
+    return jsonify({"success": True}), 200
+
+@app.route('/api/push/send-daily-decision', methods=['POST'])
+def send_daily_decision_reminder():
+    """Cron : appelé chaque jour à 9h — rappel Daily Decision"""
+    secret = request.headers.get('X-Cron-Secret')
+    if secret != os.environ.get('CRON_SECRET'):
+        return jsonify({"error": "Non autorisé"}), 401
+
+    user_ids = database.get_users_for_daily_decision_reminder()
+    sent = 0
+    for user_id in user_ids:
+        send_push_notification(
+            user_id=user_id,
+            title="🔥 Ton dilemme du jour t'attend",
+            body="1 décision. 60 secondes. Garde ton streak actif.",
+            url="/app"
+        )
+        sent += 1
+
+    return jsonify({"sent": sent}), 200
+
+@app.route('/api/push/send-cashflow-alert', methods=['POST'])
+def send_cashflow_alert():
+    """Cron : appelé chaque lundi — alerte cashflow négatif"""
+    secret = request.headers.get('X-Cron-Secret')
+    if secret != os.environ.get('CRON_SECRET'):
+        return jsonify({"error": "Non autorisé"}), 401
+
+    user_ids = database.get_users_negative_cashflow()
+    sent = 0
+    for user_id in user_ids:
+        send_push_notification(
+            user_id=user_id,
+            title="⚠️ Cashflow négatif détecté",
+            body="Tes passifs dévorent ton revenu. Coach IA a une recommandation.",
+            url="/app"
+        )
+        sent += 1
+
+    return jsonify({"sent": sent}), 200
+
+@app.route('/api/push/send-renewal-reminder', methods=['POST'])
+def send_renewal_reminder():
+    """Cron : appelé chaque jour — rappel renouvellement J-1"""
+    secret = request.headers.get('X-Cron-Secret')
+    if secret != os.environ.get('CRON_SECRET'):
+        return jsonify({"error": "Non autorisé"}), 401
+
+    user_ids = database.get_users_renewal_reminder()
+    sent = 0
+    for user_id in user_ids:
+        send_push_notification(
+            user_id=user_id,
+            title="📅 Ton accès Philia Vault se renouvelle demain",
+            body="14,99 $ seront prélevés demain. Gérer mon abonnement.",
+            url="/app"
+        )
+        sent += 1
+
+    return jsonify({"sent": sent}), 200
+
+# ─── Discipline Endpoints ─────────────────────────────────────────────────────
+
+@app.route('/api/discipline/log', methods=['POST'])
+def log_discipline():
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+
+    data = request.get_json() or {}
+    amount_spent = data.get('amount_spent')
+    if amount_spent is None:
+        return jsonify({"error": "Montant manquant"}), 400
+    
+    try:
+        amount_spent = float(amount_spent)
+    except ValueError:
+        return jsonify({"error": "Montant invalide"}), 400
+
+    import datetime
+    date_str = data.get('date') or datetime.date.today().isoformat()
+
+    # Calculate validation metrics
+    income = database.get_user_income(user_email)
+    assets = database.get_assets(user_id)
+    liabilities = database.get_liabilities(user_id)
+    
+    total_passive_income = sum(a["monthly_yield"] for a in assets)
+    total_monthly_cost = sum(l["monthly_cost"] for l in liabilities)
+    available_cashflow = income - total_monthly_cost + total_passive_income
+    
+    daily_budget = available_cashflow / 30.0
+    daily_vital_cost = total_monthly_cost / 30.0
+    
+    if amount_spent <= daily_budget:
+        status = 'success'
+        # Prevent division by zero
+        vital_cost_divisor = max(daily_vital_cost, 1.0)
+        freedom_days_earned = (daily_budget - amount_spent) / vital_cost_divisor
+    else:
+        status = 'failed'
+        freedom_days_earned = 0.0
+
+    success = database.save_discipline_entry(user_id, date_str, status, amount_spent, freedom_days_earned)
+    if not success:
+        return jsonify({"error": "Erreur lors de l'enregistrement"}), 500
+
+    streak = database.get_discipline_streak(user_id)
+    
+    # Calculate cumulative freedom days
+    conn = database.get_db()
+    cursor = conn.cursor()
+    row = cursor.execute("""
+        SELECT SUM(freedom_days_earned) FROM daily_discipline
+        WHERE user_id = ? AND status = 'success'
+    """, (user_id,)).fetchone()
+    total_freedom_days = row[0] if row and row[0] is not None else 0.0
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "status": status,
+        "freedom_days_earned": round(freedom_days_earned, 2),
+        "streak": streak,
+        "total_freedom_days": round(total_freedom_days, 2),
+        "daily_budget": round(daily_budget, 2)
+    }), 200
+
+@app.route('/api/discipline/history', methods=['GET'])
+def get_discipline_history_route():
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    # Defaults to current month if not provided
+    if not start_date or not end_date:
+        import datetime
+        today = datetime.date.today()
+        # Default start_date is first of current month
+        start_date = today.replace(day=1).isoformat()
+        # Default end_date is end of current month (approximate or just today + 31 days)
+        end_date = (today + datetime.timedelta(days=31)).isoformat()
+
+    history = database.get_discipline_history(user_id, start_date, end_date)
+    streak = database.get_discipline_streak(user_id)
+    
+    # Calculate cumulative freedom days earned
+    conn = database.get_db()
+    cursor = conn.cursor()
+    row = cursor.execute("""
+        SELECT SUM(freedom_days_earned) FROM daily_discipline
+        WHERE user_id = ? AND status = 'success'
+    """, (user_id,)).fetchone()
+    total_freedom_days = row[0] if row and row[0] is not None else 0.0
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "history": history,
+        "streak": streak,
+        "total_freedom_days": round(total_freedom_days, 2)
+    }), 200
 
 if __name__ == "__main__":
     # Ensure static directory exists

@@ -21,6 +21,15 @@ export const translations: Record<Language, Dict> = {
     tab_liabilities: 'Liabilities',
     tab_affiliation: 'My Holdings',
     tab_coach: 'Coach',
+    tab_discipline: 'Discipline',
+    discipline_title: 'Discipline Dashboard',
+    discipline_subtitle: 'Daily Spend Tracker',
+    discipline_spent_placeholder: "Today's spending ($)",
+    discipline_validate_btn: 'VALIDATE',
+    discipline_streak: '🔥 {streak} days of discipline',
+    discipline_freedom_earned: 'Freedom earned: {days} days',
+    discipline_success_msg: '🟢 Day logged successfully! +{days} freedom days!',
+    discipline_failed_msg: '🔴 Budget exceeded today!',
 
     // CGU checkbox (registration)
     cgu_checkbox_text: 'I have read and accept the ',
@@ -344,6 +353,15 @@ export const translations: Record<Language, Dict> = {
     tab_liabilities: 'Passifs',
     tab_affiliation: 'Mon Parc',
     tab_coach: 'Coach',
+    tab_discipline: 'Discipline',
+    discipline_title: 'Discipline',
+    discipline_subtitle: 'Suivi des dépenses quotidiennes',
+    discipline_spent_placeholder: 'Dépenses du jour ($)',
+    discipline_validate_btn: 'VALIDER',
+    discipline_streak: '🔥 {streak} jours de discipline',
+    discipline_freedom_earned: 'Liberté gagnée : {days} jours',
+    discipline_success_msg: '🟢 Journée enregistrée ! +{days} jours de liberté !',
+    discipline_failed_msg: '🔴 Budget dépassé aujourd\'hui !',
 
     // CGU checkbox (inscription)
     cgu_checkbox_text: 'J\'ai lu et j\'accepte les ',
@@ -659,6 +677,15 @@ export const translations: Record<Language, Dict> = {
     tab_liabilities: 'Pasivos',
     tab_affiliation: 'Mis Propiedades',
     tab_coach: 'Coach',
+    tab_discipline: 'Disciplina',
+    discipline_title: 'Disciplina',
+    discipline_subtitle: 'Seguimiento de gastos diarios',
+    discipline_spent_placeholder: 'Gastos de hoy ($)',
+    discipline_validate_btn: 'VALIDAR',
+    discipline_streak: '🔥 {streak} días de disciplina',
+    discipline_freedom_earned: 'Libertad ganada: {days} días',
+    discipline_success_msg: '🟢 ¡Día registrado con éxito! +{days} días de libertad!',
+    discipline_failed_msg: '🔴 ¡Presupuesto excedido hoy!',
 
     // Casilla CGU (registro)
     cgu_checkbox_text: 'He leído y acepto los ',
@@ -965,6 +992,15 @@ export const translations: Record<Language, Dict> = {
     tab_liabilities: 'Passivos',
     tab_affiliation: 'Minhas Propriedades',
     tab_coach: 'Coach',
+    tab_discipline: 'Disciplina',
+    discipline_title: 'Disciplina',
+    discipline_subtitle: 'Rastreador de gastos diários',
+    discipline_spent_placeholder: 'Gastos de hoje ($)',
+    discipline_validate_btn: 'VALIDAR',
+    discipline_streak: '🔥 {streak} dias de disciplina',
+    discipline_freedom_earned: 'Liberdade ganha: {days} dias',
+    discipline_success_msg: '🟢 Dia registrado com sucesso! +{days} dias de liberdade!',
+    discipline_failed_msg: '🔴 Orçamento excedido hoje!',
 
     // Caixa CGU (registo)
     cgu_checkbox_text: 'Li e aceito os ',

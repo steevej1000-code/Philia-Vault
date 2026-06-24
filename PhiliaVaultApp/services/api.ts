@@ -440,6 +440,26 @@ Passifs : ${JSON.stringify(liabilities)}
   }
 
 
+  // ─── Discipline ───────────────────────────────────────────────────────────
+
+  async getDisciplineHistory(startDate?: string, endDate?: string) {
+    let url = '/api/discipline/history';
+    const params: string[] = [];
+    if (startDate) params.push(`start_date=${startDate}`);
+    if (endDate) params.push(`end_date=${endDate}`);
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
+    }
+    return this.request(url);
+  }
+
+  async logDiscipline(amountSpent: number, date?: string) {
+    return this.request('/api/discipline/log', {
+      method: 'POST',
+      body: JSON.stringify({ amount_spent: amountSpent, date }),
+    });
+  }
+
   /**
    * Pre-fetches and caches all offline-supported endpoints. Intended to run
    * on app startup (when online) and on reconnect, so cached data is fresh

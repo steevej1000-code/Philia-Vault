@@ -87,6 +87,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="discipline"
+        options={{
+          title: t('tab_discipline'),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} emoji="⚡" label={t('tab_discipline')} />,
+        }}
+      />
+      <Tabs.Screen
         name="simulator"
         options={{
           href: null,
