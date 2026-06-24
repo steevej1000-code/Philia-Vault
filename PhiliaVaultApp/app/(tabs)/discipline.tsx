@@ -66,6 +66,8 @@ export default function DisciplineScreen() {
   const [logStatusMessage, setLogStatusMessage] = useState<string | null>(null);
   const [isSuccessLog, setIsSuccessLog] = useState(true);
   const [inputFocused, setInputFocused] = useState(false);
+  const [categoryId, setCategoryId] = useState<number>(1);
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
 
   // Animations
   const flashAnim = useRef(new Animated.Value(0)).current;
@@ -97,6 +99,9 @@ export default function DisciplineScreen() {
         setHistory(result.history || []);
         setStreak(result.streak || 0);
         setTotalFreedomDays(result.total_freedom_days || 0.0);
+        if (result.daily_budget !== undefined) {
+          setDailyBudget(result.daily_budget);
+        }
       }
     } catch (e) {
       console.error('Failed to load discipline history:', e);
@@ -105,25 +110,11 @@ export default function DisciplineScreen() {
     }
   }, []);
 
-  // Load cashflow / daily budget
-  const loadBudgetDetails = useCallback(async () => {
-    try {
-      const summary = await api.getSummary();
-      if (summary.success) {
-        const avail = summary.available_cashflow || 0.0;
-        setDailyBudget(avail / 30.0);
-      }
-    } catch (e) {
-      console.error('Failed to load user summary budget:', e);
-    }
-  }, []);
-
   // Fetch all on focus
   useFocusEffect(
     useCallback(() => {
       loadHistoryData(currentVisibleMonth);
-      loadBudgetDetails();
-    }, [loadHistoryData, loadBudgetDetails, currentVisibleMonth])
+    }, [loadHistoryData, currentVisibleMonth])
   );
 
   // Trigger neon green screen flash animation
@@ -188,22 +179,24 @@ export default function DisciplineScreen() {
     setLogStatusMessage(null);
 
     try {
-      const result = await api.logDiscipline(spent, selectedDate);
+      const result = await api.logDiscipline(spent, selectedDate, categoryId);
       if (result.success) {
         const isSuccess = result.status === 'success';
         setIsSuccessLog(isSuccess);
         
+        const msg = t('discipline_confirmation_msg').replace('{budget}', result.daily_budget.toFixed(2));
+        setLogStatusMessage(msg);
+
         if (isSuccess) {
-          setLogStatusMessage(t('discipline_success_msg').replace('{days}', result.freedom_days_earned.toFixed(2)));
           triggerSuccessFlash(result.freedom_days_earned);
-        } else {
-          setLogStatusMessage(t('discipline_failed_msg'));
         }
 
         // Refresh statistics and calendar
         setStreak(result.streak);
         setTotalFreedomDays(result.total_freedom_days);
+        setDailyBudget(result.daily_budget);
         setAmountSpent('');
+        setCategoryId(1);
         
         // Refresh visible month history
         loadHistoryData(currentVisibleMonth);
@@ -284,7 +277,10 @@ export default function DisciplineScreen() {
         </View>
 
         {/* Position 1: Calendar Dashboard */}
-        <View style={styles.calendarContainer}>
+        <View style={[
+          styles.calendarContainer,
+          categoryId === 2 && styles.calendarContainerHemorrhage
+        ]}>
           {loadingHistory && (
             <View style={styles.calendarLoader}>
               <ActivityIndicator color={COLORS.primary} size="small" />
@@ -347,6 +343,55 @@ export default function DisciplineScreen() {
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
             />
+          </View>
+
+          {/* Sélection de catégorie obligatoire */}
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerLabel}>{t('discipline_category_label')}</Text>
+            <TouchableOpacity
+              style={styles.pickerSelector}
+              onPress={() => setDropdownOpen(!dropdownOpen)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.pickerSelectorLeft}>
+                <View style={[styles.colorDot, { backgroundColor: categoryId === 1 ? '#22c55e' : categoryId === 2 ? '#ef4444' : '#3b82f6' }]} />
+                <Text style={styles.pickerSelectorText}>
+                  {categoryId === 1 ? t('discipline_category_necessary') : categoryId === 2 ? t('discipline_category_hemorrhage') : t('discipline_category_investment')}
+                </Text>
+              </View>
+              <Text style={styles.pickerArrow}>{dropdownOpen ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+
+            {dropdownOpen && (
+              <View style={styles.dropdownList}>
+                {[
+                  { id: 1, label: t('discipline_category_necessary'), color: '#22c55e' },
+                  { id: 2, label: t('discipline_category_hemorrhage'), color: '#ef4444' },
+                  { id: 3, label: t('discipline_category_investment'), color: '#3b82f6' }
+                ].map((cat) => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[
+                      styles.dropdownItem,
+                      categoryId === cat.id && styles.dropdownItemActive
+                    ]}
+                    onPress={() => {
+                      setCategoryId(cat.id);
+                      setDropdownOpen(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.colorDot, { backgroundColor: cat.color }]} />
+                    <Text style={[
+                      styles.dropdownItemText,
+                      categoryId === cat.id && styles.dropdownItemTextActive
+                    ]}>
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           {logStatusMessage && (
@@ -642,5 +687,83 @@ const styles = StyleSheet.create({
     color: COLORS.onSurface,
     letterSpacing: 3,
     marginTop: 4,
+  },
+  calendarContainerHemorrhage: {
+    borderWidth: 2,
+    borderColor: '#ff0000',
+  },
+  pickerContainer: {
+    marginBottom: 16,
+    position: 'relative',
+    zIndex: 100,
+  },
+  pickerLabel: {
+    fontFamily: 'PlusJakartaSans-Regular',
+    fontSize: 11,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  pickerSelector: {
+    height: 48,
+    backgroundColor: '#05070a',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+  },
+  pickerSelectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  colorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  pickerSelectorText: {
+    fontFamily: 'PlusJakartaSans-Regular',
+    fontSize: 14,
+    color: COLORS.onSurface,
+  },
+  pickerArrow: {
+    fontSize: 12,
+    color: COLORS.onSurfaceVariant,
+  },
+  dropdownList: {
+    backgroundColor: '#0c0e12',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+    marginTop: 4,
+    paddingVertical: 4,
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  dropdownItemActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  dropdownItemText: {
+    fontFamily: 'PlusJakartaSans-Regular',
+    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+  },
+  dropdownItemTextActive: {
+    color: COLORS.onSurface,
+    fontFamily: 'PlusJakartaSans-SemiBold',
   },
 });

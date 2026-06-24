@@ -30,6 +30,11 @@ export const translations: Record<Language, Dict> = {
     discipline_freedom_earned: 'Freedom earned: {days} days',
     discipline_success_msg: '🟢 Day logged successfully! +{days} freedom days!',
     discipline_failed_msg: '🔴 Budget exceeded today!',
+    discipline_category_label: 'Category',
+    discipline_category_necessary: 'Necessary',
+    discipline_category_hemorrhage: 'Hemorrhage',
+    discipline_category_investment: 'Investment',
+    discipline_confirmation_msg: 'Expense logged. Your daily budget is now {budget} $.',
 
     // CGU checkbox (registration)
     cgu_checkbox_text: 'I have read and accept the ',
@@ -362,6 +367,11 @@ export const translations: Record<Language, Dict> = {
     discipline_freedom_earned: 'Liberté gagnée : {days} jours',
     discipline_success_msg: '🟢 Journée enregistrée ! +{days} jours de liberté !',
     discipline_failed_msg: '🔴 Budget dépassé aujourd\'hui !',
+    discipline_category_label: 'Catégorie',
+    discipline_category_necessary: 'Nécessaire',
+    discipline_category_hemorrhage: 'Hémorragie',
+    discipline_category_investment: 'Investissement',
+    discipline_confirmation_msg: 'Dépense enregistrée. Votre budget quotidien passe à {budget} $.',
 
     // CGU checkbox (inscription)
     cgu_checkbox_text: 'J\'ai lu et j\'accepte les ',
@@ -686,6 +696,11 @@ export const translations: Record<Language, Dict> = {
     discipline_freedom_earned: 'Libertad ganada: {days} días',
     discipline_success_msg: '🟢 ¡Día registrado con éxito! +{days} días de libertad!',
     discipline_failed_msg: '🔴 ¡Presupuesto excedido hoy!',
+    discipline_category_label: 'Categoría',
+    discipline_category_necessary: 'Necesario',
+    discipline_category_hemorrhage: 'Hemorragia',
+    discipline_category_investment: 'Inversión',
+    discipline_confirmation_msg: 'Gasto registrado. Tu presupuesto diario ahora es de {budget} $.',
 
     // Casilla CGU (registro)
     cgu_checkbox_text: 'He leído y acepto los ',
@@ -997,10 +1012,15 @@ export const translations: Record<Language, Dict> = {
     discipline_subtitle: 'Rastreador de gastos diários',
     discipline_spent_placeholder: 'Gastos de hoje ($)',
     discipline_validate_btn: 'VALIDAR',
-    discipline_streak: '🔥 {streak} dias de disciplina',
+    discipline_streak: '🔥 {streak} dias de discipline',
     discipline_freedom_earned: 'Liberdade ganha: {days} dias',
     discipline_success_msg: '🟢 Dia registrado com sucesso! +{days} dias de liberdade!',
     discipline_failed_msg: '🔴 Orçamento excedido hoje!',
+    discipline_category_label: 'Categoria',
+    discipline_category_necessary: 'Necessário',
+    discipline_category_hemorrhage: 'Hemorragia',
+    discipline_category_investment: 'Investimento',
+    discipline_confirmation_msg: 'Despesa registrada. Seu orçamento diário passa para {budget} $.',
 
     // Caixa CGU (registo)
     cgu_checkbox_text: 'Li e aceito os ',

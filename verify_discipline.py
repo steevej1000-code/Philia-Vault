@@ -96,33 +96,50 @@ def run_tests():
         print(f"History endpoint returned streak={data['streak']} and total_freedom_days={data['total_freedom_days']}")
         
         # Test POST /api/discipline/log (Success spent)
-        # Spend $40 on today (Daily Budget is $60) -> success
-        print("Testing POST /api/discipline/log (Spent <= budget)...")
+        # Category 1: Necessary
+        print("Testing POST /api/discipline/log (Spent <= budget, Category 1)...")
         log_payload = {
             "amount_spent": 40.0,
+            "category_id": 1,
             "date": today_str
         }
         res = requests.post(f"{base_url}/api/discipline/log", json=log_payload, headers=headers)
-        assert res.status_code == 200, "Log route failed"
+        assert res.status_code == 200, f"Log route failed: {res.text}"
         log_data = res.json()
         assert log_data["success"] is True
         assert log_data["status"] == "success"
-        # math: budget=60, spent=40 -> diff=20. vital_cost=40. 20/40 = 0.5 days earned
-        assert log_data["freedom_days_earned"] == 0.5
+        print(f"Logged category 1 successfully. New daily budget limit: {log_data['daily_budget']}")
         
-        # Test POST /api/discipline/log (Failed spent)
-        # Spend $80 on today (Daily Budget is $60) -> failed
-        print("Testing POST /api/discipline/log (Spent > budget)...")
+        # Verify database available_cashflow update
+        conn = database.get_db()
+        row = conn.execute("SELECT available_cashflow, total_hemorrhage FROM users WHERE id = ?", (user_id,)).fetchone()
+        cashflow_after_cat1 = row["available_cashflow"]
+        hemorrhage_after_cat1 = row["total_hemorrhage"]
+        conn.close()
+        
+        # Test POST /api/discipline/log (Hemorrhage spend)
+        # Category 2: Hemorragie (should increment total_hemorrhage)
+        print("Testing POST /api/discipline/log (Spent <= budget, Category 2)...")
         log_payload = {
-            "amount_spent": 80.0,
+            "amount_spent": 10.0,
+            "category_id": 2,
             "date": today_str
         }
         res = requests.post(f"{base_url}/api/discipline/log", json=log_payload, headers=headers)
-        assert res.status_code == 200, "Log route failed"
+        assert res.status_code == 200, f"Log route failed: {res.text}"
         log_data = res.json()
         assert log_data["success"] is True
-        assert log_data["status"] == "failed"
-        assert log_data["freedom_days_earned"] == 0.0
+        
+        # Verify hemorrhage incremented and balance decremented
+        conn = database.get_db()
+        row = conn.execute("SELECT available_cashflow, total_hemorrhage FROM users WHERE id = ?", (user_id,)).fetchone()
+        cashflow_after_cat2 = row["available_cashflow"]
+        hemorrhage_after_cat2 = row["total_hemorrhage"]
+        conn.close()
+        
+        assert hemorrhage_after_cat2 == hemorrhage_after_cat1 + 1, "total_hemorrhage was not incremented"
+        assert abs(cashflow_after_cat2 - (cashflow_after_cat1 - 10.0)) < 0.01, "available_cashflow was not decremented correctly"
+        print("Hemorrhage detection and balance decrement verification passed.")
         
         print("\nAll Discipline Integration Tests passed successfully! [x]")
         

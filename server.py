@@ -1628,31 +1628,43 @@ def log_discipline():
     except ValueError:
         return jsonify({"error": "Montant invalide"}), 400
 
+    category_id = data.get('category_id')
+    if category_id is None:
+        return jsonify({"error": "Catégorie manquante"}), 400
+    try:
+        category_id = int(category_id)
+        if category_id not in [1, 2, 3]:
+            return jsonify({"error": "Catégorie invalide"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "Catégorie invalide"}), 400
+
     import datetime
     date_str = data.get('date') or datetime.date.today().isoformat()
 
-    # Calculate validation metrics
-    income = database.get_user_income(user_email)
-    assets = database.get_assets(user_id)
+    # 1. Update user balance (available_cashflow) and increment hemorrhage count if category_id == 2
+    is_hemorrhage = (category_id == 2)
+    balance_success = database.update_user_balance(user_id, amount_spent, is_hemorrhage)
+    if not balance_success:
+        return jsonify({"error": "Erreur lors de la mise à jour du solde"}), 500
+
+    # 2. Get current daily budget (dynamic)
+    import user_service
+    daily_budget = user_service.calculate_daily_budget(user_id)
+
+    # We need daily_vital_cost for freedom_days_earned calculation
     liabilities = database.get_liabilities(user_id)
-    
-    total_passive_income = sum(a["monthly_yield"] for a in assets)
     total_monthly_cost = sum(l["monthly_cost"] for l in liabilities)
-    available_cashflow = income - total_monthly_cost + total_passive_income
-    
-    daily_budget = available_cashflow / 30.0
     daily_vital_cost = total_monthly_cost / 30.0
     
     if amount_spent <= daily_budget:
         status = 'success'
-        # Prevent division by zero
         vital_cost_divisor = max(daily_vital_cost, 1.0)
         freedom_days_earned = (daily_budget - amount_spent) / vital_cost_divisor
     else:
         status = 'failed'
         freedom_days_earned = 0.0
 
-    success = database.save_discipline_entry(user_id, date_str, status, amount_spent, freedom_days_earned)
+    success = database.save_discipline_entry(user_id, date_str, status, amount_spent, freedom_days_earned, category_id)
     if not success:
         return jsonify({"error": "Erreur lors de l'enregistrement"}), 500
 
@@ -1668,13 +1680,16 @@ def log_discipline():
     total_freedom_days = row[0] if row and row[0] is not None else 0.0
     conn.close()
 
+    # Calculate new daily budget after this logging is fully saved
+    new_daily_budget = user_service.calculate_daily_budget(user_id)
+
     return jsonify({
         "success": True,
         "status": status,
         "freedom_days_earned": round(freedom_days_earned, 2),
         "streak": streak,
         "total_freedom_days": round(total_freedom_days, 2),
-        "daily_budget": round(daily_budget, 2)
+        "daily_budget": round(new_daily_budget, 2)
     }), 200
 
 @app.route('/api/discipline/history', methods=['GET'])
@@ -1710,11 +1725,15 @@ def get_discipline_history_route():
     total_freedom_days = row[0] if row and row[0] is not None else 0.0
     conn.close()
 
+    import user_service
+    daily_budget = user_service.calculate_daily_budget(user_id)
+
     return jsonify({
         "success": True,
         "history": history,
         "streak": streak,
-        "total_freedom_days": round(total_freedom_days, 2)
+        "total_freedom_days": round(total_freedom_days, 2),
+        "daily_budget": round(daily_budget, 2)
     }), 200
 
 if __name__ == "__main__":

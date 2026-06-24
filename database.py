@@ -133,7 +133,9 @@ def init_db():
         ("password_reset_code", "TEXT"),
         ("password_reset_expires", "TEXT"),
         ("monthly_income", "REAL DEFAULT 0"),
-        ("income_updated_at", "TIMESTAMP")
+        ("income_updated_at", "TIMESTAMP"),
+        ("available_cashflow", "REAL DEFAULT 0.0"),
+        ("total_hemorrhage", "INTEGER DEFAULT 0")
     ]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")
@@ -441,10 +443,16 @@ def init_db():
         status TEXT NOT NULL CHECK(status IN ('success', 'failed')),
         amount_spent REAL NOT NULL,
         freedom_days_earned REAL NOT NULL,
+        category_id INTEGER DEFAULT 1,
         FOREIGN KEY (user_id) REFERENCES users(id),
         UNIQUE(user_id, date)
     )
     """)
+
+    try:
+        cursor.execute("ALTER TABLE daily_discipline ADD COLUMN category_id INTEGER DEFAULT 1")
+    except Exception:
+        pass
 
     conn.commit()
     conn.close()
@@ -1949,16 +1957,16 @@ def get_users_renewal_reminder() -> list:
 
 # ─── Discipline Helpers ───────────────────────────────────────────────────────
 
-def save_discipline_entry(user_id: int, date_str: str, status: str, amount_spent: float, freedom_days_earned: float) -> bool:
+def save_discipline_entry(user_id: int, date_str: str, status: str, amount_spent: float, freedom_days_earned: float, category_id: int = 1) -> bool:
     """Enregistre ou met à jour une entrée de discipline quotidienne"""
     conn = get_db()
     try:
         cursor = conn.cursor()
         cursor.execute("""
             INSERT OR REPLACE INTO daily_discipline
-            (user_id, date, status, amount_spent, freedom_days_earned)
-            VALUES (?, ?, ?, ?, ?)
-        """, (user_id, date_str, status, amount_spent, freedom_days_earned))
+            (user_id, date, status, amount_spent, freedom_days_earned, category_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (user_id, date_str, status, amount_spent, freedom_days_earned, category_id))
         conn.commit()
         return True
     except Exception as e:
@@ -1973,7 +1981,7 @@ def get_discipline_history(user_id: int, start_date: str, end_date: str) -> list
     try:
         cursor = conn.cursor()
         rows = cursor.execute("""
-            SELECT date, status, amount_spent, freedom_days_earned
+            SELECT date, status, amount_spent, freedom_days_earned, category_id
             FROM daily_discipline
             WHERE user_id = ? AND date BETWEEN ? AND ?
             ORDER BY date ASC
@@ -1982,6 +1990,110 @@ def get_discipline_history(user_id: int, start_date: str, end_date: str) -> list
     except Exception as e:
         print(f"Erreur get_discipline_history: {e}")
         return []
+    finally:
+        conn.close()
+
+def update_user_balance(user_id: int, amount_spent: float, is_hemorrhage: bool) -> bool:
+    """Met à jour le solde (available_cashflow) et incrémente total_hemorrhage en transaction"""
+    conn = get_db()
+    try:
+        conn.execute("BEGIN TRANSACTION")
+        cursor = conn.cursor()
+        
+        # Obtenir les informations de l'utilisateur
+        cursor.execute("""
+            SELECT available_cashflow, total_hemorrhage, monthly_income, email 
+            FROM users WHERE id = ?
+        """, (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            conn.execute("ROLLBACK")
+            return False
+            
+        current_cashflow = row["available_cashflow"] or 0.0
+        current_hemorrhage = row["total_hemorrhage"] or 0
+        monthly_income = row["monthly_income"] or 0.0
+        user_email = row["email"]
+
+        # Si available_cashflow est 0.0, l'initialiser à partir du cashflow calculé
+        if current_cashflow == 0.0 and monthly_income > 0.0:
+            # Calculer les charges mensuelles (passifs)
+            cursor.execute("""
+                SELECT monthly_cost FROM liabilities 
+                WHERE user_id = ? OR user_id = ?
+            """, (str(user_id), user_email))
+            liab_rows = cursor.fetchall()
+            total_liab_cost = 0.0
+            for lr in liab_rows:
+                val = decrypt_val(lr["monthly_cost"])
+                if val is not None:
+                    total_liab_cost += val
+
+            # Calculer les rendements d'actifs
+            cursor.execute("""
+                SELECT monthly_yield FROM assets 
+                WHERE user_id = ? OR user_id = ?
+            """, (str(user_id), user_email))
+            asset_rows = cursor.fetchall()
+            total_asset_yield = 0.0
+            for ar in asset_rows:
+                val = decrypt_val(ar["monthly_yield"])
+                if val is not None:
+                    total_asset_yield += val
+            
+            current_cashflow = monthly_income - total_liab_cost + total_asset_yield
+            
+        new_cashflow = current_cashflow - amount_spent
+        new_hemorrhage = current_hemorrhage + (1 if is_hemorrhage else 0)
+        
+        cursor.execute("""
+            UPDATE users
+            SET available_cashflow = ?, total_hemorrhage = ?
+            WHERE id = ?
+        """, (new_cashflow, new_hemorrhage, user_id))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.execute("ROLLBACK")
+        print(f"Erreur update_user_balance: {e}")
+        return False
+    finally:
+        conn.close()
+
+def calculate_daily_budget(user_id: int) -> float:
+    """Calcule le budget quotidien dynamique restant pour le mois en cours"""
+    import datetime
+    import calendar
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        # Récupérer le revenu mensuel
+        cursor.execute("SELECT monthly_income FROM users WHERE id = ? OR email = ?", (user_id, user_id))
+        row = cursor.fetchone()
+        monthly_income = row["monthly_income"] if row else 0.0
+        
+        # Récupérer la somme de toutes les dépenses du mois en cours
+        today = datetime.date.today()
+        month_str = today.strftime("%Y-%m")
+        cursor.execute("""
+            SELECT SUM(amount_spent) FROM daily_discipline
+            WHERE user_id = (SELECT id FROM users WHERE id = ? OR email = ?) AND date LIKE ?
+        """, (user_id, user_id, f"{month_str}-%"))
+        sum_row = cursor.fetchone()
+        sum_spent = sum_row[0] if sum_row and sum_row[0] is not None else 0.0
+        
+        budget_restant = monthly_income - sum_spent
+        days_in_month = calendar.monthrange(today.year, today.month)[1]
+        jours_restants = days_in_month - today.day
+        if jours_restants < 1:
+            jours_restants = 1
+            
+        nouveau_daily_budget = budget_restant / jours_restants
+        return max(round(nouveau_daily_budget, 2), 0.0)
+    except Exception as e:
+        print(f"Erreur calculate_daily_budget: {e}")
+        return 0.0
     finally:
         conn.close()
 

@@ -453,10 +453,10 @@ Passifs : ${JSON.stringify(liabilities)}
     return this.request(url);
   }
 
-  async logDiscipline(amountSpent: number, date?: string) {
+  async logDiscipline(amountSpent: number, date?: string, categoryId?: number) {
     return this.request('/api/discipline/log', {
       method: 'POST',
-      body: JSON.stringify({ amount_spent: amountSpent, date }),
+      body: JSON.stringify({ amount_spent: amountSpent, date, category_id: categoryId }),
     });
   }
 
