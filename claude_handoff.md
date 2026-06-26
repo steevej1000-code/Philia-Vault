@@ -1,43 +1,72 @@
-# Philia Vault - Project Handoff / Summary
+# Philia Vault — Project Handoff for Claude
 
-## 📌 Project Context
-- **Project Name:** Philia Vault
-- **Path:** `PhiliaVaultApp/` (subdirectory of this repo).
-- **Stack:** Expo (React Native), TypeScript, RevenueCat (for Premium Subscriptions), Gemini AI (for the Financial Coach).
-- **Core Concept:** A financial dashboard and simulator allowing the user to track their Assets (Actifs productifs de cashflow), Liabilities (Passifs), and their Affiliation (Holdings). The tone is highly "clinical" and direct.
+This document provides all the paths, architecture decisions, and scripts needed to modify the project and deploy updates to both the PWA (web) and the native iOS app.
 
-## ✨ Recent Work & Architecture
+---
 
-### 1. The Design System (Dribbble-inspired)
-- A highly polished Dark Mode UI with vibrant **Lime Green** accents (e.g., `#B5E140`).
-- Use of Glassmorphism (blur backgrounds, semi-transparent overlays).
-- Specific typography and spacing to maintain a premium, financial-dashboard look.
+## 📁 PROJECT PATHS
 
-### 2. Specific Vocabulary ("The Mirror")
-- The dashboard is referred to as **"Le Miroir de vos décisions"** (The Mirror of your decisions).
-- The simulator is the **"GPS vers la liberté"** (GPS to freedom).
-- The affiliation program is referred to as **"Mon Parc"** ou **"Holdings"**.
-- All text keys are strictly managed in `constants/translations.ts`. Do not use generic financial terms; stick to the "clinical/philia" terminology defined in the translations file.
+* **Project Root (Backend / Flask & Landing static assets)**:
+  `path: /Users/steeve/philia_vault_landing`
+* **Mobile / PWA App (React Native Expo)**:
+  `path: /Users/steeve/philia_vault_landing/PhiliaVaultApp`
+* **Desktop Symlink (outside iCloud sync to prevent build conflicts)**:
+  `/Users/steeve/Desktop/philia_vault_landing` -> points to `/Users/steeve/philia_vault_landing`
 
-### 3. The Coach IA (Gemini)
-- **Local Integration:** The Coach now runs directly via the Gemini API using an API key stored locally.
-- **Environment Variable:** The key `EXPO_PUBLIC_GEMINI_API_KEY` is securely stored in `.env.local` (not pushed to GitHub).
-- **Offline Mode:** The app includes logic to detect network connectivity (`@react-native-community/netinfo`). The Coach is explicitly disabled when offline, while the rest of the dashboard remains lightning-fast using cached data (AsyncStorage).
+---
 
-### 4. Git & File Structure Cleanup
-- The single source of truth is `PhiliaVaultApp/` inside this repo.
-- The current working state is fully synced and stable.
+## ⚡ AUTOMATED SYNC & DEPLOY
 
-## 🚀 How to Run the App (for Claude / Agents)
-1. Navigate to the correct directory:
-   `cd PhiliaVaultApp`
-2. Ensure dependencies are up to date:
-   `npm install`
-3. Start the Expo server (clearing the cache is recommended for fresh starts):
-   `npx expo start -c`
-4. The user tests the app via **Expo Go** on their iPhone. Whenever a change is made, tell the user to shake their phone and tap "Reload" to fetch the latest bundle.
+A shell script has been created to automate PWA web exports, static asset copying, GitHub pushes (triggering Render deploy), and building/installing the native iOS app to the connected iPhone:
+👉 **Script Path**: `/Users/steeve/philia_vault_landing/scripts/deploy_sync.sh`
 
-## ⚠️ Important Rules for Claude
-- **Do not modify `services/api.ts` blindly:** It contains the specific Gemini initialization and offline caching logic we just perfected.
-- **Always use targeted file edits.**
-- **Keep the Tone:** If adding new screens or text, ensure they align with the direct, "red pill", clinical vocabulary defined in `translations.ts`.
+### How to use it:
+```bash
+# Set execute permissions if needed
+chmod +x /Users/steeve/philia_vault_landing/scripts/deploy_sync.sh
+
+# Run the complete synchronized update
+/Users/steeve/philia_vault_landing/scripts/deploy_sync.sh
+```
+
+---
+
+## 📱 TARGET IOS DEVICE CONFIGURATION
+
+* **Connected Device**: `iPhone Steeve`
+* **Target ID**: `00008150-001A74262288401C`
+* **DerivedData Path used for clean native builds**: `/tmp/DerivedData`
+* **Native Build Commands (run inside PhiliaVaultApp)**:
+  ```bash
+  # Rebuild native app scheme
+  rm -rf /tmp/DerivedData
+  xcodebuild -workspace ios/PhiliaVault.xcworkspace \
+    -scheme PhiliaVault \
+    -configuration Debug \
+    -destination id=00008150-001A74262288401C \
+    -derivedDataPath /tmp/DerivedData
+
+  # Deploy to iPhone
+  npx native-run ios --app /tmp/DerivedData/Build/Products/Debug-iphoneos/PhiliaVault.app --target 00008150-001A74262288401C
+  ```
+
+---
+
+## ⚠️ KNOWN BUILD CACHES & ROOT PATH CONFLICTS
+
+* **Stale DerivedData in node_modules**:
+  Moving the directory out of iCloud (`/Users/steeve/Desktop` to `/Users/steeve`) caused some `expo-modules-jsi` files to have hardcoded absolute reference path mismatches.
+  If swift compile errors occur:
+  ```bash
+  rm -rf /Users/steeve/philia_vault_landing/PhiliaVaultApp/node_modules/expo-modules-jsi/apple/.DerivedData
+  ```
+
+---
+
+## 🛠️ TECH STACK & DESIGN TOKENS
+
+* **Backend**: Flask (`server.py`).
+* **Database**: SQLite native operations (`database.py`) — **NO ORM / SQLAlchemy**.
+* **Frontend**: Expo React Native (exported to Web PWA in `dist/` and copied to `static/` of landing).
+* **Color Accents**: `#CCFF00` (Electric Lime/Green) is the verified green color code for active states, CTA buttons, metrics, and streak cards.
+* **Global Skill Location**: `/Users/steeve/.gemini/config/skills/philia-vault-architect/SKILL.md` contains the full rules, mathematical formulas (IIF score, Hemorrhage Rate), and lock definitions.
