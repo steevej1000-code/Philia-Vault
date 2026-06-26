@@ -760,7 +760,7 @@ export default function DisciplineScreen() {
               const statusInfo = getGoalStatus(goal);
               return (
                 <View key={goal.id} style={styles.goalCard}>
-                  <View style={goalHeaderRow}>
+                  <View style={styles.goalsHeaderRow}>
                     <Text style={styles.goalName}>
                       {getCategoryIcon(goal.category)} {goal.name}
                     </Text>
