@@ -65,7 +65,8 @@ export default function DisciplineScreen() {
   const [dailyBudget, setDailyBudget] = useState(0.0);
   const [logStatusMessage, setLogStatusMessage] = useState<string | null>(null);
   const [isSuccessLog, setIsSuccessLog] = useState(true);
-  const [inputFocused, setInputFocused] = useState(false);
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const [pulseState, setPulseState] = useState(true);
   const [categoryId, setCategoryId] = useState<number>(1);
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
 
@@ -111,6 +112,35 @@ export default function DisciplineScreen() {
       LocaleConfig.defaultLocale = ''; // Safely fall back to internal default
     }
   }, [language]);
+
+  // Pulse effect for today's outline
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPulseState((p) => !p);
+    }, 800);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getDaysLabel = () => {
+    if (language === 'fr') return streak > 1 ? 'JOURS' : 'JOUR';
+    if (language === 'es') return streak > 1 ? 'DÍAS' : 'DÍA';
+    if (language === 'pt') return streak > 1 ? 'DIAS' : 'DIA';
+    return streak > 1 ? 'DAYS' : 'DAY';
+  };
+
+  const getFreedomLabel = () => {
+    if (language === 'fr') return 'LIBERTÉ GAGNÉE';
+    if (language === 'es') return 'LIBERTAD GANADA';
+    if (language === 'pt') return 'LIBERDADE GANHA';
+    return 'FREEDOM EARNED';
+  };
+
+  const getFreedomDaysLabel = () => {
+    if (language === 'fr') return 'JOURS DE LIBERTÉ';
+    if (language === 'es') return 'DÍAS DE LIBERTAD';
+    if (language === 'pt') return 'DIAS DE LIBERDADE';
+    return 'DAYS OF FREEDOM';
+  };
 
   // Load history data for visible month range
   const loadHistoryData = useCallback(async (baseDateStr: string) => {
@@ -256,6 +286,7 @@ export default function DisciplineScreen() {
   // Build calendar markedDates dynamically
   const getMarkedDates = () => {
     const marked: Record<string, any> = {};
+    const todayStr = new Date().toISOString().split('T')[0];
 
     // Populated from backend discipline logs
     history.forEach((item) => {
@@ -263,18 +294,58 @@ export default function DisciplineScreen() {
       marked[item.date] = {
         customStyles: {
           container: {
-            backgroundColor: isSuccess ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-            borderWidth: 1,
-            borderColor: isSuccess ? '#22c55e' : '#ef4444',
-            borderRadius: RADIUS.md,
+            backgroundColor: isSuccess ? '#39FF14' : '#FF4444',
+            borderRadius: 20,
+            justifyContent: 'center',
+            alignItems: 'center',
           },
           text: {
-            color: isSuccess ? '#22c55e' : '#ef4444',
+            color: isSuccess ? '#000000' : '#FFFFFF',
             fontWeight: 'bold',
           }
         }
       };
     });
+
+    // Today gets a pulsating outline circle (glowing green border)
+    const todayBorderColor = pulseState ? '#39FF14' : 'rgba(57, 255, 20, 0.35)';
+    const todayShadowRadius = pulseState ? 8 : 2;
+    const todayShadowOpacity = pulseState ? 0.9 : 0.4;
+
+    if (!marked[todayStr]) {
+      marked[todayStr] = {
+        customStyles: {
+          container: {
+            borderWidth: 2,
+            borderColor: todayBorderColor,
+            borderRadius: 20,
+            backgroundColor: 'transparent',
+            shadowColor: '#39FF14',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: todayShadowOpacity,
+            shadowRadius: todayShadowRadius,
+            elevation: 3,
+          },
+          text: {
+            color: '#39FF14',
+            fontWeight: 'bold',
+          }
+        }
+      };
+    } else {
+      // If today already has a state (success or fail), we keep the background and text color but add the border outline
+      marked[todayStr].customStyles.container = {
+        ...marked[todayStr].customStyles.container,
+        borderWidth: 2,
+        borderColor: todayBorderColor,
+        borderRadius: 20,
+        shadowColor: '#39FF14',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: todayShadowOpacity,
+        shadowRadius: todayShadowRadius,
+        elevation: 3,
+      };
+    }
 
     // Merge or highlight the selected date
     const selectedExisting = marked[selectedDate];
@@ -284,7 +355,7 @@ export default function DisciplineScreen() {
           backgroundColor: selectedExisting?.customStyles?.container?.backgroundColor || 'rgba(255, 255, 255, 0.05)',
           borderWidth: 2,
           borderColor: COLORS.primary,
-          borderRadius: RADIUS.md,
+          borderRadius: 20,
           shadowColor: COLORS.primary,
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: 0.6,
@@ -519,7 +590,7 @@ export default function DisciplineScreen() {
             markingType={'custom'}
             theme={{
               backgroundColor: '#000000',
-              calendarBackground: '#0c0e12',
+              calendarBackground: '#000000',
               textSectionTitleColor: COLORS.onSurfaceVariant,
               selectedDayBackgroundColor: COLORS.primary,
               selectedDayTextColor: '#000000',
@@ -559,7 +630,7 @@ export default function DisciplineScreen() {
                 onPress={() => setShowBudgetSetup(true)}
               >
                 <LinearGradient
-                  colors={['#ccff00', '#a3e635']}
+                  colors={['#39FF14', '#39FF14']}
                   style={styles.validateBtnGrad}
                 >
                   <Text style={styles.validateText}>{t('discipline.set_daily_budget')}</Text>
@@ -569,7 +640,7 @@ export default function DisciplineScreen() {
           ) : showBudgetSetup ? (
             <View style={styles.budgetSetupContainer}>
               <Text style={styles.budgetSetupLabel}>{t('discipline.set_budget_prompt')}</Text>
-              <View style={[styles.inputWrapper, budgetInputFocused && styles.inputFocused]}>
+              <View style={[styles.inputWrapper, focusedInput === 'budget' && styles.inputFocused]}>
                 <TextInput
                   style={styles.input}
                   placeholder="Ex: 50"
@@ -577,8 +648,8 @@ export default function DisciplineScreen() {
                   keyboardType="numeric"
                   value={newBudgetVal}
                   onChangeText={setNewBudgetVal}
-                  onFocus={() => setBudgetInputFocused(true)}
-                  onBlur={() => setBudgetInputFocused(false)}
+                  onFocus={() => setFocusedInput('budget')}
+                  onBlur={() => setFocusedInput(null)}
                 />
               </View>
               <View style={{ flexDirection: 'row', marginTop: 12, gap: 10 }}>
@@ -596,7 +667,7 @@ export default function DisciplineScreen() {
                   disabled={loadingBudget}
                 >
                   <LinearGradient
-                    colors={['#ccff00', '#a3e635']}
+                    colors={['#39FF14', '#39FF14']}
                     style={styles.validateBtnGrad}
                   >
                     {loadingBudget ? (
@@ -622,7 +693,7 @@ export default function DisciplineScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={[styles.inputWrapper, inputFocused && styles.inputFocused]}>
+              <View style={[styles.inputWrapper, focusedInput === 'spent' && styles.inputFocused]}>
                 <TextInput
                   style={styles.input}
                   placeholder={t('discipline_spent_placeholder')}
@@ -630,8 +701,8 @@ export default function DisciplineScreen() {
                   keyboardType="numeric"
                   value={amountSpent}
                   onChangeText={setAmountSpent}
-                  onFocus={() => setInputFocused(true)}
-                  onBlur={() => setInputFocused(false)}
+                  onFocus={() => setFocusedInput('spent')}
+                  onBlur={() => setFocusedInput(null)}
                 />
               </View>
 
@@ -705,7 +776,7 @@ export default function DisciplineScreen() {
                 disabled={loading}
               >
                 <LinearGradient
-                  colors={['#ccff00', '#a3e635']}
+                  colors={['#39FF14', '#39FF14']}
                   style={styles.validateBtnGrad}
                 >
                   {loading ? (
@@ -722,17 +793,17 @@ export default function DisciplineScreen() {
         {/* Position 3: Discipline Statistics */}
         <View style={styles.statsContainer}>
           {/* Active Streak Card */}
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, styles.streakCard]}>
             <Text style={styles.streakEmoji}>🔥</Text>
-            <Text style={styles.statLabel}>Streak</Text>
-            <Text style={styles.statValue}>{streak} days</Text>
+            <Text style={styles.streakValue}>{streak}</Text>
+            <Text style={styles.streakDaysLabel}>{getDaysLabel()}</Text>
           </View>
 
           {/* Life Freedom Accumulated */}
           <View style={[styles.statCard, styles.freedomCard]}>
-            <Text style={styles.freedomLabel}>{t('discipline_freedom_earned').split(':')[0]}</Text>
+            <Text style={styles.freedomLabel}>{getFreedomLabel()}</Text>
             <Text style={styles.freedomValue}>{totalFreedomDays.toFixed(2)}</Text>
-            <Text style={styles.freedomDaysLabel}>DAYS OF FREEDOM</Text>
+            <Text style={styles.freedomDaysLabel}>{getFreedomDaysLabel()}</Text>
           </View>
         </View>
 
@@ -820,7 +891,7 @@ export default function DisciplineScreen() {
                         }}
                       >
                         <LinearGradient
-                          colors={['#ccff00', '#a3e635']}
+                          colors={['#39FF14', '#39FF14']}
                           style={styles.contributeBtnGrad}
                         >
                           <Text style={styles.contributeText}>
@@ -853,18 +924,20 @@ export default function DisciplineScreen() {
               <Text style={styles.modalTitle}>{t('discipline.new_goal') || 'Nouvel objectif'}</Text>
               
               <Text style={styles.formLabel}>{t('discipline.goal_name_placeholder').split('(')[0]}</Text>
-              <View style={styles.inputWrapper}>
+              <View style={[styles.inputWrapper, focusedInput === 'goalName' && styles.inputFocused]}>
                 <TextInput
                   style={styles.input}
                   placeholder={t('discipline.goal_name_placeholder')}
                   placeholderTextColor={COLORS.onSurfaceVariant}
                   value={goalName}
                   onChangeText={setGoalName}
+                  onFocus={() => setFocusedInput('goalName')}
+                  onBlur={() => setFocusedInput(null)}
                 />
               </View>
 
               <Text style={styles.formLabel}>{t('discipline.target_amount')}</Text>
-              <View style={styles.inputWrapper}>
+              <View style={[styles.inputWrapper, focusedInput === 'goalAmount' && styles.inputFocused]}>
                 <TextInput
                   style={styles.input}
                   placeholder="Ex: 5000"
@@ -872,6 +945,8 @@ export default function DisciplineScreen() {
                   keyboardType="numeric"
                   value={targetAmountInput}
                   onChangeText={setTargetAmountInput}
+                  onFocus={() => setFocusedInput('goalAmount')}
+                  onBlur={() => setFocusedInput(null)}
                 />
               </View>
 
@@ -1000,7 +1075,7 @@ export default function DisciplineScreen() {
                   disabled={creatingGoal}
                 >
                   <LinearGradient
-                    colors={['#ccff00', '#a3e635']}
+                    colors={['#39FF14', '#39FF14']}
                     style={styles.validateBtnGrad}
                   >
                     {creatingGoal ? (
@@ -1033,8 +1108,8 @@ export default function DisciplineScreen() {
                 {t('discipline.contribute') || '+ Contribuer'} - {selectedGoal?.name}
               </Text>
               
-              <Text style={styles.formLabel}>{t('discipline.target_amount').replace('cible', 'contribution')}</Text>
-              <View style={styles.inputWrapper}>
+               <Text style={styles.formLabel}>{t('discipline.target_amount').replace('cible', 'contribution')}</Text>
+              <View style={[styles.inputWrapper, focusedInput === 'contribAmount' && styles.inputFocused]}>
                 <TextInput
                   style={styles.input}
                   placeholder="Ex: 100"
@@ -1042,17 +1117,21 @@ export default function DisciplineScreen() {
                   keyboardType="numeric"
                   value={contribAmount}
                   onChangeText={setContribAmount}
+                  onFocus={() => setFocusedInput('contribAmount')}
+                  onBlur={() => setFocusedInput(null)}
                 />
               </View>
 
               <Text style={styles.formLabel}>Note (Optionnelle)</Text>
-              <View style={styles.inputWrapper}>
+              <View style={[styles.inputWrapper, focusedInput === 'contribNote' && styles.inputFocused]}>
                 <TextInput
                   style={styles.input}
                   placeholder="Ex: Économie bonus"
                   placeholderTextColor={COLORS.onSurfaceVariant}
                   value={contribNote}
                   onChangeText={setContribNote}
+                  onFocus={() => setFocusedInput('contribNote')}
+                  onBlur={() => setFocusedInput(null)}
                 />
               </View>
 
@@ -1070,7 +1149,7 @@ export default function DisciplineScreen() {
                   disabled={contributing}
                 >
                   <LinearGradient
-                    colors={['#ccff00', '#a3e635']}
+                    colors={['#39FF14', '#39FF14']}
                     style={styles.validateBtnGrad}
                   >
                     {contributing ? (
@@ -1142,7 +1221,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   calendarContainer: {
-    backgroundColor: '#0c0e12',
+    backgroundColor: '#000000',
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.glassBorder,
@@ -1188,15 +1267,15 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
   inputWrapper: {
-    backgroundColor: '#05070a',
+    backgroundColor: '#1A1A1A',
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.glassBorder,
+    borderColor: '#2A2A2A',
     marginBottom: 12,
     paddingHorizontal: 12,
   },
   inputFocused: {
-    borderColor: COLORS.primary,
+    borderColor: '#39FF14',
   },
   input: {
     height: 48,
@@ -1232,7 +1311,11 @@ const styles = StyleSheet.create({
   validateBtn: {
     borderRadius: RADIUS.full,
     overflow: 'hidden',
-    ...SHADOW.glow(COLORS.primary),
+    shadowColor: '#39FF14',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
   validateBtnGrad: {
     height: 48,
@@ -1240,10 +1323,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   validateText: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    color: '#000000',
     fontSize: 15,
-    color: '#0c0e12',
+    fontFamily: 'PlusJakartaSans-Bold',
     fontWeight: '800',
+    letterSpacing: 0.3,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -1259,10 +1343,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  streakCard: {
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1.5,
+    borderColor: '#39FF14',
+    shadowColor: '#39FF14',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.85,
+    shadowRadius: 12,
+    elevation: 6,
+  },
   freedomCard: {
     flex: 1.3,
-    borderColor: COLORS.primary,
-    backgroundColor: 'rgba(204,255,0,0.02)',
+    backgroundColor: '#39FF14',
+    borderColor: '#39FF14',
+    borderWidth: 1,
+    shadowColor: '#39FF14',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    elevation: 5,
   },
   streakEmoji: {
     fontSize: 28,
@@ -1279,27 +1379,46 @@ const styles = StyleSheet.create({
     color: COLORS.onSurface,
     marginTop: 2,
   },
-  freedomLabel: {
+  streakValue: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 38,
+    color: '#39FF14',
+    marginTop: 2,
+    textShadowColor: 'rgba(57, 255, 20, 0.65)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
+    fontWeight: '900',
+  },
+  streakDaysLabel: {
     fontFamily: 'PlusJakartaSans-SemiBold',
-    fontSize: 11,
-    color: COLORS.onSurfaceVariant,
+    fontSize: 10,
+    color: '#94a3b8',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  freedomLabel: {
+    fontFamily: 'PlusJakartaSans-Bold',
+    fontSize: 11,
+    color: '#000000',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: '800',
   },
   freedomValue: {
     fontFamily: 'Montserrat-Bold',
-    fontSize: 32,
-    color: COLORS.primary,
+    fontSize: 38,
+    color: '#000000',
     marginVertical: 4,
-    textShadowColor: 'rgba(204, 255, 0, 0.4)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+    fontWeight: '900',
+    letterSpacing: -0.5,
   },
   freedomDaysLabel: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 9,
-    color: COLORS.primary,
+    color: '#000000',
     letterSpacing: 1,
+    fontWeight: '800',
   },
   flashOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1530,7 +1649,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     flex: 1,
     marginLeft: 16,
-    ...SHADOW.glow(COLORS.primary),
+    shadowColor: '#39FF14',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
   },
   contributeBtnGrad: {
     height: 38,
@@ -1538,10 +1661,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   contributeText: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontFamily: 'PlusJakartaSans-Bold',
     fontSize: 13,
-    color: '#0c0e12',
+    color: '#000000',
     fontWeight: '800',
+    letterSpacing: 0.3,
   },
   abandonBtn: {
     width: 38,
