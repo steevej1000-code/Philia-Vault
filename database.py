@@ -135,7 +135,8 @@ def init_db():
         ("monthly_income", "REAL DEFAULT 0"),
         ("income_updated_at", "TIMESTAMP"),
         ("available_cashflow", "REAL DEFAULT 0.0"),
-        ("total_hemorrhage", "INTEGER DEFAULT 0")
+        ("total_hemorrhage", "INTEGER DEFAULT 0"),
+        ("daily_budget", "REAL DEFAULT 0")
     ]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")
@@ -453,6 +454,37 @@ def init_db():
         cursor.execute("ALTER TABLE daily_discipline ADD COLUMN category_id INTEGER DEFAULT 1")
     except Exception:
         pass
+
+    # Create financial_goals table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS financial_goals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        target_amount REAL NOT NULL,
+        saved_amount REAL DEFAULT 0,
+        target_date DATE NOT NULL,
+        category TEXT DEFAULT 'savings' CHECK (category IN ('savings','debt','investment','project')),
+        status TEXT DEFAULT 'active' CHECK (status IN ('active','completed','abandoned')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    """)
+
+    # Create goal_contributions table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS goal_contributions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        goal_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        note TEXT,
+        contributed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (goal_id) REFERENCES financial_goals(id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    """)
 
     conn.commit()
     conn.close()
@@ -2138,6 +2170,240 @@ def get_discipline_streak(user_id: int) -> int:
     except Exception as e:
         print(f"Erreur get_discipline_streak: {e}")
         return 0
+    finally:
+        conn.close()
+
+
+# ─── Financial Goals & Extended Discipline Helpers ───────────────────────────
+
+def get_or_calculate_daily_budget(user_id: int) -> float:
+    """Retourne le budget quotidien défini ou calculé automatiquement"""
+    conn = get_db()
+    try:
+        result = conn.execute(
+            "SELECT daily_budget, monthly_income FROM users WHERE id = ?",
+            (user_id,)
+        ).fetchone()
+        
+        if not result:
+            return 0.0
+            
+        if result['daily_budget'] and result['daily_budget'] > 0:
+            return result['daily_budget']
+        
+        # Calcul automatique : revenu mensuel / 30
+        if result['monthly_income'] and result['monthly_income'] > 0:
+            return round(result['monthly_income'] / 30, 2)
+        
+        return 0.0
+    finally:
+        conn.close()
+
+def update_user_daily_budget(user_id: int, daily_budget: float) -> bool:
+    """Met à jour le budget quotidien défini par l'utilisateur"""
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE users SET daily_budget = ? WHERE id = ?",
+            (daily_budget, user_id)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Erreur update_user_daily_budget: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_user_goals(user_id: int) -> list:
+    """Retourne tous les objectifs actifs de l'utilisateur avec calculs"""
+    conn = get_db()
+    try:
+        goals = conn.execute("""
+            SELECT
+                g.*,
+                ROUND((g.saved_amount / g.target_amount) * 100, 1)
+                    as progress_pct,
+                CAST(
+                    (julianday(g.target_date) - julianday('now'))
+                AS INTEGER) as days_remaining,
+                ROUND(
+                    (g.target_amount - g.saved_amount) /
+                    MAX(1, (
+                        (julianday(g.target_date) - julianday('now')) / 30
+                    ))
+                , 2) as monthly_needed
+            FROM financial_goals g
+            WHERE g.user_id = ? AND g.status = 'active'
+            ORDER BY g.target_date ASC
+        """, (user_id,)).fetchall()
+        return [dict(g) for g in goals]
+    finally:
+        conn.close()
+
+def create_goal(user_id: int, name: str, target_amount: float,
+                target_date: str, category: str) -> int:
+    """Crée un nouvel objectif financier"""
+    conn = get_db()
+    try:
+        cursor = conn.execute("""
+            INSERT INTO financial_goals
+            (user_id, name, target_amount, target_date, category)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, name, target_amount, target_date, category))
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+def add_goal_contribution(goal_id: int, user_id: int,
+                          amount: float, note: str = '') -> bool:
+    """Ajoute une contribution à un objectif"""
+    conn = get_db()
+    try:
+        conn.execute("BEGIN TRANSACTION")
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO goal_contributions
+            (goal_id, user_id, amount, note)
+            VALUES (?, ?, ?, ?)
+        """, (goal_id, user_id, amount, note))
+        
+        # Mettre à jour le montant épargné
+        cursor.execute("""
+            UPDATE financial_goals
+            SET saved_amount = saved_amount + ?
+            WHERE id = ? AND user_id = ?
+        """, (amount, goal_id, user_id))
+        
+        # Vérifier si l'objectif est atteint
+        goal = cursor.execute(
+            "SELECT saved_amount, target_amount FROM financial_goals WHERE id = ?",
+            (goal_id,)
+        ).fetchone()
+        
+        if goal and goal['saved_amount'] >= goal['target_amount']:
+            cursor.execute("""
+                UPDATE financial_goals
+                SET status = 'completed', completed_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (goal_id,))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.execute("ROLLBACK")
+        print(f"Erreur add_goal_contribution: {e}")
+        return False
+    finally:
+        conn.close()
+
+def validate_discipline_day(user_id: int, date: str) -> bool:
+    """
+    Un jour est vert si au moins une de ces conditions est vraie :
+    1. Daily Decision complété
+    2. Contribution à un objectif
+    3. Dépenses inférieures au budget quotidien (si budget > 0 et dépenses enregistrées)
+    """
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        # Vérifier Daily Decision
+        daily_done = cursor.execute("""
+            SELECT COUNT(*) as cnt FROM user_dilemma_history
+            WHERE user_id = ? AND DATE(answered_at, 'localtime') = ?
+        """, (user_id, date)).fetchone()['cnt'] > 0
+
+        # Vérifier contribution objectif
+        goal_contributed = cursor.execute("""
+            SELECT COUNT(*) as cnt FROM goal_contributions
+            WHERE user_id = ? AND DATE(contributed_at, 'localtime') = ?
+        """, (user_id, date)).fetchone()['cnt'] > 0
+
+        # Vérifier budget respecté (si budget défini et log existant)
+        budget = get_or_calculate_daily_budget(user_id)
+        spending_ok = True
+        
+        has_log = cursor.execute("""
+            SELECT COUNT(*) as cnt FROM daily_discipline
+            WHERE user_id = ? AND date = ?
+        """, (user_id, date)).fetchone()['cnt'] > 0
+
+        if budget > 0:
+            daily_spending = cursor.execute("""
+                SELECT COALESCE(SUM(amount_spent), 0) as total
+                FROM daily_discipline
+                WHERE user_id = ? AND date = ?
+            """, (user_id, date)).fetchone()['total']
+            spending_ok = daily_spending <= budget
+        elif has_log:
+            daily_spending = cursor.execute("""
+                SELECT COALESCE(SUM(amount_spent), 0) as total
+                FROM daily_discipline
+                WHERE user_id = ? AND date = ?
+            """, (user_id, date)).fetchone()['total']
+            spending_ok = daily_spending <= 0
+
+        return daily_done or goal_contributed or (has_log and spending_ok)
+    finally:
+        conn.close()
+
+def recalculate_and_save_discipline_status(user_id: int, date_str: str) -> bool:
+    """Recalcule le statut d'un jour donné (success ou failed) et le met à jour dans daily_discipline"""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        
+        # Check if they have any activity on this date: dilemma, contribution, or existing discipline entry
+        daily_done = cursor.execute("""
+            SELECT COUNT(*) as cnt FROM user_dilemma_history
+            WHERE user_id = ? AND DATE(answered_at, 'localtime') = ?
+        """, (user_id, date_str)).fetchone()['cnt'] > 0
+
+        goal_contributed = cursor.execute("""
+            SELECT COUNT(*) as cnt FROM goal_contributions
+            WHERE user_id = ? AND DATE(contributed_at, 'localtime') = ?
+        """, (user_id, date_str)).fetchone()['cnt'] > 0
+
+        existing = cursor.execute("""
+            SELECT amount_spent, freedom_days_earned, category_id
+            FROM daily_discipline
+            WHERE user_id = ? AND date = ?
+        """, (user_id, date_str)).fetchone()
+
+        if not (daily_done or goal_contributed or existing):
+            return True
+
+        # Calculate if the day was successful
+        is_success = validate_discipline_day(user_id, date_str)
+        status = 'success' if is_success else 'failed'
+
+        # Get existing values or use defaults
+        amount_spent = existing['amount_spent'] if existing else 0.0
+        freedom_days_earned = existing['freedom_days_earned'] if existing else 0.0
+        category_id = existing['category_id'] if existing else 1
+
+        # If it's a success now and freedom_days_earned is 0.0, calculate freedom_days_earned
+        if is_success and freedom_days_earned == 0.0:
+            budget = get_or_calculate_daily_budget(user_id)
+            if budget > 0 and amount_spent < budget:
+                liabilities = get_liabilities(user_id)
+                total_monthly_cost = sum(l["monthly_cost"] for l in liabilities)
+                daily_vital_cost = total_monthly_cost / 30.0
+                vital_cost_divisor = max(daily_vital_cost, 1.0)
+                freedom_days_earned = (budget - amount_spent) / vital_cost_divisor
+
+        cursor.execute("""
+            INSERT OR REPLACE INTO daily_discipline
+            (user_id, date, status, amount_spent, freedom_days_earned, category_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (user_id, date_str, status, amount_spent, freedom_days_earned, category_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Erreur recalculate_and_save_discipline_status: {e}")
+        return False
     finally:
         conn.close()
 

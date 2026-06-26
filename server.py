@@ -1407,6 +1407,12 @@ def post_daily_decision():
 
         conn.commit()
 
+        # Recalculate daily discipline status
+        try:
+            database.recalculate_and_save_discipline_status(uid, today_str)
+        except Exception as ex:
+            print(f"Error triggering discipline recalculate on dilemma answer: {ex}")
+
         # Return feedback from dilemma (localized)
         dilemmas = _load_dilemmas("fr")  # always look up by FR id
         dilemma_raw = next((d for d in dilemmas if d["id"] == dilemma_id), None)
@@ -1735,6 +1741,108 @@ def get_discipline_history_route():
         "total_freedom_days": round(total_freedom_days, 2),
         "daily_budget": round(daily_budget, 2)
     }), 200
+
+
+# ─── Daily Budget & Goals Endpoints ───────────────────────────────────────────
+
+@app.route('/api/discipline/budget', methods=['GET'])
+def get_discipline_budget():
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+    budget = database.get_or_calculate_daily_budget(user_id)
+    return jsonify({"success": True, "daily_budget": budget}), 200
+
+@app.route('/api/discipline/budget', methods=['POST'])
+def set_discipline_budget():
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+    data = request.get_json() or {}
+    budget = data.get('daily_budget')
+    if budget is None:
+        return jsonify({"error": "Budget manquant"}), 400
+    try:
+        budget = float(budget)
+    except ValueError:
+        return jsonify({"error": "Budget invalide"}), 400
+    success = database.update_user_daily_budget(user_id, budget)
+    if success:
+        return jsonify({"success": True, "daily_budget": budget}), 200
+    return jsonify({"error": "Erreur serveur"}), 500
+
+@app.route('/api/goals', methods=['GET'])
+def get_goals():
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+    goals = database.get_user_goals(user_id)
+    return jsonify({"success": True, "goals": goals}), 200
+
+@app.route('/api/goals', methods=['POST'])
+def create_new_goal():
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    try:
+        target_amount = float(data.get('target_amount', 0))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Montant cible invalide"}), 400
+    target_date = data.get('target_date')
+    category = data.get('category', 'savings')
+    if not name or target_amount <= 0 or not target_date:
+        return jsonify({"error": "Données invalides"}), 400
+    goal_id = database.create_goal(user_id, name, target_amount, target_date, category)
+    return jsonify({"success": True, "goal_id": goal_id}), 201
+
+@app.route('/api/goals/<int:goal_id>/contribute', methods=['POST'])
+def contribute_to_goal(goal_id: int):
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+    data = request.get_json() or {}
+    try:
+        amount = float(data.get('amount', 0))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Montant invalide"}), 400
+    note = data.get('note', '')
+    if amount <= 0:
+        return jsonify({"error": "Montant invalide"}), 400
+    success = database.add_goal_contribution(goal_id, user_id, amount, note)
+    if success:
+        import datetime
+        today_str = datetime.date.today().isoformat()
+        database.recalculate_and_save_discipline_status(user_id, today_str)
+        return jsonify({"success": True}), 200
+    return jsonify({"error": "Erreur serveur"}), 500
+
+@app.route('/api/goals/<int:goal_id>', methods=['DELETE'])
+def abandon_goal(goal_id: int):
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+    conn = database.get_db()
+    conn.execute("""
+        UPDATE financial_goals SET status = 'abandoned'
+        WHERE id = ? AND user_id = ?
+    """, (goal_id, user_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True}), 200
 
 if __name__ == "__main__":
     # Ensure static directory exists

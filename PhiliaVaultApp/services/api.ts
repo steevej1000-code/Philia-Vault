@@ -460,6 +460,41 @@ Passifs : ${JSON.stringify(liabilities)}
     });
   }
 
+  async getDailyBudget() {
+    return this.request('/api/discipline/budget');
+  }
+
+  async setDailyBudget(dailyBudget: number) {
+    return this.request('/api/discipline/budget', {
+      method: 'POST',
+      body: JSON.stringify({ daily_budget: dailyBudget }),
+    });
+  }
+
+  async getGoals() {
+    return this.request('/api/goals');
+  }
+
+  async createGoal(name: string, targetAmount: number, targetDate: string, category: string) {
+    return this.request('/api/goals', {
+      method: 'POST',
+      body: JSON.stringify({ name, target_amount: targetAmount, target_date: targetDate, category }),
+    });
+  }
+
+  async contributeToGoal(goalId: number, amount: number, note?: string) {
+    return this.request(`/api/goals/${goalId}/contribute`, {
+      method: 'POST',
+      body: JSON.stringify({ amount, note }),
+    });
+  }
+
+  async abandonGoal(goalId: number) {
+    return this.request(`/api/goals/${goalId}`, {
+      method: 'DELETE',
+    });
+  }
+
   /**
    * Pre-fetches and caches all offline-supported endpoints. Intended to run
    * on app startup (when online) and on reconnect, so cached data is fresh
