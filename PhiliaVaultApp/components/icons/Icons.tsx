@@ -53,11 +53,11 @@ export function IconScale({ size, color, opacity }: IconProps) {
   );
 }
 
-// Sparkle / AI Star — used for "Coach IA" (modern, like Galaxy AI / Gemini)
+// Sparkle / AI — used for "Coach IA" (modern, premium, minimalist)
 export function IconCoach({ size, color, opacity }: IconProps) {
   return (
     <Svg {...base(size, color)} opacity={opacity}>
-      <Path d="M12 2 L14.5 8.5 L21 11 L14.5 13.5 L12 20 L9.5 13.5 L3 11 L9.5 8.5 Z" />
+      <Path d="M12 3 L13 10 L20 11 L13 12 L12 19 L11 12 L4 11 L11 10 Z" />
     </Svg>
   );
 }
