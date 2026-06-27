@@ -60,3 +60,6 @@ export const GOOGLE_WEB_CLIENT_ID = '179843169337-kod2rt6ab6fon6sc2h7p1hrcqq7pp0
 // Bundle ID: com.philia.vault
 // TODO: Remplacer par le vrai Client ID iOS après création
 export const GOOGLE_IOS_CLIENT_ID = '179843169337-k1fe47qaric2f3esqbu6kkc1qmk18kc8.apps.googleusercontent.com';
+// Android Client ID — créé dans Google Cloud Console (type: Android)
+// Package: com.philia.vault
+export const GOOGLE_ANDROID_CLIENT_ID = '179843169337-kvscg7d2qb3jbbmd1q70qpfigfqb3cts.apps.googleusercontent.com';
