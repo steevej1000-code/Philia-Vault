@@ -11,7 +11,7 @@ load_dotenv()
 # --- Vérification des variables d'environnement critiques ---
 # ENCRYPTION_KEY est accepté en alias de DB_ENCRYPTION_KEY (nom historique
 # utilisé par database.py) : l'un des deux doit être présent.
-REQUIRED_ENV_VARS = ["GEMINI_API_KEY", "SECRET_KEY"]
+REQUIRED_ENV_VARS = ["DEEPSEEK_API_KEY", "SECRET_KEY"]
 _missing = [v for v in REQUIRED_ENV_VARS if not os.environ.get(v)]
 if not os.environ.get("DB_ENCRYPTION_KEY") and not os.environ.get("ENCRYPTION_KEY"):
     _missing.append("DB_ENCRYPTION_KEY (ou ENCRYPTION_KEY)")
@@ -72,16 +72,18 @@ def redirect_www():
 # Initialize DB on load
 database.init_db()
 
-# Gemini Config
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
-gemini_model = None
-if GEMINI_KEY:
+# DeepSeek Config (OpenAI-compatible)
+DEEPSEEK_KEY = os.environ.get("DEEPSEEK_API_KEY")
+deepseek_client = None
+if DEEPSEEK_KEY:
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=GEMINI_KEY)
-        gemini_model = genai.GenerativeModel('gemini-2.5-flash')
+        from openai import OpenAI
+        deepseek_client = OpenAI(
+            api_key=DEEPSEEK_KEY,
+            base_url="https://api.deepseek.com/v1"
+        )
     except Exception as e:
-        print(f"Error configuring Gemini: {e}")
+        print(f"Error configuring DeepSeek: {e}")
 
 # Static Routes
 @app.route("/")
@@ -1113,36 +1115,26 @@ Voici les données financières de l'utilisateur pour orienter sa navigation :
 {context_str}
 """
     
-    if gemini_model:
+    if deepseek_client:
         try:
-            # Build conversation history with strict alternating roles
-            import google.generativeai as genai
-            contents = []
-            last_role = None
+            # Build conversation history for OpenAI-compatible format
+            messages = [{"role": "system", "content": sys_prompt}]
+            
             for h in history:
-                role = "user" if h.get("role") == "user" else "model"
-                if role == last_role:
-                    continue
-                contents.append({
-                    "role": role,
-                    "parts": [h.get("text", "")]
-                })
-                last_role = role
+                role = "user" if h.get("role") == "user" else "assistant"
+                messages.append({"role": role, "content": h.get("text", "")})
             
-            # If the last message in history was 'user', pop it to avoid duplicate 'user' roles when appending user_msg
-            if last_role == "user" and contents:
-                contents.pop()
+            messages.append({"role": "user", "content": user_msg})
             
-            contents.append({"role": "user", "parts": [user_msg]})
-            
-            model_with_sys = genai.GenerativeModel('gemini-2.5-flash', system_instruction=sys_prompt)
-            response = model_with_sys.generate_content(
-                contents
+            response = deepseek_client.chat.completions.create(
+                model="deepseek-chat",
+                messages=messages,
+                max_tokens=1024
             )
-            return jsonify({"success": True, "reply": response.text})
+            reply_text = response.choices[0].message.content
+            return jsonify({"success": True, "reply": reply_text})
         except Exception as e:
-            print(f"Gemini error: {e}")
-            # fall through to offline mockup fallback if API call fails
+            print(f"DeepSeek error: {e}")
     
     # Intelligent Offline Mock Mode (Heuristic engine based on actual DB stats)
     reply = ""
