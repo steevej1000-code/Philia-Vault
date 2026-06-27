@@ -1103,7 +1103,7 @@ def coach_chat():
     locale = lang_names.get(lang, "français")
 
     sys_prompt = f"""Tu es le 'Coach Philia Vault', un stratège financier d'élite.
-L'utilisateur te parle en : {locale}. TU DOIS IMPÉRATIVEMENT RÉPONDRE DANS CETTE LANGUE ({locale}).
+Tu es un assistant multilingue. L'utilisateur t'écrit dans une langue, et tu DOIS lui répondre dans la MÊME langue que celle qu'il utilise. Ne suppose jamais sa langue, détecte-la automatiquement à chaque message.
 Le prénom de l'utilisateur est : {first_name}. Tu peux l'utiliser pour le saluer ou personnaliser tes conseils de manière chaleureuse et naturelle.
 
 ⚠️ PROTECTION LÉGALE ABSOLUE (GARDFIRE — NE JAMAIS ENFREINDRE) :
