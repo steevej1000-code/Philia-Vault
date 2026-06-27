@@ -53,16 +53,11 @@ export function IconScale({ size, color, opacity }: IconProps) {
   );
 }
 
-// Robot head — used for "Coach IA"
+// Sparkle / AI Star — used for "Coach IA" (modern, like Galaxy AI / Gemini)
 export function IconCoach({ size, color, opacity }: IconProps) {
   return (
     <Svg {...base(size, color)} opacity={opacity}>
-      <Rect x="4" y="8" width="16" height="11" rx="3" />
-      <Line x1="12" y1="8" x2="12" y2="4" />
-      <Circle cx="12" cy="3" r="1" />
-      <Circle cx="9" cy="13" r="1.2" fill={color} />
-      <Circle cx="15" cy="13" r="1.2" fill={color} />
-      <Path d="M9 17 h6" />
+      <Path d="M12 2 L14.5 8.5 L21 11 L14.5 13.5 L12 20 L9.5 13.5 L3 11 L9.5 8.5 Z" />
     </Svg>
   );
 }
