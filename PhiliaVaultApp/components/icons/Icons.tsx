@@ -53,11 +53,14 @@ export function IconScale({ size, color, opacity }: IconProps) {
   );
 }
 
-// Sparkle / AI — used for "Coach IA" (modern, premium, minimalist)
+// Minimalist brain / AI — used for "Coach IA" (modern, premium, medical-grade)
 export function IconCoach({ size, color, opacity }: IconProps) {
   return (
     <Svg {...base(size, color)} opacity={opacity}>
-      <Path d="M12 3 L13 10 L20 11 L13 12 L12 19 L11 12 L4 11 L11 10 Z" />
+      <Path d="M12 3 C7 3 4 6 4 10 C4 13 6 15 7 16 C5 18 5 20 7 21 C8 22 10 21 10 19 L10 17" />
+      <Path d="M12 3 C17 3 20 6 20 10 C20 13 18 15 17 16 C19 18 19 20 17 21 C16 22 14 21 14 19 L14 17" />
+      <Path d="M10 8 Q12 10 14 8" />
+      <Path d="M10 13 Q12 11 14 13" />
     </Svg>
   );
 }
