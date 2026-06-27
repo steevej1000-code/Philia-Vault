@@ -122,7 +122,7 @@ export const translations: Record<Language, Dict> = {
 
     // Coach
     coach_title: 'AI Financial Coach',
-    coach_subtitle: 'Your personal financial advisor powered by Gemini AI',
+    coach_subtitle: 'Your personal financial advisor powered by AI',
     coach_audit: 'Full audit',
     coach_optimize: 'Optimize my cashflow',
     coach_strategy: 'Investment strategy',
