@@ -12,7 +12,7 @@ load_dotenv()
 # --- Vérification des variables d'environnement critiques ---
 # ENCRYPTION_KEY est accepté en alias de DB_ENCRYPTION_KEY (nom historique
 # utilisé par database.py) : l'un des deux doit être présent.
-REQUIRED_ENV_VARS = ["GEMINI_API_KEY", "SECRET_KEY"]
+REQUIRED_ENV_VARS = ["OPENAI_API_KEY", "SECRET_KEY"]
 _missing = [v for v in REQUIRED_ENV_VARS if not os.environ.get(v)]
 if not os.environ.get("DB_ENCRYPTION_KEY") and not os.environ.get("ENCRYPTION_KEY"):
     _missing.append("DB_ENCRYPTION_KEY (ou ENCRYPTION_KEY)")
@@ -73,15 +73,15 @@ def redirect_www():
 # Initialize DB on load
 database.init_db()
 
-# Gemini AI Config (google.genai SDK)
-import google.genai as genai
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
-genai_client = None
-if GEMINI_KEY:
+# OpenAI AI Config (for Coach)
+OPENAI_KEY = os.environ.get("OPENAI_API_KEY")
+openai_client = None
+if OPENAI_KEY:
     try:
-        genai_client = genai.Client(api_key=GEMINI_KEY)
+        from openai import OpenAI
+        openai_client = OpenAI(api_key=OPENAI_KEY)
     except Exception as e:
-        print(f"Error configuring Gemini: {e}")
+        print(f"Error configuring OpenAI: {e}")
 
 # Static Routes
 @app.route("/")
@@ -1201,26 +1201,24 @@ Here are the user's financial data to guide your analysis:
 {context_str}
 """
     
-    if genai_client:
+    if openai_client:
         try:
-            # Build history for gemini format
-            history_parts = []
+            # Build conversation history for OpenAI format
+            messages = [{"role": "system", "content": sys_prompt}]
             for h in history:
-                role = "user" if h.get("role") == "user" else "model"
-                history_parts.append({"role": role, "parts": [h.get("text", "")]})
+                role = "user" if h.get("role") == "user" else "assistant"
+                messages.append({"role": role, "content": h.get("text", "")})
+            messages.append({"role": "user", "content": user_msg})
             
-            # Create chat with system instruction
-            chat = genai_client.chats.create(
-                model="gemini-1.5-flash",
-                history=history_parts,
-                system_instruction=sys_prompt,
-                config={"max_output_tokens": 1024}
+            response = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                max_tokens=1024
             )
-            response = chat.send_message(user_msg)
-            reply_text = response.text
+            reply_text = response.choices[0].message.content
             return jsonify({"success": True, "reply": reply_text})
         except Exception as e:
-            print(f"Gemini error: {e}")
+            print(f"OpenAI error: {e}")
     
     # Intelligent Offline Mock Mode (Heuristic engine based on actual DB stats)
     reply = ""
