@@ -294,7 +294,7 @@ export default function DisciplineScreen() {
       marked[item.date] = {
         customStyles: {
           container: {
-            backgroundColor: isSuccess ? '#39FF14' : '#FF4444',
+            backgroundColor: isSuccess ? '#CCFF00' : '#FF4444',
             borderRadius: 20,
             justifyContent: 'center',
             alignItems: 'center',
@@ -308,7 +308,7 @@ export default function DisciplineScreen() {
     });
 
     // Today gets a pulsating outline circle (glowing green border)
-    const todayBorderColor = pulseState ? '#39FF14' : 'rgba(57, 255, 20, 0.35)';
+    const todayBorderColor = pulseState ? '#CCFF00' : 'rgba(204, 255, 0, 0.35)';
     const todayShadowRadius = pulseState ? 8 : 2;
     const todayShadowOpacity = pulseState ? 0.9 : 0.4;
 
@@ -320,14 +320,14 @@ export default function DisciplineScreen() {
             borderColor: todayBorderColor,
             borderRadius: 20,
             backgroundColor: 'transparent',
-            shadowColor: '#39FF14',
+            shadowColor: '#CCFF00',
             shadowOffset: { width: 0, height: 0 },
             shadowOpacity: todayShadowOpacity,
             shadowRadius: todayShadowRadius,
             elevation: 3,
           },
           text: {
-            color: '#39FF14',
+            color: '#CCFF00',
             fontWeight: 'bold',
           }
         }
@@ -339,7 +339,7 @@ export default function DisciplineScreen() {
         borderWidth: 2,
         borderColor: todayBorderColor,
         borderRadius: 20,
-        shadowColor: '#39FF14',
+        shadowColor: '#CCFF00',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: todayShadowOpacity,
         shadowRadius: todayShadowRadius,
@@ -492,7 +492,7 @@ export default function DisciplineScreen() {
   };
 
   const getGoalStatus = (goal: any) => {
-    if (goal.progress_pct >= 100) return { label: t('discipline.status_achieved') || '🏆 Atteint !', color: '#39FF14' };
+    if (goal.progress_pct >= 100) return { label: t('discipline.status_achieved') || '🏆 Atteint !', color: '#CCFF00' };
     if (goal.days_remaining < 0) return { label: t('discipline.status_expired') || '❌ Expiré', color: '#FF4444' };
     
     const monthsRemaining = goal.days_remaining / 30;
@@ -509,7 +509,7 @@ export default function DisciplineScreen() {
     const currentMonthlyRate = goal.saved_amount / Math.max(1, timeDiffMonths);
     
     if (currentMonthlyRate * monthsRemaining >= amountRemaining) {
-      return { label: t('discipline.status_on_track') || '✅ En bonne voie', color: '#39FF14' };
+      return { label: t('discipline.status_on_track') || '✅ En bonne voie', color: '#CCFF00' };
     }
     return { label: t('discipline.status_delayed') || '⚠️ En retard', color: '#FFA500' };
   };
@@ -630,7 +630,7 @@ export default function DisciplineScreen() {
                 onPress={() => setShowBudgetSetup(true)}
               >
                 <LinearGradient
-                  colors={['#39FF14', '#39FF14']}
+                  colors={['#CCFF00', '#CCFF00']}
                   style={styles.validateBtnGrad}
                 >
                   <Text style={styles.validateText}>{t('discipline.set_daily_budget')}</Text>
@@ -667,7 +667,7 @@ export default function DisciplineScreen() {
                   disabled={loadingBudget}
                 >
                   <LinearGradient
-                    colors={['#39FF14', '#39FF14']}
+                    colors={['#CCFF00', '#CCFF00']}
                     style={styles.validateBtnGrad}
                   >
                     {loadingBudget ? (
@@ -776,7 +776,7 @@ export default function DisciplineScreen() {
                 disabled={loading}
               >
                 <LinearGradient
-                  colors={['#39FF14', '#39FF14']}
+                  colors={['#CCFF00', '#CCFF00']}
                   style={styles.validateBtnGrad}
                 >
                   {loading ? (
@@ -891,7 +891,7 @@ export default function DisciplineScreen() {
                         }}
                       >
                         <LinearGradient
-                          colors={['#39FF14', '#39FF14']}
+                          colors={['#CCFF00', '#CCFF00']}
                           style={styles.contributeBtnGrad}
                         >
                           <Text style={styles.contributeText}>
@@ -1075,7 +1075,7 @@ export default function DisciplineScreen() {
                   disabled={creatingGoal}
                 >
                   <LinearGradient
-                    colors={['#39FF14', '#39FF14']}
+                    colors={['#CCFF00', '#CCFF00']}
                     style={styles.validateBtnGrad}
                   >
                     {creatingGoal ? (
@@ -1149,7 +1149,7 @@ export default function DisciplineScreen() {
                   disabled={contributing}
                 >
                   <LinearGradient
-                    colors={['#39FF14', '#39FF14']}
+                    colors={['#CCFF00', '#CCFF00']}
                     style={styles.validateBtnGrad}
                   >
                     {contributing ? (
@@ -1275,7 +1275,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   inputFocused: {
-    borderColor: '#39FF14',
+    borderColor: '#CCFF00',
   },
   input: {
     height: 48,
@@ -1311,7 +1311,7 @@ const styles = StyleSheet.create({
   validateBtn: {
     borderRadius: RADIUS.full,
     overflow: 'hidden',
-    shadowColor: '#39FF14',
+    shadowColor: '#CCFF00',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
@@ -1346,8 +1346,8 @@ const styles = StyleSheet.create({
   streakCard: {
     backgroundColor: '#1A1A1A',
     borderWidth: 1.5,
-    borderColor: '#39FF14',
-    shadowColor: '#39FF14',
+    borderColor: '#CCFF00',
+    shadowColor: '#CCFF00',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.85,
     shadowRadius: 12,
@@ -1355,10 +1355,10 @@ const styles = StyleSheet.create({
   },
   freedomCard: {
     flex: 1.3,
-    backgroundColor: '#39FF14',
-    borderColor: '#39FF14',
+    backgroundColor: '#CCFF00',
+    borderColor: '#CCFF00',
     borderWidth: 1,
-    shadowColor: '#39FF14',
+    shadowColor: '#CCFF00',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 10,
@@ -1382,9 +1382,9 @@ const styles = StyleSheet.create({
   streakValue: {
     fontFamily: 'Montserrat-Bold',
     fontSize: 38,
-    color: '#39FF14',
+    color: '#CCFF00',
     marginTop: 2,
-    textShadowColor: 'rgba(57, 255, 20, 0.65)',
+    textShadowColor: 'rgba(204, 255, 0, 0.65)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
     fontWeight: '900',
@@ -1649,7 +1649,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     flex: 1,
     marginLeft: 16,
-    shadowColor: '#39FF14',
+    shadowColor: '#CCFF00',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,

@@ -207,28 +207,7 @@ export default function LoginScreen() {
     }
   };
 
-  const [referralCode, setReferralCode] = useState('');
 
-  // Auto-fill referral code from URL param ?ref=XXXXXXXX
-  useEffect(() => {
-    const extractRef = async () => {
-      try {
-        if (Platform.OS === 'web') {
-          const params = new URLSearchParams(window.location.search);
-          const ref = params.get('ref');
-          if (ref) { setReferralCode(ref); setMode('register'); }
-        } else {
-          const url = await Linking.getInitialURL();
-          if (url) {
-            const parsed = Linking.parse(url);
-            const ref = parsed.queryParams?.ref as string | undefined;
-            if (ref) { setReferralCode(ref); setMode('register'); }
-          }
-        }
-      } catch (_) {}
-    };
-    extractRef();
-  }, []);
 
   const handleSubmit = async (bypassOnboarding = false) => {
     if (!email.trim() || !password) {
@@ -257,7 +236,7 @@ export default function LoginScreen() {
       if (mode === 'login') {
         await login(email.trim().toLowerCase(), password);
       } else {
-        await register(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), password, referralCode.trim());
+        await register(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), password);
       }
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue.');
@@ -439,20 +418,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
             )}
 
-            {mode === 'register' && (
-              <View style={styles.field}>
-                <Text style={styles.label}>Code de parrainage (Optionnel)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={referralCode}
-                  onChangeText={setReferralCode}
-                  placeholder="ex: REF12345"
-                  placeholderTextColor={COLORS.outline}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                />
-              </View>
-            )}
+
 
             {mode === 'register' && (
               <TouchableOpacity 

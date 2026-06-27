@@ -33,23 +33,32 @@ def handle_stripe_webhook():
         return jsonify({'error': 'webhook_error'}), 400
 
     # ============================================
-    # 2. TRAITER L'ÉVÉNEMENT checkout.session.completed
+    # 2. TRAITER LES DIFFÉRENTS ÉVÉNEMENTS
     # ============================================
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        return process_successful_payment(session)
+    event_type = event.get('type')
+    data = event.get('data', {}).get('object', {})
 
-    # ============================================
-    # 3. GÉRER LES ÉCHECS DE PAIEMENT
-    # ============================================
-    elif event['type'] == 'invoice.payment_failed':
-        invoice = event['data']['object']
-        customer_email = invoice.get('customer_email')
-        print(f'[Stripe Webhook] Échec paiement pour {customer_email}')
+    if event_type == 'checkout.session.completed':
+        return process_successful_payment(data)
+
+    elif event_type == 'invoice.payment_succeeded':
+        customer_id = data.get('customer')
+        database.update_user_by_stripe_customer(customer_id, 'active')
+        return jsonify({'received': True}), 200
+
+    elif event_type == 'invoice.payment_failed':
+        customer_id = data.get('customer')
+        database.update_user_by_stripe_customer(customer_id, 'past_due')
+        return jsonify({'received': True}), 200
+
+    elif event_type in ['customer.subscription.updated', 'customer.subscription.deleted']:
+        customer_id = data.get('customer')
+        new_status = data.get('status', 'canceled')
+        database.update_user_by_stripe_customer(customer_id, new_status)
         return jsonify({'received': True}), 200
 
     # Autres événements — accusé réception sans action
-    print(f'[Stripe Webhook] Event non géré: {event["type"]}')
+    print(f'[Stripe Webhook] Event non géré: {event_type}')
     return jsonify({'received': True}), 200
 
 def process_successful_payment(session):

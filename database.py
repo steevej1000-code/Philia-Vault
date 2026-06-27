@@ -136,7 +136,10 @@ def init_db():
         ("income_updated_at", "TIMESTAMP"),
         ("available_cashflow", "REAL DEFAULT 0.0"),
         ("total_hemorrhage", "INTEGER DEFAULT 0"),
-        ("daily_budget", "REAL DEFAULT 0")
+        ("daily_budget", "REAL DEFAULT 0"),
+        ("stripe_status", "TEXT DEFAULT 'free'"),
+        ("payment_channel", "TEXT"),
+        ("stripe_status_updated_at", "TIMESTAMP")
     ]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")
@@ -539,7 +542,9 @@ def get_user_profile(user_id):
             "parrain_id": d.get("parrain_id"),
             "monthly_income": d.get("monthly_income", 0.0),
             "income_updated_at": d.get("income_updated_at"),
-            "created_at": d.get("created_at")
+            "created_at": d.get("created_at"),
+            "stripe_status": d.get("stripe_status") or "free",
+            "payment_channel": d.get("payment_channel")
         }
     return None
 
@@ -2404,6 +2409,77 @@ def recalculate_and_save_discipline_status(user_id: int, date_str: str) -> bool:
     except Exception as e:
         print(f"Erreur recalculate_and_save_discipline_status: {e}")
         return False
+    finally:
+        conn.close()
+
+def update_user_premium_status(app_user_id: str,
+                                new_status: str,
+                                source: str = 'stripe') -> bool:
+    """
+    Met à jour le statut premium d'un utilisateur.
+    app_user_id = user.id.toString() (envoyé à RevenueCat à l'init)
+    source = 'stripe' ou 'revenuecat'
+    """
+    conn = get_db()
+    try:
+        premium_status = 1 if new_status in ['active', 'trialing'] else 0
+        conn.execute("""
+            UPDATE users
+            SET stripe_status = ?,
+                payment_channel = ?,
+                stripe_status_updated_at = CURRENT_TIMESTAMP,
+                premium_status = ?
+            WHERE id = ?
+        """, (new_status, source, premium_status, int(app_user_id)))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Erreur update_user_premium_status: {e}")
+        return False
+    finally:
+        conn.close()
+
+def update_user_by_stripe_customer(stripe_customer_id: str,
+                                    new_status: str) -> bool:
+    conn = get_db()
+    try:
+        premium_status = 1 if new_status in ['active', 'trialing'] else 0
+        conn.execute("""
+            UPDATE users
+            SET stripe_status = ?,
+                payment_channel = 'stripe',
+                stripe_status_updated_at = CURRENT_TIMESTAMP,
+                premium_status = ?
+            WHERE stripe_customer_id = ?
+        """, (new_status, premium_status, stripe_customer_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Erreur update_user_by_stripe_customer: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_user_stripe_status(user_id) -> str:
+    """
+    Récupère le statut stripe/premium de l'utilisateur.
+    """
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT stripe_status FROM users WHERE id = ? OR email = ?", (user_id, user_id))
+        row = cursor.fetchone()
+        if row and row["stripe_status"]:
+            return row["stripe_status"]
+        # Fallback to premium_status if stripe_status not set
+        cursor.execute("SELECT premium_status FROM users WHERE id = ? OR email = ?", (user_id, user_id))
+        row = cursor.fetchone()
+        if row and row["premium_status"] == 1:
+            return "active"
+        return "free"
+    except Exception as e:
+        print(f"Erreur get_user_stripe_status: {e}")
+        return "free"
     finally:
         conn.close()
 

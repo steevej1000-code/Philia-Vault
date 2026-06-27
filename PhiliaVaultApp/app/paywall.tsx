@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ActivityIndicator, Alert, ScrollView, Platform
@@ -37,6 +37,27 @@ export default function PaywallScreen() {
   const { isFounder, loading: founderLoading } = useFounderStatus();
   const [loading, setLoading]                  = useState(false);
   const [plan, setPlan]                        = useState<'annual' | 'monthly'>('annual');
+  const [monthlyPrice, setMonthlyPrice]        = useState('$14.99');
+  const [annualPrice, setAnnualPrice]          = useState('$149.90');
+
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const offerings = await getOfferings();
+        if (offerings) {
+          if (offerings.monthly?.product?.priceString) {
+            setMonthlyPrice(offerings.monthly.product.priceString);
+          }
+          if (offerings.annual?.product?.priceString) {
+            setAnnualPrice(offerings.annual.product.priceString);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching offerings for pricing:', err);
+      }
+    };
+    fetchPrices();
+  }, []);
 
   /* ─── Payment handler ─────────────────────────────────────────────────────── */
   const handleSubscribe = async () => {
@@ -49,14 +70,14 @@ export default function PaywallScreen() {
         return; // browser redirects away — setLoading not needed
       }
 
-      // Native path → RevenueCat (monthly package with trial configured in App Store / Play Console)
+      // Native path → RevenueCat
       const offerings = await getOfferings();
       if (!offerings) {
         Alert.alert(t('error'), 'No offerings available. Check your connection.');
         setLoading(false);
         return;
       }
-      const pkg = (offerings as any).monthly;
+      const pkg = plan === 'annual' ? (offerings as any).annual : (offerings as any).monthly;
       if (!pkg) {
         Alert.alert(t('error'), 'Plan not found.');
         setLoading(false);
@@ -125,7 +146,7 @@ export default function PaywallScreen() {
           <Text style={styles.founderTitle}>{t('paywall.founder_title')}</Text>
           <Text style={styles.founderSub}>{t('paywall.founder_subtitle')}</Text>
           <View style={styles.founderPriceRow}>
-            <Text style={styles.founderPrice}>{PRICE_MONTHLY}</Text>
+            <Text style={styles.founderPrice}>{monthlyPrice}</Text>
             <Text style={styles.founderPricePeriod}> / {t('paywall.month')}</Text>
           </View>
           <Text style={styles.founderLocked}>🔒 {t('paywall.locked_for_life')}</Text>
@@ -193,7 +214,7 @@ export default function PaywallScreen() {
             <Text style={styles.planCardBadgeText}>BEST VALUE</Text>
           </View>
           <Text style={styles.planCardTitle}>Annuel</Text>
-          <Text style={styles.planCardPrice}>{PRICE_ANNUAL}</Text>
+          <Text style={styles.planCardPrice}>{annualPrice}</Text>
           <Text style={styles.planCardSub}>/ an · ~$12.42/mo</Text>
         </TouchableOpacity>
 
@@ -207,7 +228,7 @@ export default function PaywallScreen() {
             <Text style={styles.planCardBadgeText}>{TRIAL_DAYS}J GRATUITS</Text>
           </View>
           <Text style={styles.planCardTitle}>Mensuel</Text>
-          <Text style={styles.planCardPrice}>{PRICE_MONTHLY}</Text>
+          <Text style={styles.planCardPrice}>{monthlyPrice}</Text>
           <Text style={styles.planCardSub}>/ mois</Text>
         </TouchableOpacity>
       </View>
@@ -225,13 +246,13 @@ export default function PaywallScreen() {
             : (
               <View style={styles.subBtnInner}>
                 {plan === 'annual'
-                  ? <Text style={styles.subText}>Commencer — {PRICE_ANNUAL}/an</Text>
+                  ? <Text style={styles.subText}>Commencer — {annualPrice}/an</Text>
                   : <Text style={styles.subText}>Commencer — {TRIAL_DAYS} jours gratuits</Text>
                 }
                 <Text style={styles.subTextSub}>
                   {plan === 'annual'
                     ? 'Économisez 17% vs mensuel · Sans engagement'
-                    : `Sans engagement · ${PRICE_MONTHLY}/mois ensuite`
+                    : `Sans engagement · ${monthlyPrice}/mois ensuite`
                   }
                 </Text>
               </View>

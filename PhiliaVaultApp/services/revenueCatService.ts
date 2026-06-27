@@ -25,8 +25,35 @@ export const initializeRevenueCat = async (userId: string) => {
 
 export const getOfferings = async () => {
   if (__DEV__) {
-    console.log('[RevenueCat] Mode DEV — getOfferings retourne null.');
-    return null;
+    console.log('[RevenueCat] Mode DEV — getOfferings retourne les offerings simulés.');
+    return {
+      monthly: {
+        identifier: '$rc_monthly',
+        packageType: 'MONTHLY',
+        product: {
+          identifier: 'coach_monthly',
+          description: 'Philia Vault Premium Mensuel',
+          title: 'Premium Mensuel',
+          price: 14.99,
+          priceString: '$14.99',
+          currencyCode: 'USD',
+        },
+        offeringIdentifier: 'default',
+      },
+      annual: {
+        identifier: '$rc_annual',
+        packageType: 'ANNUAL',
+        product: {
+          identifier: 'coach_annual',
+          description: 'Philia Vault Premium Annuel',
+          title: 'Premium Annuel',
+          price: 149.90,
+          priceString: '$149.90',
+          currencyCode: 'USD',
+        },
+        offeringIdentifier: 'default',
+      },
+    } as any;
   }
   try {
     const offerings = await Purchases.getOfferings();

@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, RADIUS } from '../../constants/colors';
-import { IconAssets, IconLiabilities, IconGift, IconCoach, IconProps } from '../../components/icons/Icons';
+import { IconAssets, IconLiabilities, IconGift, IconCoach, IconShield, IconProps } from '../../components/icons/Icons';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
 
 interface TabIconProps {
@@ -75,8 +75,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="affiliation"
         options={{
-          title: t('tab_affiliation'),
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconGift} label={t('tab_affiliation')} />,
+          href: null,
         }}
       />
       <Tabs.Screen
@@ -90,7 +89,7 @@ export default function TabsLayout() {
         name="discipline"
         options={{
           title: t('tab_discipline'),
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} emoji="⚡" label={t('tab_discipline')} />,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={IconShield} label={t('tab_discipline')} />,
         }}
       />
       <Tabs.Screen

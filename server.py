@@ -159,6 +159,39 @@ def get_current_user_id():
                 pass
     return user_id or "alex@philiavault.com" # fallback default to prevent crash, but front-end will send X-User-Email
 
+from functools import wraps
+
+def get_token_from_request():
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        return auth_header.split(" ")[1]
+    return request.headers.get("X-User-Email") or request.args.get("user_id")
+
+def verify_token(token):
+    if not token:
+        return None
+    profile = database.get_user_profile(token)
+    return profile
+
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = get_token_from_request()
+        user = verify_token(token)
+        if not user:
+            return jsonify({"error": "Non authentifié"}), 401
+
+        # Vérifier le statut premium en DB
+        status = database.get_user_stripe_status(user['id'])
+        if status not in ['active', 'trialing']:
+            return jsonify({
+                "error": "Accès suspendu",
+                "stripe_status": status
+            }), 403
+
+        return f(*args, **kwargs)
+    return decorated
+
 # Google Auth Verification helper
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -956,33 +989,52 @@ def webhook_stripe():
             
     return jsonify({"success": True})
 
-# RevenueCat Webhook Endpoint
-@app.route("/api/webhooks/revenuecat", methods=["POST"])
-def webhook_revenuecat():
-    data = request.json or {}
-    event = data.get("event", {})
-    event_type = event.get("type")
-    app_user_id = event.get("app_user_id")
-    
+@app.route('/api/webhooks/revenuecat', methods=['POST'])
+def revenuecat_webhook():
+    """
+    Reçoit les événements RevenueCat et met à jour stripe_status en DB.
+    RevenueCat utilise son propre système d'auth — vérifier le header.
+    """
+    # Vérifier l'authenticité du webhook RevenueCat
+    auth_header = request.headers.get('Authorization')
+    expected = os.environ.get('REVENUECAT_WEBHOOK_SECRET')
+    if expected and auth_header != expected:
+        return jsonify({'error': 'Non autorisé'}), 401
+
+    event_data = request.get_json() or {}
+    event = event_data.get('event', {})
+    event_type = event.get('type')
+    app_user_id = event.get('app_user_id')
+
     if not event_type or not app_user_id:
-        return jsonify({"success": False, "error": "Invalid event data"}), 400
-        
-    try:
-        if event_type in ["INITIAL_PURCHASE", "RENEWAL", "SUBSCRIBE"]:
-            # Set user premium
-            database.set_premium_status(app_user_id, 1)
-            database.add_transaction(app_user_id, f"Abonnement Premium activé via RevenueCat", "asset_yield", 0.0, "Today")
-        elif event_type in ["CANCELLATION", "EXPIRATION"]:
-            # Cancel user premium
-            database.set_premium_status(app_user_id, 0)
-            database.add_transaction(app_user_id, f"Abonnement Premium expiré via RevenueCat", "liability_payment", 0.0, "Today")
-            
-        return jsonify({"success": True, "message": f"Processed RevenueCat event {event_type}"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({'error': 'Données invalides'}), 400
+
+    # Mapper les événements RevenueCat aux statuts Philia Vault
+    if event_type in ['INITIAL_PURCHASE', 'RENEWAL', 'UNCANCELLATION']:
+        # Activer l'accès premium
+        database.update_user_premium_status(app_user_id, 'active', 'revenuecat')
+        database.add_transaction(app_user_id, f"Abonnement Premium activé via RevenueCat", "asset_yield", 0.0, "Today")
+
+    elif event_type in ['CANCELLATION', 'EXPIRATION']:
+        # Révoquer l'accès
+        database.update_user_premium_status(app_user_id, 'canceled', 'revenuecat')
+        database.add_transaction(app_user_id, f"Abonnement Premium expiré via RevenueCat", "liability_payment", 0.0, "Today")
+
+    elif event_type == 'BILLING_ISSUE':
+        # Paiement échoué
+        database.update_user_premium_status(app_user_id, 'past_due', 'revenuecat')
+        database.add_transaction(app_user_id, f"Incident de paiement RevenueCat", "liability_payment", 0.0, "Today")
+
+    elif event_type == 'PRODUCT_CHANGE':
+        # Changement de plan (mensuel ↔ annuel)
+        database.update_user_premium_status(app_user_id, 'active', 'revenuecat')
+        database.add_transaction(app_user_id, f"Changement de formule RevenueCat", "asset_yield", 0.0, "Today")
+
+    return jsonify({'received': True}), 200
 
 # Gemini AI Coach Chat
 @app.route("/api/coach/chat", methods=["POST"])
+@require_auth
 def coach_chat():
     user_id = get_current_user_id()
     data = request.json or {}

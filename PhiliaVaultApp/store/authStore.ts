@@ -3,6 +3,7 @@ import { storage } from '../services/storage';
 import api from '../services/api';
 
 export interface User {
+  id: number;
   email: string;
   first_name: string;
   last_name: string;
@@ -12,6 +13,7 @@ export interface User {
   monthly_income?: number;
   income_updated_at?: string;
 }
+
 
 interface AuthState {
   user: User | null;

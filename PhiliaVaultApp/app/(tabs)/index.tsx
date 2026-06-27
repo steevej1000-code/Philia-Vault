@@ -264,7 +264,7 @@ export default function DashboardScreen() {
                 <Text style={styles.boxLabel}>Revenue Disponible</Text>
                 <Text style={[
                   styles.boxVal,
-                  { color: availableCashflow > 0 ? '#39FF14' : availableCashflow < 0 ? '#FF4444' : '#FF9500' }
+                  { color: availableCashflow > 0 ? '#CCFF00' : availableCashflow < 0 ? '#FF4444' : '#FF9500' }
                 ]}>
                   {formatLargeAmount(availableCashflow)}
                 </Text>
@@ -283,7 +283,7 @@ export default function DashboardScreen() {
                 ) : (
                   <Animated.Text style={[
                     styles.boxVal,
-                    { color: hemorragieRate! <= 30 ? '#39FF14' : hemorragieRate! <= 50 ? '#FF9500' : '#FF4444' },
+                    { color: hemorragieRate! <= 30 ? '#CCFF00' : hemorragieRate! <= 50 ? '#FF9500' : '#FF4444' },
                     hemorragieRate! > 75 && { opacity: pulseAnim }
                   ]}>
                     {Math.round(hemorragieRate!)}%

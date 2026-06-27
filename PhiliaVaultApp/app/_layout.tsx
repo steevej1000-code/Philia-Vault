@@ -184,7 +184,7 @@ function OnboardingSalaryGuard() {
 
 
 export default function RootLayout() {
-  const { loadSession } = useAuthStore();
+  const { loadSession, user } = useAuthStore();
 
   const [fontsLoaded] = useFonts({
     'Montserrat-Regular': Montserrat_400Regular,
@@ -199,9 +199,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     loadSession();
-    // Initialize RevenueCat
-    // @ts-ignore
-    initializeRevenueCat('anonymous'); // Ou utiliser l'ID de l'utilisateur quand il sera loadé.
 
     // Warm the offline cache on startup if we're online, so cached data is
     // available immediately the next time the user opens the app offline.
@@ -210,6 +207,13 @@ export default function RootLayout() {
       api.syncAll();
     })();
   }, []);
+
+  useEffect(() => {
+    if (user?.id) {
+      initializeRevenueCat(user.id.toString());
+    }
+  }, [user]);
+
 
   if (!fontsLoaded) {
     return (
