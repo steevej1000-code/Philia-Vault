@@ -59,4 +59,4 @@ export const GOOGLE_WEB_CLIENT_ID = '179843169337-kod2rt6ab6fon6sc2h7p1hrcqq7pp0
 // iOS Client ID — créé dans Google Cloud Console (type: iOS)
 // Bundle ID: com.philia.vault
 // TODO: Remplacer par le vrai Client ID iOS après création
-export const GOOGLE_IOS_CLIENT_ID = '179843169337-kod2rt6ab6fon6sc2h7p1hrcqq7pp03q.apps.googleusercontent.com';
+export const GOOGLE_IOS_CLIENT_ID = '179843169337-k1fe47qaric2f3esqbu6kkc1qmk18kc8.apps.googleusercontent.com';
