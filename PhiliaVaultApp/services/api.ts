@@ -120,10 +120,10 @@ class ApiClient {
     return data;
   }
 
-  async googleAuth(idToken: string) {
+  async googleAuth(idToken: string, email?: string) {
     const data = await this.request(ENDPOINTS.googleAuth, {
       method: 'POST',
-      body: JSON.stringify({ id_token: idToken }),
+      body: JSON.stringify({ id_token: idToken, email: email || '' }),
     });
     if (data.success && data.user?.email) {
       this.setUserEmail(data.user.email);

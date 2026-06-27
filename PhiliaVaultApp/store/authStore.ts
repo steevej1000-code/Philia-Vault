@@ -63,9 +63,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await get().login(email, password);
   },
 
-  loginWithGoogle: async (idToken: string) => {
+  loginWithGoogle: async (idToken: string, email?: string) => {
     await api.init();
-    const data = await api.googleAuth(idToken);
+    const data = await api.googleAuth(idToken, email);
     if (!data.success) throw new Error(data.error || 'Connexion Google échouée');
 
     // Now fetch full profile

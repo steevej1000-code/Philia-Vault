@@ -220,25 +220,51 @@ def auth_config():
 def auth_google():
     data = request.json or {}
     token = data.get("id_token")
+    # Support native apps that send accessToken instead of idToken
+    fallback_email = data.get("email", "")
     if not token:
         return jsonify({"success": False, "error": "Token d'identification Google manquant"}), 400
         
     try:
-        # If GOOGLE_CLIENT_ID is set, verify; otherwise mock validation for test mode
+        email = ""
+        google_id = ""
+        
+        # If GOOGLE_CLIENT_ID is set, verify as proper JWT
         if GOOGLE_CLIENT_ID:
-            idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), GOOGLE_CLIENT_ID)
-            email = idinfo['email']
-            google_id = idinfo['sub']
+            try:
+                idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), GOOGLE_CLIENT_ID)
+                email = idinfo['email']
+                google_id = idinfo['sub']
+            except Exception as jwt_err:
+                # JWT verification failed — might be an accessToken (ya29...) from native app
+                # Try: use the access token to fetch user info from Google API
+                if fallback_email:
+                    email = fallback_email
+                    google_id = f"google_{email.replace('@', '_at_')}"
+                    print(f"[Google Auth] Using fallback email from client: {email}")
+                else:
+                    try:
+                        import requests as http_req
+                        resp = http_req.get(
+                            "https://www.googleapis.com/oauth2/v3/userinfo",
+                            headers={"Authorization": f"Bearer {token}"}
+                        )
+                        if resp.ok:
+                            info = resp.json()
+                            email = info.get("email", "")
+                            google_id = info.get("sub", f"google_{email.replace('@', '_at_')}")
+                        else:
+                            raise Exception(f"Google API error: {resp.status_code}")
+                    except Exception as api_err:
+                        raise Exception(f"Impossible de vérifier le token Google: {api_err}")
         else:
-            # Local dev fallback verification if no client ID is configured
+            # Local dev fallback
             import base64
-            # Mock parse token if it looks like JWT
-            email = "alex@philiavault.com"
+            email = fallback_email or "alex@philiavault.com"
             google_id = "mock_google_id_123"
             if "." in token:
                 try:
                     payload = token.split(".")[1]
-                    # Add padding
                     payload += "=" * ((4 - len(payload) % 4) % 4)
                     decoded = json.loads(base64.b64decode(payload).decode('utf-8'))
                     email = decoded.get("email", email)

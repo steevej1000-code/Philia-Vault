@@ -137,8 +137,8 @@ export default function LoginScreen() {
       // Use id_token if available, otherwise create a synthetic token
       const idToken = authentication.idToken || authentication.accessToken;
 
-      // Send to our Flask backend
-      await loginWithGoogle(idToken);
+      // Send to our Flask backend with fallback email for native apps
+      await loginWithGoogle(idToken, userInfo.email);
     } catch (e: any) {
       setError(e.message || 'Erreur lors de la connexion Google.');
       setGoogleLoading(false);
