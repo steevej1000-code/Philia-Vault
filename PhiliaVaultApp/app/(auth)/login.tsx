@@ -15,7 +15,7 @@ import { IconShield } from '../../components/icons/Icons';
 import { useAuthStore } from '../../store/authStore';
 import { COLORS, RADIUS } from '../../constants/colors';
 import { PremiumButton } from '../../components/PremiumButton';
-import { GOOGLE_WEB_CLIENT_ID } from '../../constants/api';
+import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '../../constants/api';
 import api from '../../services/api';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
 import Svg, { Path, Circle, Line, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
@@ -96,7 +96,7 @@ export default function LoginScreen() {
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
     webClientId: GOOGLE_WEB_CLIENT_ID,
-    iosClientId: GOOGLE_WEB_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
     androidClientId: GOOGLE_WEB_CLIENT_ID,
     redirectUri: makeRedirectUri({
       scheme: 'philiavault',

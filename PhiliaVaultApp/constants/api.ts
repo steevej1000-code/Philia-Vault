@@ -56,3 +56,7 @@ export const ENDPOINTS = {
 // Google OAuth Web Client ID (for expo-auth-session)
 // This is the WEB client ID from Google Console (not iOS/Android)
 export const GOOGLE_WEB_CLIENT_ID = '179843169337-kod2rt6ab6fon6sc2h7p1hrcqq7pp03q.apps.googleusercontent.com';
+// iOS Client ID — créé dans Google Cloud Console (type: iOS)
+// Bundle ID: com.philia.vault
+// TODO: Remplacer par le vrai Client ID iOS après création
+export const GOOGLE_IOS_CLIENT_ID = '179843169337-kod2rt6ab6fon6sc2h7p1hrcqq7pp03q.apps.googleusercontent.com';
