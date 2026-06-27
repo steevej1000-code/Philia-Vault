@@ -3,7 +3,7 @@ import stripe
 from flask import Blueprint, request, jsonify
 import database
 from services.meta_conversions import send_purchase_event
-from services.email_service import send_confirmation_email
+from services.email_service import send_confirmation_email, send_welcome_email
 
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
 WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
@@ -147,6 +147,16 @@ def process_successful_payment(session):
         member_number=new_member_number,
         language=language,
     )
+
+    # ============================================
+    # ENVOYER EMAIL DE BIENVENUE
+    # ============================================
+    try:
+        user = database.get_user_profile(customer_email)
+        if user and user.get('first_name'):
+            send_welcome_email(customer_email, user['first_name'])
+    except Exception as e:
+        print(f'[Stripe Webhook] Erreur envoi welcome email: {e}')
 
     return jsonify({
         'received': True,

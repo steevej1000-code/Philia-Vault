@@ -5,6 +5,7 @@ import json
 from dotenv import load_dotenv
 
 from flask_cors import CORS
+from services.email_service import send_welcome_email
 
 load_dotenv()
 
@@ -286,6 +287,36 @@ def auth_apple():
     except Exception as e:
         return jsonify({"success": False, "error": f"Échec de validation Apple: {str(e)}"}), 401
 
+import re
+
+def validate_password(password: str) -> dict:
+    """
+    Valide la force du mot de passe.
+    Retourne {valid: bool, errors: list}
+    """
+    errors = []
+
+    if len(password) < 8:
+        errors.append("Au moins 8 caractères requis")
+
+    if not re.search(r'[A-Z]', password):
+        errors.append("Au moins une lettre majuscule requise")
+
+    if not re.search(r'[a-z]', password):
+        errors.append("Au moins une lettre minuscule requise")
+
+    if not re.search(r'\d', password):
+        errors.append("Au moins un chiffre requis")
+
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        errors.append("Au moins un caractère spécial requis")
+
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors
+    }
+
+
 # User Authentication endpoints
 @app.route("/api/auth/register", methods=["POST"])
 def auth_register():
@@ -297,6 +328,14 @@ def auth_register():
     referral_code = data.get("referral_code")
     if not email or not password:
         return jsonify({"success": False, "error": "Email et mot de passe requis"}), 400
+    
+    # Validation du mot de passe
+    pwd_check = validate_password(password)
+    if not pwd_check['valid']:
+        return jsonify({
+            "error": "Mot de passe trop faible",
+            "details": pwd_check['errors']
+        }), 400
     
     success = database.create_user(email, password, first_name, last_name, referral_code)
     if success:
@@ -1018,6 +1057,15 @@ def revenuecat_webhook():
         # Activer l'accès premium
         database.update_user_premium_status(app_user_id, 'active', 'revenuecat')
         database.add_transaction(app_user_id, f"Abonnement Premium activé via RevenueCat", "asset_yield", 0.0, "Today")
+
+        # Envoyer email de bienvenue uniquement sur INITIAL_PURCHASE (pas RENEWAL)
+        if event_type == 'INITIAL_PURCHASE':
+            try:
+                user = database.get_user_profile(app_user_id)
+                if user and user.get('email') and user.get('first_name'):
+                    send_welcome_email(user['email'], user['first_name'])
+            except Exception as e:
+                print(f"[RevenueCat] Erreur envoi welcome email: {e}")
 
     elif event_type in ['CANCELLATION', 'EXPIRATION']:
         # Révoquer l'accès

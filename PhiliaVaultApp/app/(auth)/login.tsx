@@ -409,6 +409,8 @@ export default function LoginScreen() {
               />
             </View>
 
+            {mode === 'register' && <PasswordStrengthIndicator password={password} />}
+
             {mode === 'login' && (
               <TouchableOpacity
                 style={styles.forgotLink}
@@ -496,6 +498,102 @@ export default function LoginScreen() {
     </Animated.View>
   );
 }
+
+// ─── Password Strength Indicator ──────────────────────────────────────
+
+function PasswordStrengthIndicator({ password }: { password: string }) {
+  const checks = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /\d/.test(password),
+    special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+  };
+
+  const passed = Object.values(checks).filter(Boolean).length;
+  const score = passed; // 0-5
+
+  let strengthLabel = 'Faible';
+  let barColor = '#FF4444';
+  let barWidth = '20%';
+  if (score <= 2) {
+    strengthLabel = 'Faible';
+    barColor = '#FF4444';
+    barWidth = '20%';
+  } else if (score <= 4) {
+    strengthLabel = 'Moyen';
+    barColor = '#FFA500';
+    barWidth = '60%';
+  } else {
+    strengthLabel = 'Fort';
+    barColor = '#39FF14';
+    barWidth = '100%';
+  }
+
+  const criteria = [
+    { key: 'length', label: '8 caractères minimum' },
+    { key: 'uppercase', label: 'Une majuscule' },
+    { key: 'lowercase', label: 'Une minuscule' },
+    { key: 'number', label: 'Un chiffre' },
+    { key: 'special', label: 'Un caractère spécial' },
+  ] as const;
+
+  return (
+    <View style={pwdStyles.container}>
+      {/* Barre de progression */}
+      <View style={pwdStyles.barBg}>
+        <View style={[pwdStyles.barFill, { width: barWidth as any, backgroundColor: barColor }]} />
+      </View>
+      <Text style={[pwdStyles.strengthLabel, { color: barColor }]}>{strengthLabel}</Text>
+
+      {/* Liste des critères */}
+      {criteria.map((c) => (
+        <View key={c.key} style={pwdStyles.criterion}>
+          <Text style={{ color: checks[c.key] ? '#39FF14' : '#FF4444', fontSize: 12 }}>
+            {checks[c.key] ? '✅' : '❌'}
+          </Text>
+          <Text style={[pwdStyles.criterionText, { color: checks[c.key] ? '#39FF14' : '#888888' }]}>
+            {c.label}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const pwdStyles = StyleSheet.create({
+  container: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    gap: 6,
+  },
+  barBg: {
+    height: 4,
+    backgroundColor: '#2C2C2E',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: 4,
+    borderRadius: 2,
+  },
+  strengthLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  criterion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  criterionText: {
+    fontSize: 12,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
