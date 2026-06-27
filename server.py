@@ -185,7 +185,9 @@ def require_auth(f):
 
         # Vérifier le statut premium en DB
         status = database.get_user_stripe_status(user['id'])
-        if status not in ['active', 'trialing']:
+        profile = database.get_user_profile(user['id'])
+        premium = profile.get('premium_status', 0) if profile else 0
+        if status not in ['active', 'trialing'] and premium != 1:
             return jsonify({
                 "error": "Accès suspendu",
                 "stripe_status": status
