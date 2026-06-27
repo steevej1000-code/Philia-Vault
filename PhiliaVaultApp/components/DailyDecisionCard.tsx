@@ -42,10 +42,10 @@ interface Streak {
 
 // ─── UI Labels (multilingue) ──────────────────────────────────────────────────
 const CATEGORY_COLORS: Record<string, string> = {
-  cashflow:      '#4ADE80',
-  dette:         '#F87171',
-  investissement:'#60A5FA',
-  mentalite:     '#FBBF24',
+  cashflow:      '#888888',
+  dette:         '#888888',
+  investissement:'#888888',
+  mentalite:     '#888888',
 };
 
 const CATEGORY_LABELS: Record<string, Record<string, string>> = {
@@ -332,10 +332,8 @@ export default function DailyDecisionCard() {
             { display: flipped ? 'flex' : 'none' },
           ]}
         >
-          <Text style={styles.resultIcon}>{choice === 'asset' ? '✅' : '⚠️'}</Text>
-          <Text style={styles.resultLabel}>
-            {choice === 'asset' ? ui('good_reflex') : ui('liability_chosen')}
-          </Text>
+          <Text style={styles.resultIcon}>💡</Text>
+          <Text style={styles.resultLabel}>Décision enregistrée</Text>
           <Text style={styles.feedbackText}>{feedback}</Text>
 
           {alreadyAnswered && (
@@ -370,8 +368,8 @@ const styles = StyleSheet.create({
   dilemmaScenario:  { color: '#D1D5DB', fontSize: 13, lineHeight: 19, marginBottom: 16 },
   choicesRow:       { flexDirection: 'row', gap: 10 },
   choiceBtn:        { flex: 1, borderRadius: 12, borderWidth: 1, padding: 12, alignItems: 'center', gap: 6 },
-  liabilityBtn:     { backgroundColor: '#7F1D1D22', borderColor: '#F8717155' },
-  assetBtn:         { backgroundColor: '#14532D22', borderColor: '#4ADE8055' },
+  liabilityBtn:     { backgroundColor: '#2C2C2E22', borderColor: '#88888855' },
+  assetBtn:         { backgroundColor: '#2C2C2E22', borderColor: '#88888855' },
   choiceBtnIcon:    { fontSize: 20 },
   choiceBtnLabel:   { color: '#E5E7EB', fontSize: 11, textAlign: 'center', lineHeight: 15 },
   resultIcon:       { fontSize: 36, marginBottom: 8 },
