@@ -567,7 +567,8 @@ def get_user_profile(user_id):
             "income_updated_at": d.get("income_updated_at"),
             "created_at": d.get("created_at"),
             "stripe_status": d.get("stripe_status") or "free",
-            "payment_channel": d.get("payment_channel")
+            "payment_channel": d.get("payment_channel"),
+            "is_blocked": bool(d.get("is_blocked", 0))
         }
     return None
 

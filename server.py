@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 
 from flask_cors import CORS
 from services.email_service import send_welcome_email
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 load_dotenv()
 
@@ -31,6 +33,20 @@ app.secret_key = os.environ.get("SECRET_KEY")
 # Register Blueprints
 app.register_blueprint(stripe_webhook_bp)
 app.register_blueprint(admin_bp, url_prefix="/api/admin")
+
+# SECURITY: Rate Limiting — key function uses user email when available, fallback to IP # SECURITY
+def _limiter_key_func():
+    email = request.headers.get("X-User-Email") or request.args.get("user_id")
+    if email:
+        return f"user:{email}"
+    return get_remote_address()
+
+limiter = Limiter(
+    _limiter_key_func,
+    app=app,
+    default_limits=["60 per minute"],
+    storage_uri="memory://",
+)
 
 @app.before_request
 def skip_json_parsing_for_webhook():
@@ -72,6 +88,29 @@ def redirect_www():
 
 # Initialize DB on load
 database.init_db()
+
+# SECURITY: Security Headers on every response
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    # SECURITY: Content-Security-Policy — restrictive but permissive enough for React PWA
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data:; "
+        "connect-src 'self' https://api.stripe.com https://philia-vault.onrender.com https://generativelanguage.googleapis.com https://api.deepseek.com; "
+        "frame-src https://js.stripe.com https://hooks.stripe.com; "
+        "frame-ancestors 'none';"
+    )
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+    response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
+    return response
 
 # Gemini Config (via OpenAI-compatible SDK — plus fiable)
 DEEPSEEK_KEY = os.environ.get("DEEPSEEK_API_KEY")
@@ -197,11 +236,20 @@ def require_auth(f):
         if not user:
             return jsonify({"error": "Non authentifié"}), 401
 
-        # Vérifier le statut premium en DB
+        # Vérifier le statut premium/stripe en DB à chaque requête # SECURITY
         status = database.get_user_stripe_status(user['id'])
         profile = database.get_user_profile(user['id'])
         premium = profile.get('premium_status', 0) if profile else 0
-        if status not in ['active', 'trialing'] and premium != 1:
+
+        # Vérifier aussi is_blocked # SECURITY
+        if profile and profile.get('is_blocked'):
+            return jsonify({
+                "error": "Compte désactivé",
+                "stripe_status": status
+            }), 403
+
+        # stripe_status from DB est la source de vérité # SECURITY
+        if status not in ('active', 'trialing', 'complete') and premium != 1:
             return jsonify({
                 "error": "Accès suspendu",
                 "stripe_status": status
@@ -358,6 +406,7 @@ def validate_password(password: str) -> dict:
 
 # User Authentication endpoints
 @app.route("/api/auth/register", methods=["POST"])
+@limiter.limit("10 per minute")  # SECURITY: Rate limit registration
 def auth_register():
     data = request.json or {}
     email = data.get("email")
@@ -383,6 +432,7 @@ def auth_register():
         return jsonify({"success": False, "error": "Cet email est déjà utilisé"}), 400
 
 @app.route("/api/auth/login", methods=["POST"])
+@limiter.limit("5 per minute")  # SECURITY: Rate limit login
 def auth_login():
     data = request.json or {}
     email = data.get("email")
@@ -399,6 +449,7 @@ def auth_login():
         return jsonify({"success": False, "error": "Email ou mot de passe incorrect"}), 401
 
 @app.route("/api/auth/forgot-password", methods=["POST"])
+@limiter.limit("3 per minute")  # SECURITY: Rate limit password reset requests
 def auth_forgot_password():
     data = request.json or {}
     email = data.get("email")
@@ -414,6 +465,7 @@ def auth_forgot_password():
     return jsonify({"success": True, "message": "Si ce compte existe, un code a été envoyé par email"})
 
 @app.route("/api/auth/reset-password", methods=["POST"])
+@limiter.limit("3 per minute")  # SECURITY: Rate limit password reset
 def auth_reset_password():
     data = request.json or {}
     email = data.get("email")
@@ -1053,22 +1105,35 @@ def webhook_stripe():
     if event_type in ["customer.subscription.created", "customer.subscription.updated"]:
         customer_id = event_data.get("customer")
         status = event_data.get("status")
-        
+
         user = database.get_user_by_stripe_customer_id(customer_id)
         if user:
-            # active/trialing implies active premium status
-            premium = 1 if status in ["active", "trialing"] else 0
-            database.set_premium_status(user["email"], premium, stripe_customer_id=customer_id)
-            if premium:
+            # Utiliser update_user_by_stripe_customer pour mettre à jour stripe_status également # SECURITY
+            database.update_user_by_stripe_customer(customer_id, status)
+            if status in ["active", "trialing"]:
                 database.add_transaction(user["email"], f"Abonnement Stripe activé ({status})", "asset_yield", 0.0, "Today")
-                
+
     elif event_type == "customer.subscription.deleted":
         customer_id = event_data.get("customer")
         user = database.get_user_by_stripe_customer_id(customer_id)
         if user:
-            database.set_premium_status(user["email"], 0, stripe_customer_id=customer_id)
+            # Utiliser update_user_by_stripe_customer pour mettre à jour stripe_status également # SECURITY
+            database.update_user_by_stripe_customer(customer_id, "canceled")
             database.add_transaction(user["email"], "Abonnement Stripe résilié", "liability_payment", 0.0, "Today")
-            
+
+    elif event_type == "invoice.payment_failed":
+        # Événement manquant — marquer comme past_due # SECURITY
+        customer_id = event_data.get("customer")
+        user = database.get_user_by_stripe_customer_id(customer_id)
+        if user:
+            database.update_user_by_stripe_customer(customer_id, "past_due")
+            database.add_transaction(user["email"], "Paiement Stripe échoué", "liability_payment", 0.0, "Today")
+
+    elif event_type == "invoice.payment_succeeded":
+        # Ré-activer si le paiement réussi après un past_due # SECURITY
+        customer_id = event_data.get("customer")
+        database.update_user_by_stripe_customer(customer_id, "active")
+
     return jsonify({"success": True})
 
 @app.route('/api/webhooks/revenuecat', methods=['POST'])
@@ -1126,6 +1191,7 @@ def revenuecat_webhook():
 # Gemini AI Coach Chat
 @app.route("/api/coach/chat", methods=["POST"])
 @require_auth
+@limiter.limit("10 per minute")  # SECURITY: Rate limit AI coach
 def coach_chat():
     user_id = get_current_user_id()
     data = request.json or {}
