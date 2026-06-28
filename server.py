@@ -73,15 +73,31 @@ def redirect_www():
 # Initialize DB on load
 database.init_db()
 
-# Gemini AI Config (google.genai SDK)
-import google.genai as genai
+# Gemini Config (via OpenAI-compatible SDK — plus fiable)
+DEEPSEEK_KEY = os.environ.get("DEEPSEEK_API_KEY")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
-genai_client = None
-if GEMINI_KEY:
+deepseek_client = None
+if DEEPSEEK_KEY:
     try:
-        genai_client = genai.Client(api_key=GEMINI_KEY)
+        from openai import OpenAI
+        deepseek_client = OpenAI(
+            api_key=DEEPSEEK_KEY,
+            base_url="https://api.deepseek.com/v1"
+        )
     except Exception as e:
-        print(f"Error configuring Gemini: {e}")
+        print(f"Error configuring DeepSeek: {e}")
+
+# Gemini via OpenAI-compatible endpoint
+genai_client = None
+if GEMINI_KEY and not deepseek_client:
+    try:
+        from openai import OpenAI
+        genai_client = OpenAI(
+            api_key=GEMINI_KEY,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+        )
+    except Exception as e:
+        print(f"Error configuring Gemini (OpenAI compat): {e}")
 
 # Static Routes
 @app.route("/")
@@ -1203,26 +1219,38 @@ Here are the user's financial data to guide your analysis:
     
     if genai_client:
         try:
-            # Build history for Gemini format
-            history_parts = []
+            messages = [{"role": "system", "content": sys_prompt}]
             for h in history:
-                role = "user" if h.get("role") == "user" else "model"
-                history_parts.append({"role": role, "parts": [h.get("text", "")]})
+                role = "user" if h.get("role") == "user" else "assistant"
+                messages.append({"role": role, "content": h.get("text", "")})
+            messages.append({"role": "user", "content": user_msg})
             
-            # Create chat with system instruction
-            chat = genai_client.chats.create(
+            response = genai_client.chat.completions.create(
                 model="gemini-1.5-flash",
-                history=history_parts,
-                system_instruction=sys_prompt,
-                config={"max_output_tokens": 1024}
+                messages=messages,
+                max_tokens=1024
             )
-            response = chat.send_message(user_msg)
-            reply_text = response.text
+            reply_text = response.choices[0].message.content
             return jsonify({"success": True, "reply": reply_text})
         except Exception as e:
             print(f"Gemini error: {e}")
     
-    # Intelligent Offline Mock Mode (Heuristic engine based on actual DB stats)
+    # Fallback DeepSeek (si Gemini indisponible)
+    if deepseek_client:
+        try:
+            messages = [{"role": "system", "content": sys_prompt}]
+            for h in history:
+                role = "user" if h.get("role") == "user" else "assistant"
+                messages.append({"role": role, "content": h.get("text", "")})
+            messages.append({"role": "user", "content": user_msg})
+            response = deepseek_client.chat.completions.create(
+                model="deepseek-chat", messages=messages, max_tokens=1024
+            )
+            return jsonify({"success": True, "reply": response.choices[0].message.content})
+        except Exception as e:
+            print(f"DeepSeek error: {e}")
+    
+    # Offline Mock Mode (si ni Gemini ni DeepSeek ne marchent)
     reply = ""
     lower_msg = user_msg.lower()
     
