@@ -458,6 +458,29 @@ def init_db():
     except Exception:
         pass
 
+    # Migrate daily_discipline for My Target: add new columns
+    for col_def in [
+        ("reason", "TEXT"),
+        ("points", "INTEGER DEFAULT 0"),
+        ("epargne_du_jour", "REAL DEFAULT 0"),
+        ("depense_du_jour", "REAL DEFAULT 0"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE daily_discipline ADD COLUMN {col_def[0]} {col_def[1]}")
+        except Exception:
+            pass
+
+    # Create user_targets table for My Target feature
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_targets (
+        user_id INTEGER PRIMARY KEY,
+        monthly_savings_goal REAL DEFAULT 0,
+        monthly_budget REAL DEFAULT 0,
+        monthly_income REAL DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
     # Create financial_goals table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS financial_goals (
@@ -2480,6 +2503,311 @@ def get_user_stripe_status(user_id) -> str:
     except Exception as e:
         print(f"Erreur get_user_stripe_status: {e}")
         return "free"
+    finally:
+        conn.close()
+
+
+# ─── My Target Helpers ────────────────────────────────────────────────────────
+
+def get_user_targets(user_id: int) -> dict:
+    """Retourne les objectifs mensuels de l'utilisateur (My Target)"""
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT * FROM user_targets WHERE user_id = ?",
+            (user_id,)
+        ).fetchone()
+        if row:
+            return dict(row)
+        # Return defaults if no targets set
+        return {
+            "user_id": user_id,
+            "monthly_savings_goal": 0.0,
+            "monthly_budget": 0.0,
+            "monthly_income": 0.0,
+        }
+    finally:
+        conn.close()
+
+
+def set_user_targets(user_id: int, savings_goal: float, monthly_budget: float) -> bool:
+    """Définit ou met à jour les objectifs mensuels de l'utilisateur"""
+    conn = get_db()
+    try:
+        # Also update monthly_income from users table
+        income_row = conn.execute(
+            "SELECT monthly_income FROM users WHERE id = ?",
+            (user_id,)
+        ).fetchone()
+        monthly_income = income_row["monthly_income"] if income_row else 0.0
+
+        conn.execute("""
+            INSERT INTO user_targets (user_id, monthly_savings_goal, monthly_budget, monthly_income)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                monthly_savings_goal = excluded.monthly_savings_goal,
+                monthly_budget = excluded.monthly_budget,
+                monthly_income = excluded.monthly_income
+        """, (user_id, savings_goal, monthly_budget, monthly_income))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Erreur set_user_targets: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def save_daily_target_entry(user_id: int, date_str: str, epargne: float,
+                            depense: float, status: str, points: int = 0,
+                            reason: str = "") -> bool:
+    """Enregistre une entrée quotidienne My Target dans daily_discipline
+    Note: status must be 'success' or 'failed' per table CHECK constraint.
+    """
+    conn = get_db()
+    try:
+        # Normalize status to match table CHECK constraint
+        if status not in ('success', 'failed'):
+            if status == 'failure':
+                status = 'failed'
+            else:
+                status = 'failed'  # default for neutral/unknown
+
+        # Get existing freedom_days_earned if already present
+        existing = conn.execute("""
+            SELECT id, freedom_days_earned, amount_spent, category_id
+            FROM daily_discipline
+            WHERE user_id = ? AND date = ?
+        """, (user_id, date_str)).fetchone()
+
+        if existing:
+            conn.execute("""
+                UPDATE daily_discipline
+                SET status = ?,
+                    epargne_du_jour = ?,
+                    depense_du_jour = ?,
+                    amount_spent = ?,
+                    points = ?,
+                    reason = ?
+                WHERE id = ?
+            """, (status, epargne, depense, depense, points, reason, existing["id"]))
+        else:
+            conn.execute("""
+                INSERT INTO daily_discipline
+                (user_id, date, status, epargne_du_jour, depense_du_jour,
+                 amount_spent, freedom_days_earned, points, reason, category_id)
+                VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, 1)
+            """, (user_id, date_str, status, epargne, depense, depense, points, reason))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Erreur save_daily_target_entry: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def get_monthly_target_entries(user_id: int, year_month: str) -> list:
+    """Retourne les entrées My Target pour un mois donné (YYYY-MM)"""
+    conn = get_db()
+    try:
+        rows = conn.execute("""
+            SELECT date, status, epargne_du_jour, depense_du_jour,
+                   points, reason, amount_spent as depense
+            FROM daily_discipline
+            WHERE user_id = ? AND date LIKE ?
+            ORDER BY date ASC
+        """, (user_id, f"{year_month}-%")).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f"Erreur get_monthly_target_entries: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+def get_target_streak_data(user_id: int) -> dict:
+    """Calcule la série de succès consécutifs à partir d'aujourd'hui.
+    Retourne { streak_count, label }
+    Labels: 1-6='Étincelle', 7-29='Flamme', 30-99='Brasier',
+            100-364='Phare', 365+='Légende Philia'
+    """
+    conn = get_db()
+    try:
+        import datetime
+        cursor = conn.cursor()
+        rows = cursor.execute("""
+            SELECT date, status FROM daily_discipline
+            WHERE user_id = ? AND status IN ('success', 'failure')
+            ORDER BY date DESC
+        """, (user_id,)).fetchall()
+
+        if not rows:
+            return {"streak_count": 0, "label": "Aucune"}
+
+        # Build a lookup: date -> status
+        status_map = {}
+        for r in rows:
+            status_map[r["date"]] = r["status"]
+
+        today = datetime.date.today()
+        current = today
+        streak = 0
+
+        while True:
+            d_str = current.isoformat()
+            if d_str in status_map:
+                if status_map[d_str] == 'success':
+                    streak += 1
+                else:
+                    # Failed day breaks the streak, but only if today hasn't started
+                    if current == today:
+                        # Today is a failure, streak is 0
+                        streak = 0
+                        break
+                    break
+            else:
+                # No entry for this day — streak is broken (unless it's today)
+                if current == today:
+                    # Today has no entry, streak starts counting from yesterday
+                    current -= datetime.timedelta(days=1)
+                    continue
+                break
+            current -= datetime.timedelta(days=1)
+
+        # Determine label
+        if streak >= 365:
+            label = "Légende Philia"
+        elif streak >= 100:
+            label = "Phare"
+        elif streak >= 30:
+            label = "Brasier"
+        elif streak >= 7:
+            label = "Flamme"
+        elif streak >= 1:
+            label = "Étincelle"
+        else:
+            label = "Aucune"
+
+        return {"streak_count": streak, "label": label}
+    except Exception as e:
+        print(f"Erreur get_target_streak_data: {e}")
+        return {"streak_count": 0, "label": "Aucune"}
+    finally:
+        conn.close()
+
+
+def get_target_summary_data(user_id: int) -> dict:
+    """Calcule le résumé My Target pour l'utilisateur.
+    Jours de Liberté = (CASHFLOW_ACTIFS * 12) / (DEPENSES_ANNUELLES / 365)
+    Si DEPENSES_ANNUELLES = 0 → jours_liberte = 0
+    """
+    conn = get_db()
+    try:
+        import datetime
+        cursor = conn.cursor()
+
+        # Récupérer les objectifs
+        targets = get_user_targets(user_id)
+        budget_mensuel = targets.get("monthly_budget", 0.0)
+        objectif_epargne = targets.get("monthly_savings_goal", 0.0)
+
+        # Récupérer les actifs (cashflow actifs)
+        assets = get_assets(user_id)
+        cashflow_actifs = sum(a.get("monthly_yield", 0) for a in assets)
+
+        # Récupérer les passifs (dépenses annuelles)
+        liabilities = get_liabilities(user_id)
+        depenses_mensuelles = sum(l.get("monthly_cost", 0) for l in liabilities)
+        depenses_annuelles = depenses_mensuelles * 12
+
+        # Jours de Liberté
+        if depenses_annuelles > 0:
+            jours_liberte = (cashflow_actifs * 12) / (depenses_annuelles / 365)
+        else:
+            jours_liberte = 0.0
+
+        # Progression (percentage of savings goal achieved this month)
+        today = datetime.date.today()
+        month_str = today.strftime("%Y-%m")
+        rows = cursor.execute("""
+            SELECT COALESCE(SUM(epargne_du_jour), 0) as total_epargne
+            FROM daily_discipline
+            WHERE user_id = ? AND date LIKE ? AND status = 'success'
+        """, (user_id, f"{month_str}-%")).fetchone()
+        total_epargne_mois = rows["total_epargne"] if rows else 0.0
+
+        progression = 0.0
+        if objectif_epargne > 0:
+            progression = round((total_epargne_mois / objectif_epargne) * 100, 1)
+
+        return {
+            "budget_mensuel": budget_mensuel,
+            "objectif_epargne": objectif_epargne,
+            "jours_liberte": round(jours_liberte, 2),
+            "progression": progression,
+            "total_epargne_mois": round(total_epargne_mois, 2),
+        }
+    except Exception as e:
+        print(f"Erreur get_target_summary_data: {e}")
+        return {
+            "budget_mensuel": 0.0,
+            "objectif_epargne": 0.0,
+            "jours_liberte": 0.0,
+            "progression": 0.0,
+            "total_epargne_mois": 0.0,
+        }
+    finally:
+        conn.close()
+
+
+def auto_insert_neutral_entries() -> int:
+    """Cron job: Insère des entrées 'failure' avec reason='neutral' pour les
+    utilisateurs n'ayant pas d'entrée aujourd'hui.
+    Si depense_du_jour > budget_variable → 'failure'.
+    Retourne le nombre d'entrées insérées.
+    """
+    conn = get_db()
+    try:
+        import datetime
+        today = datetime.date.today().isoformat()
+        cursor = conn.cursor()
+
+        # Get all users who have targets set
+        users = cursor.execute("""
+            SELECT ut.user_id FROM user_targets ut
+            WHERE ut.monthly_budget > 0 OR ut.monthly_savings_goal > 0
+        """).fetchall()
+
+        count = 0
+        for user_row in users:
+            uid = user_row["user_id"]
+
+            # Check if entry exists for today
+            existing = cursor.execute("""
+                SELECT id FROM daily_discipline
+                WHERE user_id = ? AND date = ?
+            """, (uid, today)).fetchone()
+
+            if existing:
+                continue
+
+            # Auto-insert neutral entry
+            cursor.execute("""
+                INSERT INTO daily_discipline
+                (user_id, date, status, amount_spent, freedom_days_earned,
+                 epargne_du_jour, depense_du_jour, points, reason, category_id)
+                VALUES (?, ?, 'failure', 0, 0, 0, 0, 0, 'neutral', 1)
+            """, (uid, today))
+            count += 1
+
+        if count > 0:
+            conn.commit()
+        return count
+    except Exception as e:
+        print(f"Erreur auto_insert_neutral_entries: {e}")
+        conn.rollback()
+        return 0
     finally:
         conn.close()
 

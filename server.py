@@ -2004,6 +2004,191 @@ def abandon_goal(goal_id: int):
     conn.close()
     return jsonify({"success": True}), 200
 
+
+# ─── My Target Endpoints ──────────────────────────────────────────────────────
+
+@app.route('/api/target/daily-entry', methods=['POST'])
+def target_daily_entry():
+    """Enregistre une entrée quotidienne pour My Target.
+    Body: { epargne, depense }
+    Auto-calc status: success si epargne >= goal AND depense <= budget
+    """
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+
+    data = request.get_json() or {}
+    epargne = data.get('epargne', 0)
+    depense = data.get('depense', 0)
+
+    try:
+        epargne = float(epargne)
+        depense = float(depense)
+    except (ValueError, TypeError):
+        return jsonify({"error": "Valeurs invalides"}), 400
+
+    if epargne < 0 or depense < 0:
+        return jsonify({"error": "Les valeurs doivent être positives"}), 400
+
+    import datetime
+    today_str = datetime.date.today().isoformat()
+
+    # Récupérer les objectifs
+    targets = database.get_user_targets(user_id)
+    savings_goal = targets.get("monthly_savings_goal", 0.0)
+    monthly_budget = targets.get("monthly_budget", 0.0)
+
+    # Calcul du budget journalier restant
+    budget_variable = monthly_budget
+    if monthly_budget > 0:
+        # Calculate remaining budget for the month
+        import calendar
+        today = datetime.date.today()
+        days_in_month = calendar.monthrange(today.year, today.month)[1]
+        budget_variable = monthly_budget / days_in_month
+
+    # Auto-calcul du statut
+    if savings_goal > 0 and monthly_budget > 0:
+        daily_savings_target = savings_goal / 30.0
+        if epargne >= daily_savings_target and depense <= budget_variable:
+            status = 'success'
+        else:
+            status = 'failed'
+    elif epargne > 0:
+        status = 'success'
+    else:
+        status = 'failed'
+
+    # Points system (simple)
+    points = 0
+    if status == 'success':
+        points = 10
+        if epargne > 0:
+            points += 5
+        if depense == 0:
+            points += 5
+
+    success = database.save_daily_target_entry(
+        user_id, today_str, epargne, depense, status, points
+    )
+    if not success:
+        return jsonify({"error": "Erreur lors de l'enregistrement"}), 500
+
+    return jsonify({
+        "success": True,
+        "status": status,
+        "points_earned": points,
+        "epargne": epargne,
+        "depense": depense,
+    }), 200
+
+
+@app.route('/api/target/calendar', methods=['GET'])
+def target_calendar():
+    """Retourne les entrées My Target pour un mois donné.
+    Query param: month=YYYY-MM (default: current month)
+    """
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+
+    import datetime
+    month = request.args.get('month')
+    if not month:
+        month = datetime.date.today().strftime("%Y-%m")
+
+    entries = database.get_monthly_target_entries(user_id, month)
+
+    return jsonify({
+        "success": True,
+        "entries": entries,
+    }), 200
+
+
+@app.route('/api/target/streak', methods=['GET'])
+def target_streak():
+    """Calcule la série de succès consécutifs.
+    Returns: { streak_count, label }
+    """
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+
+    data = database.get_target_streak_data(user_id)
+    return jsonify({"success": True, **data}), 200
+
+
+@app.route('/api/target/summary', methods=['GET'])
+def target_summary():
+    """Retourne le résumé My Target.
+    Returns: { budget_mensuel, objectif_epargne, jours_liberte, progression }
+    """
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+
+    data = database.get_target_summary_data(user_id)
+    return jsonify({"success": True, **data}), 200
+
+
+@app.route('/api/target/set-goal', methods=['POST'])
+def target_set_goal():
+    """Définit les objectifs mensuels My Target.
+    Body: { savings_goal, monthly_budget }
+    """
+    user_email = get_current_user_id()
+    profile = database.get_user_profile(user_email)
+    if not profile:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+    user_id = profile["id"]
+
+    data = request.get_json() or {}
+    savings_goal = data.get('savings_goal', 0)
+    monthly_budget = data.get('monthly_budget', 0)
+
+    try:
+        savings_goal = float(savings_goal)
+        monthly_budget = float(monthly_budget)
+    except (ValueError, TypeError):
+        return jsonify({"error": "Valeurs invalides"}), 400
+
+    if savings_goal < 0 or monthly_budget < 0:
+        return jsonify({"error": "Les valeurs doivent être positives"}), 400
+
+    success = database.set_user_targets(user_id, savings_goal, monthly_budget)
+    if success:
+        targets = database.get_user_targets(user_id)
+        return jsonify({
+            "success": True,
+            "targets": targets,
+        }), 200
+    return jsonify({"error": "Erreur serveur"}), 500
+
+
+@app.route('/api/target/cron/auto-neutral', methods=['POST'])
+def target_cron_auto_neutral():
+    """Cron endpoint: Insère des entrées neutres pour les utilisateurs sans
+    entrée aujourd'hui. Protégé par une clé secrète simple en header.
+    """
+    # Simple protection — require a cron secret
+    cron_secret = os.environ.get("CRON_SECRET", "")
+    if cron_secret:
+        auth = request.headers.get("Authorization", "")
+        if auth != f"Bearer {cron_secret}":
+            return jsonify({"error": "Non autorisé"}), 401
+
+    count = database.auto_insert_neutral_entries()
+    return jsonify({"success": True, "inserted": count}), 200
+
+
 if __name__ == "__main__":
     # Ensure static directory exists
     os.makedirs("static", exist_ok=True)
