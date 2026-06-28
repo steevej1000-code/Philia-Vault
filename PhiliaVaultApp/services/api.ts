@@ -443,6 +443,31 @@ class ApiClient {
    * on app startup (when online) and on reconnect, so cached data is fresh
    * even before the user visits each screen.
    */
+  // ─── Push Notifications ───────────────────────────────────────────────────────
+
+  async subscribePush(subscription: PushSubscription, deviceType: string = 'unknown') {
+    return this.request('/api/push/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({
+        subscription: {
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh')!))),
+            auth: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth')!))),
+          },
+        },
+        device_type: deviceType,
+      }),
+    });
+  }
+
+  async unsubscribePush(endpoint: string) {
+    return this.request('/api/push/unsubscribe', {
+      method: 'POST',
+      body: JSON.stringify({ endpoint }),
+    });
+  }
+
   async syncAll(): Promise<void> {
     const online = await this.isOnline();
     if (!online) return;

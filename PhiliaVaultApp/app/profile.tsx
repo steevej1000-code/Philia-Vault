@@ -55,6 +55,11 @@ export default function ProfileScreen() {
   const [cancelAccessUntil, setCancelAccessUntil] = useState<string | null>(null);
   const [subCancelAtPeriodEnd, setSubCancelAtPeriodEnd] = useState(false);
   const [reactivating, setReactivating] = useState(false);
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+
+  const VAPID_PUBLIC_KEY = 'BKAEvpLXxMC8Aj0v1THOUmtxQJx5s6W-2MvOoj0t35J0GqkFL6oV8nqa9q5_ZllG2rRrXL9oFYnOKNS_0TvY6fI';
 
   useEffect(() => {
     (async () => {
@@ -63,6 +68,17 @@ export default function ProfileScreen() {
       setBiometricSupported(hasHardware && isEnrolled);
       const stored = await storage.getItem(BIOMETRIC_LOCK_KEY);
       setBiometricEnabled(stored === 'true');
+    })();
+    // Check push notification support (web only)
+    (async () => {
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
+        setPushSupported(true);
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          const sub = await reg.pushManager.getSubscription();
+          setPushSubscribed(!!sub);
+        } catch {}
+      }
     })();
   }, []);
 
@@ -136,6 +152,39 @@ export default function ProfileScreen() {
     setSavingSettings(true);
     try {
       await api.updateSettings({ notifications_enabled: value });
+
+      // Push subscription management (web only)
+      if (pushSupported && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+        if (value && !pushSubscribed) {
+          setSubscribing(true);
+          try {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: VAPID_PUBLIC_KEY,
+            });
+            await api.subscribePush(sub, 'web');
+            setPushSubscribed(true);
+          } catch (e: any) {
+            console.warn('Push subscribe failed:', e);
+            // Not critical — user can still use app
+          } finally {
+            setSubscribing(false);
+          }
+        } else if (!value && pushSubscribed) {
+          try {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.getSubscription();
+            if (sub) {
+              await api.unsubscribePush(sub.endpoint);
+              await sub.unsubscribe();
+            }
+            setPushSubscribed(false);
+          } catch (e: any) {
+            console.warn('Push unsubscribe failed:', e);
+          }
+        }
+      }
     } catch (e: any) {
       Alert.alert(t('error'), e.message || t('notifications_update_error'));
       setNotificationsEnabled(!value);

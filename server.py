@@ -1714,9 +1714,10 @@ def push_unsubscribe():
     database.deactivate_push_subscription(endpoint)
     return jsonify({"success": True}), 200
 
-@app.route('/api/push/send-daily-decision', methods=['POST'])
-def send_daily_decision_reminder():
-    """Cron : appelé chaque jour à 9h — rappel Daily Decision"""
+@app.route('/api/cron/daily-decision-reminder', methods=['POST'])
+def daily_decision_reminder():
+    """Cron : appelé chaque jour à 9h — rappel Daily Decision
+    → Utilisateurs premium qui n'ont pas loggé discipline aujourd'hui"""
     secret = request.headers.get('X-Cron-Secret')
     if secret != os.environ.get('CRON_SECRET'):
         return jsonify({"error": "Non autorisé"}), 401
@@ -1726,17 +1727,18 @@ def send_daily_decision_reminder():
     for user_id in user_ids:
         send_push_notification(
             user_id=user_id,
-            title="🔥 Ton dilemme du jour t'attend",
-            body="1 décision. 60 secondes. Garde ton streak actif.",
-            url="/app"
+            title="⚡ Daily Decision",
+            body="Ton dilemme du jour t'attend.",
+            url="/dashboard"
         )
         sent += 1
 
     return jsonify({"sent": sent}), 200
 
-@app.route('/api/push/send-cashflow-alert', methods=['POST'])
-def send_cashflow_alert():
-    """Cron : appelé chaque lundi — alerte cashflow négatif"""
+@app.route('/api/cron/cashflow-alert', methods=['POST'])
+def cashflow_alert():
+    """Cron : appelé chaque lundi à 10h — alerte cashflow négatif
+    → Utilisateurs avec cashflow_net < 0"""
     secret = request.headers.get('X-Cron-Secret')
     if secret != os.environ.get('CRON_SECRET'):
         return jsonify({"error": "Non autorisé"}), 401
@@ -1746,17 +1748,18 @@ def send_cashflow_alert():
     for user_id in user_ids:
         send_push_notification(
             user_id=user_id,
-            title="⚠️ Cashflow négatif détecté",
-            body="Tes passifs dévorent ton revenu. Coach IA a une recommandation.",
-            url="/app"
+            title="🔴 Hémorragie détectée",
+            body="Ton cashflow est négatif.",
+            url="/liabilities"
         )
         sent += 1
 
     return jsonify({"sent": sent}), 200
 
-@app.route('/api/push/send-renewal-reminder', methods=['POST'])
-def send_renewal_reminder():
-    """Cron : appelé chaque jour — rappel renouvellement J-1"""
+@app.route('/api/cron/renewal-reminder', methods=['POST'])
+def renewal_reminder():
+    """Cron : appelé chaque jour à 8h — rappel renouvellement J-1
+    → Utilisateurs dont l'abonnement se renouvelle demain"""
     secret = request.headers.get('X-Cron-Secret')
     if secret != os.environ.get('CRON_SECRET'):
         return jsonify({"error": "Non autorisé"}), 401
@@ -1766,9 +1769,9 @@ def send_renewal_reminder():
     for user_id in user_ids:
         send_push_notification(
             user_id=user_id,
-            title="📅 Ton accès Philia Vault se renouvelle demain",
-            body="14,99 $ seront prélevés demain. Gérer mon abonnement.",
-            url="/app"
+            title="🔔 Renouvellement demain",
+            body="Ton abonnement se renouvelle.",
+            url="/profile"
         )
         sent += 1
 
