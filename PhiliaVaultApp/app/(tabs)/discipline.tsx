@@ -1683,7 +1683,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   flashOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#22c55e',
     zIndex: 9999,
   },
@@ -2161,5 +2161,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 4,
     textAlign: 'center',
+  },
+  budgetSetupContainer: {
+    padding: 20,
+    alignItems: 'center' as const,
+  },
+  budgetSetupLabel: {
+    fontFamily: 'PlusJakartaSans-Medium',
+    fontSize: 14,
+    color: '#888888',
+    textAlign: 'center' as const,
+    marginBottom: 12,
+  },
+  editBudgetIcon: {
+    marginLeft: 8,
+    padding: 4,
   },
 });

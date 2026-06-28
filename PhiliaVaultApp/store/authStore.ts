@@ -24,7 +24,7 @@ interface AuthState {
   setUser: (user: User | null) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (firstName: string, lastName: string, email: string, password: string, referralCode?: string) => Promise<void>;
-  loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithGoogle: (idToken: string, email?: string) => Promise<void>;
   loginWithApple: (idToken: string, email?: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
