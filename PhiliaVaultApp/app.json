@@ -22,7 +22,9 @@
       "package": "com.philia.vault",
       "permissions": [
         "USE_BIOMETRIC",
-        "USE_FINGERPRINT"
+        "USE_FINGERPRINT",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ]
     },
     "plugins": [
@@ -58,6 +60,13 @@
     },
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1aadc232-0dea-41d9-bced-45fc2fcc8f08"
+      }
+    },
+    "owner": "steevej12"
   }
 }

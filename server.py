@@ -89,7 +89,7 @@ if DEEPSEEK_KEY:
 
 # Gemini via OpenAI-compatible endpoint
 genai_client = None
-if GEMINI_KEY and not deepseek_client:
+if GEMINI_KEY:
     try:
         from openai import OpenAI
         genai_client = OpenAI(

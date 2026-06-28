@@ -38,7 +38,8 @@ xcodebuild -workspace ios/PhiliaVault.xcworkspace \
   -scheme PhiliaVault \
   -configuration Debug \
   -destination id="$IPHONE_TARGET" \
-  -derivedDataPath "$DERIVED_DATA"
+  -derivedDataPath "$DERIVED_DATA" \
+  -allowProvisioningUpdates
 
 echo "📲 Installing app on iPhone ($IPHONE_TARGET)..."
 npx native-run ios --app "$DERIVED_DATA/Build/Products/Debug-iphoneos/PhiliaVault.app" --target "$IPHONE_TARGET"
