@@ -9,6 +9,54 @@ from services.email_service import send_welcome_email
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
+# SECURITY: Input validation helpers
+import html as _html
+_MAX_FIELD_LENGTH = 500
+_MAX_MESSAGE_LENGTH = 5000
+_FORBIDDEN_SQL_PATTERNS = ["' --", "';", "/*", "*/", "UNION SELECT", "DROP TABLE", "DELETE FROM", "INSERT INTO", "ALTER TABLE", "CREATE TABLE", "OR 1=1", "OR '1'='1'", "OR 1=1--", "xp_cmdshell"]
+
+def sanitize_string(val, max_len=_MAX_FIELD_LENGTH):
+    """Valide et nettoie une chaîne. Retourne None si invalide."""
+    if val is None or not isinstance(val, str):
+        return None
+    val = val.strip()
+    if len(val) == 0 or len(val) > max_len:
+        return None
+    # Bloquer les patterns SQL dangereux # SECURITY
+    upper = val.upper()
+    for pattern in _FORBIDDEN_SQL_PATTERNS:
+        if pattern in upper:
+            return None
+    return _html.escape(val[:max_len])  # HTML-escape comme filet de sécurité # SECURITY
+
+def validate_email(email):
+    """Validation basique d'email."""
+    if not email or not isinstance(email, str):
+        return None
+    email = email.strip().lower()
+    if len(email) > 254 or len(email) < 3:
+        return None
+    if "@" not in email or "." not in email.split("@")[-1]:
+        return None
+    return email
+
+def validate_json_request(required_fields=None, max_field_length=_MAX_FIELD_LENGTH):
+    """Décorateur qui valide le body JSON et les champs requis."""
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            data = request.json or {}
+            if required_fields:
+                for field in required_fields:
+                    if field not in data or data[field] is None:
+                        return jsonify({"error": "Paramètres requis manquants"}), 400
+                    # Validation string pour les champs texte
+                    if isinstance(data[field], str) and sanitize_string(data[field], max_field_length) is None:
+                        return jsonify({"error": "Paramètre invalide"}), 400
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
 load_dotenv()
 
 # --- Vérification des variables d'environnement critiques ---
@@ -212,7 +260,7 @@ def get_current_user_id():
                 user_id = request.json.get("user_id")
             except Exception:
                 pass
-    return user_id or "alex@philiavault.com" # fallback default to prevent crash, but front-end will send X-User-Email
+    return user_id or os.environ.get("FALLBACK_USER_EMAIL", "alex@philiavault.com")  # SECURITY: fallback en dur — à surcharger via FALLBACK_USER_EMAIL
 
 from functools import wraps
 
@@ -281,8 +329,11 @@ def auth_config():
 def auth_google():
     data = request.json or {}
     token = data.get("id_token")
+    # SECURITY: Token length check
+    if token and len(str(token)) > 5000:
+        return jsonify({"success": False, "error": "Token invalide"}), 400
     # Support native apps that send accessToken instead of idToken
-    fallback_email = data.get("email", "")
+    fallback_email = validate_email(data.get("email", "")) or ""
     if not token:
         return jsonify({"success": False, "error": "Token d'identification Google manquant"}), 400
         
@@ -342,6 +393,9 @@ def auth_google():
 def auth_apple():
     data = request.json or {}
     token = data.get("id_token")
+    # SECURITY: Token length check
+    if token and len(str(token)) > 5000:
+        return jsonify({"success": False, "error": "Token invalide"}), 400
     if not token:
         return jsonify({"success": False, "error": "Token d'identification Apple manquant"}), 400
 
@@ -386,6 +440,9 @@ def validate_password(password: str) -> dict:
     if len(password) < 8:
         errors.append("Au moins 8 caractères requis")
 
+    if len(password) > 128:  # SECURITY: Longueur max
+        errors.append("Mot de passe trop long (max 128 caractères)")
+
     if not re.search(r'[A-Z]', password):
         errors.append("Au moins une lettre majuscule requise")
 
@@ -409,13 +466,17 @@ def validate_password(password: str) -> dict:
 @limiter.limit("10 per minute")  # SECURITY: Rate limit registration
 def auth_register():
     data = request.json or {}
-    email = data.get("email")
+    email = validate_email(data.get("email"))
     password = data.get("password")
-    first_name = data.get("first_name", "")
-    last_name = data.get("last_name", "")
-    referral_code = data.get("referral_code")
+    first_name = sanitize_string(data.get("first_name"), 100) or ""
+    last_name = sanitize_string(data.get("last_name"), 100) or ""
+    referral_code = sanitize_string(data.get("referral_code"), 20)
     if not email or not password:
         return jsonify({"success": False, "error": "Email et mot de passe requis"}), 400
+    
+    # SECURITY: Longueur max du mot de passe
+    if len(password) > 128:
+        return jsonify({"success": False, "error": "Mot de passe trop long"}), 400
     
     # Validation du mot de passe
     pwd_check = validate_password(password)
@@ -435,10 +496,14 @@ def auth_register():
 @limiter.limit("5 per minute")  # SECURITY: Rate limit login
 def auth_login():
     data = request.json or {}
-    email = data.get("email")
+    email = validate_email(data.get("email"))
     password = data.get("password")
     if not email or not password:
         return jsonify({"success": False, "error": "Email et mot de passe requis"}), 400
+    
+    # SECURITY: Longueur max
+    if len(password) > 128:
+        return jsonify({"success": False, "error": "Email ou mot de passe incorrect"}), 401
         
     user = database.verify_user(email, password)
     if user:
@@ -452,8 +517,8 @@ def auth_login():
 @limiter.limit("3 per minute")  # SECURITY: Rate limit password reset requests
 def auth_forgot_password():
     data = request.json or {}
-    email = data.get("email")
-    language = data.get("language", "en")
+    email = validate_email(data.get("email"))
+    language = sanitize_string(data.get("language"), 10) or "en"
     if not email:
         return jsonify({"success": False, "error": "Email requis"}), 400
 
@@ -468,11 +533,15 @@ def auth_forgot_password():
 @limiter.limit("3 per minute")  # SECURITY: Rate limit password reset
 def auth_reset_password():
     data = request.json or {}
-    email = data.get("email")
-    code = data.get("code")
+    email = validate_email(data.get("email"))
+    code = sanitize_string(data.get("code"), 20)
     new_password = data.get("new_password")
     if not email or not code or not new_password:
         return jsonify({"success": False, "error": "Email, code et nouveau mot de passe requis"}), 400
+    
+    # SECURITY: Longueur max du mot de passe
+    if len(new_password) > 128:
+        return jsonify({"success": False, "error": "Échec de la réinitialisation"}), 400
 
     success, error = database.reset_password_with_code(email, code, new_password)
     if success:
@@ -490,6 +559,10 @@ def auth_change_password():
     new_password = data.get("new_password")
     if not current_password or not new_password:
         return jsonify({"success": False, "error": "Mot de passe actuel et nouveau mot de passe requis"}), 400
+    
+    # SECURITY: Longueur max
+    if len(new_password) > 128 or len(current_password) > 128:
+        return jsonify({"success": False, "error": "Échec de la modification"}), 400
 
     email = get_current_user_id()
     success, error = database.change_password(email, current_password, new_password)
@@ -821,10 +894,13 @@ def toggle_user_premium():
 def update_profile():
     user_id = get_current_user_id()
     data = request.json or {}
-    first_name = data.get("first_name", "")
-    last_name = data.get("last_name", "")
-    custom_categories = data.get("custom_categories", "")
+    first_name = sanitize_string(data.get("first_name"), 100) or ""
+    last_name = sanitize_string(data.get("last_name"), 100) or ""
+    custom_categories = sanitize_string(data.get("custom_categories"), 1000) or ""
     avatar = data.get("avatar")
+    # SECURITY: Validation avatar URL
+    if avatar and isinstance(avatar, str) and len(avatar) > 500:
+        avatar = None
     try:
         database.update_user_profile(user_id, first_name, last_name, custom_categories, avatar)
         return jsonify({"success": True, "message": "Profile mis à jour avec succès"})
@@ -1214,7 +1290,13 @@ def coach_chat():
         })
 
     user_msg = data.get("message", "")
+    # SECURITY: Validation de l'input utilisateur
+    if not isinstance(user_msg, str) or len(user_msg) > _MAX_MESSAGE_LENGTH:
+        return jsonify({"success": False, "error": "Message invalide"}), 400
     history = data.get("history", []) # list of {"role": "user"/"model", "text": "..."}
+    # SECURITY: Validation de l'historique
+    if not isinstance(history, list) or len(history) > 50:
+        history = []
     
     # Get user context
     assets = database.get_assets(user_id)

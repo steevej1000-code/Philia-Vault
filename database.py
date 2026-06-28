@@ -17,7 +17,11 @@ if db_dir:
 def get_encryptor():
     key = os.environ.get("DB_ENCRYPTION_KEY")
     if not key:
-        # Stable fallback key for local dev so restarts don't break decryption
+        # SECURITY: Stable fallback key for local dev so restarts don't break decryption
+        # AVERTISSEMENT CRITIQUE: Cette clé de fallback est codée en dur et connue de quiconque
+        # lit ce code. En production, DB_ENCRYPTION_KEY DOIT être définie dans l'environnement.
+        # Voir .env.example pour générer une clé via: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+        print("WARNING [SECURITY] DB_ENCRYPTION_KEY non définie dans l'environnement — utilisation de la clé de fallback codée en dur !")  # SECURITY
         key = base64.urlsafe_b64encode(b"PhiliaVaultEncryptionFallbackKey")
     else:
         try:
