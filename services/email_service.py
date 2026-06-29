@@ -2,11 +2,14 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
 
-SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
-SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
+load_dotenv()
+
+SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.hostinger.com')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', 465))
 SMTP_USER = os.environ.get('SMTP_USER')
-SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD') or os.environ.get('SMTP_PASS')
 
 EMAIL_TEMPLATES = {
     'en': {
@@ -74,11 +77,23 @@ Ce code expire dans 30 minutes. Si tu n'es pas à l'origine de cette demande, tu
     },
 }
 
+def _get_smtp_connection():
+    """Crée une connexion SMTP avec le serveur en choisissant SSL (port 465) ou TLS/Plain."""
+    if SMTP_PORT == 465:
+        return smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT)
+    else:
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        try:
+            server.starttls()
+        except Exception:
+            pass
+        return server
+
 def send_password_reset_email(to_email, code, language='en'):
     template = RESET_EMAIL_TEMPLATES.get(language, RESET_EMAIL_TEMPLATES['en'])
 
     msg = MIMEMultipart()
-    msg['From'] = SMTP_USER
+    msg['From'] = f"Philia Vault <{SMTP_USER}>"
     msg['To'] = to_email
     msg['Subject'] = template['subject']
     msg.attach(MIMEText(template['body'].format(code=code), 'plain'))
@@ -88,10 +103,9 @@ def send_password_reset_email(to_email, code, language='en'):
         return False
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
+        with _get_smtp_connection() as server:
             server.login(SMTP_USER, SMTP_PASSWORD)
-            server.send_message(msg)
+            server.sendmail(SMTP_USER, to_email, msg.as_string())
         print(f'[Email] Password reset code envoyé à {to_email}')
         return True
     except Exception as e:
@@ -102,132 +116,177 @@ def send_confirmation_email(to_email, member_number, language='en'):
     template = EMAIL_TEMPLATES.get(language, EMAIL_TEMPLATES['en'])
 
     msg = MIMEMultipart()
-    msg['From'] = SMTP_USER
+    msg['From'] = f"Philia Vault <{SMTP_USER}>"
     msg['To'] = to_email
     msg['Subject'] = template['subject'].format(number=member_number)
 
     body = template['body'].format(number=member_number)
     msg.attach(MIMEText(body, 'plain'))
 
+    if not SMTP_USER or not SMTP_PASSWORD:
+        print(f'[Email] SMTP not configured, simulating confirmation email to {to_email}')
+        return False
+
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
+        with _get_smtp_connection() as server:
             server.login(SMTP_USER, SMTP_PASSWORD)
-            server.send_message(msg)
+            server.sendmail(SMTP_USER, to_email, msg.as_string())
         print(f'[Email] Confirmation envoyée à {to_email}')
         return True
     except Exception as e:
         print(f'[Email] Erreur envoi: {e}')
         return False
 
-
 def send_welcome_email(user_email: str, first_name: str) -> bool:
     """
-    Envoie l'email de bienvenue après inscription et paiement confirmé.
+    Envoie l'email de bienvenue HTML après inscription réussie via Hostinger SMTP.
     """
     try:
-        from_email = os.environ.get('FROM_EMAIL', 'contact@philiaentreprisellc.com')
+        from_email = SMTP_USER or 'contact@philiaentreprisellc.com'
 
         if not SMTP_USER or not SMTP_PASSWORD:
-            print(f'[Email] SMTP non configuré — simulation email bienvenue à {user_email}')
+            print(f'[Email] SMTP non configuré — simulation email bienvenue à {user_email}', flush=True)
             return False
 
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"Bienvenue dans Philia Vault, {first_name} 🔐"
+        msg['Subject'] = f"Bienvenue dans Philia Vault, {first_name} 🔥"
         msg['From'] = f"Philia Vault <{from_email}>"
         msg['To'] = user_email
 
-        # Version texte
+        # Version texte brute
         text_content = f"""
-Bonjour {first_name},
+Bonjour {first_name} 👋
 
-Ton coffre-fort financier est maintenant actif.
+Ton miroir financier impitoyable est prêt.
+Philia Vault ne te dit pas quoi faire — il te montre exactement où tu en es.
 
-Tu viens de prendre une décision que la majorité des gens n'osent
-jamais prendre : regarder leur réalité financière en face.
+TON PREMIER OBJECTIF :
+Atteindre un IIF de 100%
+Index d'Indépendance Financière = Cashflow actifs ÷ Revenu net × 100
 
-C'est ici que commence le changement.
+Commence par renseigner ton salaire et tes premières dépenses.
+Le tableau de bord s'illumine immédiatement.
 
-PAR OÙ COMMENCER :
+Ouvrir mon Vault : https://app.philiavault.com
 
-1. Saisis ton revenu mensuel net
-   → Ton score IIF s'active immédiatement
-
-2. Ajoute tes 3 plus gros passifs
-   → Vois où va ton argent chaque mois
-
-3. Réponds à ton premier dilemme financier
-   → Lance ta série de discipline 🔥
-
-Accéder à Philia Vault : https://app.philiavault.com
-
-"Les riches accumulent des actifs.
-Les pauvres accumulent des passifs."
-— Robert Kiyosaki
-
-Philia Vault — The Ruthless Financial Mirror
+Philia Entreprise LLC
+contact@philiaentreprisellc.com
         """
 
-        # Version HTML
-        html_content = f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>
-  body {{ background-color: #000000; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 0; }}
-  .container {{ max-width: 600px; margin: 0 auto; padding: 40px 20px; }}
-  .logo {{ font-size: 28px; font-weight: bold; color: #39FF14; text-align: center; margin-bottom: 8px; letter-spacing: 4px; }}
-  .tagline {{ color: #888888; text-align: center; font-size: 12px; margin-bottom: 40px; }}
-  .hero {{ background: #1A1A1A; border: 1px solid #39FF14; border-radius: 12px; padding: 30px; margin-bottom: 30px; }}
-  .hero h1 {{ color: #FFFFFF; font-size: 22px; margin: 0 0 16px 0; }}
-  .hero p {{ color: #AAAAAA; line-height: 1.6; margin: 0; }}
-  .steps {{ background: #1A1A1A; border-radius: 12px; padding: 24px 30px; margin-bottom: 30px; }}
-  .steps h2 {{ color: #39FF14; font-size: 14px; letter-spacing: 2px; margin: 0 0 20px 0; }}
-  .step {{ display: flex; align-items: flex-start; margin-bottom: 16px; }}
-  .step-number {{ background: #39FF14; color: #000000; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; margin-right: 12px; flex-shrink: 0; }}
-  .step-text {{ color: #FFFFFF; font-size: 14px; line-height: 1.5; }}
-  .step-text span {{ color: #888888; display: block; font-size: 12px; margin-top: 2px; }}
-  .cta {{ text-align: center; margin-bottom: 30px; }}
-  .cta a {{ background: #39FF14; color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; }}
-  .quote {{ background: #0A0A0A; border-left: 3px solid #39FF14; padding: 16px 20px; margin-bottom: 30px; border-radius: 0 8px 8px 0; }}
-  .quote p {{ color: #AAAAAA; font-style: italic; margin: 0 0 8px 0; line-height: 1.6; }}
-  .quote span {{ color: #39FF14; font-size: 12px; }}
-  .footer {{ text-align: center; color: #555555; font-size: 11px; line-height: 1.6; }}
-  .footer a {{ color: #39FF14; text-decoration: none; }}
-</style>
-</head>
-<body>
-<div class="container">
-  <div class="logo">PHILIA VAULT</div>
-  <div class="tagline">THE RUTHLESS FINANCIAL MIRROR</div>
-  <div class="hero">
-    <h1>Bienvenue, {first_name}. 🔐</h1>
-    <p>Ton coffre-fort financier est maintenant actif.<br><br>Tu viens de prendre une décision que la majorité des gens n'osent jamais prendre : regarder leur réalité financière en face.<br><br>C'est ici que commence le changement.</p>
-  </div>
-  <div class="steps">
-    <h2>🚀 PAR OÙ COMMENCER</h2>
-    <div class="step"><div class="step-number">1</div><div class="step-text">Saisis ton revenu mensuel net<span>→ Ton score IIF s'active immédiatement</span></div></div>
-    <div class="step"><div class="step-number">2</div><div class="step-text">Ajoute tes 3 plus gros passifs<span>→ Vois où va ton argent chaque mois</span></div></div>
-    <div class="step"><div class="step-number">3</div><div class="step-text">Réponds à ton premier dilemme financier<span>→ Lance ta série de discipline 🔥</span></div></div>
-  </div>
-  <div class="cta"><a href="https://app.philiavault.com">Ouvrir mon Coffre-Fort →</a></div>
-  <div class="quote"><p>"Les riches accumulent des actifs.<br>Les pauvres accumulent des passifs."</p><span>— Robert Kiyosaki</span></div>
-  <div class="footer">Philia Vault — Philia entreprise LLC<br><a href="mailto:contact@philiaentreprisellc.com">contact@philiaentreprisellc.com</a><br><br>Tu reçois cet email car tu viens de t'inscrire sur app.philiavault.com<br><a href="#">Se désabonner</a></div>
-</div>
-</body>
-</html>"""
+        # Version HTML riche demandée par l'utilisateur
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0;padding:0;background-color:#000000;font-family:'Helvetica Neue',Arial,sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#000000;padding:40px 20px;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" 
+                       style="background-color:#1A1A1A;border-radius:12px;overflow:hidden;max-width:600px;">
+                  
+                  <!-- HEADER -->
+                  <tr>
+                    <td align="center" style="padding:40px 40px 20px;">
+                      <div style="font-size:36px;font-weight:900;background:linear-gradient(135deg,#39FF14,#FF4444);
+                                  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+                                  background-clip:text;letter-spacing:2px;">PV</div>
+                      <div style="color:#888888;font-size:12px;letter-spacing:4px;margin-top:4px;">PHILIA VAULT</div>
+                    </td>
+                  </tr>
 
-        msg.attach(MIMEText(text_content, 'plain'))
-        msg.attach(MIMEText(html_content, 'html'))
+                  <!-- TITRE -->
+                  <tr>
+                    <td align="center" style="padding:20px 40px;">
+                      <h1 style="color:#FFFFFF;font-size:28px;font-weight:800;margin:0;line-height:1.3;">
+                        Bienvenue, {first_name} 👋
+                      </h1>
+                      <p style="color:#39FF14;font-size:14px;margin:12px 0 0;font-weight:600;letter-spacing:1px;">
+                        YOUR FINANCIAL TRAJECTORY, LIVE
+                      </p>
+                    </td>
+                  </tr>
 
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
+                  <!-- CORPS -->
+                  <tr>
+                    <td style="padding:20px 40px;">
+                      <p style="color:#CCCCCC;font-size:15px;line-height:1.7;margin:0 0 20px;">
+                        Ton miroir financier impitoyable est prêt.<br>
+                        Philia Vault ne te dit pas quoi faire — il te montre 
+                        <strong style="color:#FFFFFF;">exactement où tu en es</strong>.
+                      </p>
+                      
+                      <!-- BOX IIF -->
+                      <div style="background:#0A0A0A;border:1px solid #2A2A2A;border-left:3px solid #39FF14;
+                                  border-radius:8px;padding:20px;margin:20px 0;">
+                        <p style="color:#888888;font-size:11px;letter-spacing:2px;margin:0 0 8px;">TON PREMIER OBJECTIF</p>
+                        <p style="color:#FFFFFF;font-size:16px;font-weight:700;margin:0;">
+                          Atteindre un IIF de 100%
+                        </p>
+                        <p style="color:#888888;font-size:13px;margin:8px 0 0;">
+                          Index d'Indépendance Financière = Cashflow actifs ÷ Revenu net × 100
+                        </p>
+                      </div>
+
+                      <p style="color:#CCCCCC;font-size:15px;line-height:1.7;margin:0 0 20px;">
+                        Commence par renseigner ton salaire et tes premières dépenses.<br>
+                        Le tableau de bord s'illumine immédiatement.
+                      </p>
+                    </td>
+                  </tr>
+
+                  <!-- CTA -->
+                  <tr>
+                    <td align="center" style="padding:10px 40px 30px;">
+                      <a href="https://app.philiavault.com" 
+                         style="display:inline-block;background-color:#39FF14;color:#000000;
+                                font-weight:800;font-size:16px;text-decoration:none;
+                                padding:16px 48px;border-radius:8px;letter-spacing:1px;">
+                        OUVRIR MON VAULT →
+                      </a>
+                    </td>
+                  </tr>
+
+                  <!-- SÉPARATEUR -->
+                  <tr>
+                    <td style="padding:0 40px;">
+                      <div style="border-top:1px solid #2A2A2A;"></div>
+                    </td>
+                  </tr>
+
+                  <!-- FOOTER -->
+                  <tr>
+                    <td align="center" style="padding:24px 40px;">
+                      <p style="color:#555555;font-size:12px;margin:0;line-height:1.6;">
+                        Philia Entreprise LLC<br>
+                        Tu reçois cet email car tu viens de créer un compte Philia Vault.<br>
+                        <a href="https://app.philiavault.com/unsubscribe" 
+                           style="color:#555555;">Se désabonner</a>
+                      </p>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+        """
+
+        msg.attach(MIMEText(text_content, 'plain', 'utf-8'))
+        msg.attach(MIMEText(html_content, 'html', 'utf-8'))
+
+        with _get_smtp_connection() as server:
             server.login(SMTP_USER, SMTP_PASSWORD)
             server.sendmail(from_email, user_email, msg.as_string())
 
-        print(f"[Email] Email de bienvenue envoyé à {user_email}")
+        print(f"[EMAIL] Welcome email sent to {user_email}", flush=True)
         return True
 
     except Exception as e:
-        print(f"[Email] Erreur envoi email bienvenue: {e}")
+        print(f"[EMAIL ERROR] Failed to send to {user_email}: {e}", flush=True)
         return False

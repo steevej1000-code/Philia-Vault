@@ -485,6 +485,12 @@ def auth_register():
     
     success = database.create_user(email, password, first_name, last_name, referral_code)
     if success:
+        # Extraire first_name depuis le body ou email
+        fn = first_name or email.split("@")[0].capitalize()
+        try:
+            send_welcome_email(email, fn)
+        except Exception as e:
+            print(f"[EMAIL ERROR] Exception in auth_register send_welcome_email: {e}")
         return jsonify({"success": True, "message": "Compte créé avec succès"})
     else:
         return jsonify({"success": False, "error": "Cet email est déjà utilisé"}), 400

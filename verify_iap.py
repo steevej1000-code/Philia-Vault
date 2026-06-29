@@ -4,7 +4,7 @@ import sys
 def test_iap_flow():
     base_url = "http://127.0.0.1:5001"
     email = "test_rc_user@philia.com"
-    password = "password123"
+    password = "Password123!"
     
     try:
         # Register user if not exists
