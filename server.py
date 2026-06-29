@@ -62,7 +62,7 @@ load_dotenv()
 # --- Vérification des variables d'environnement critiques ---
 # ENCRYPTION_KEY est accepté en alias de DB_ENCRYPTION_KEY (nom historique
 # utilisé par database.py) : l'un des deux doit être présent.
-REQUIRED_ENV_VARS = ["GEMINI_API_KEY", "SECRET_KEY"]
+REQUIRED_ENV_VARS = ["DEEPSEEK_API_KEY", "SECRET_KEY"]
 _missing = [v for v in REQUIRED_ENV_VARS if not os.environ.get(v)]
 if not os.environ.get("DB_ENCRYPTION_KEY") and not os.environ.get("ENCRYPTION_KEY"):
     _missing.append("DB_ENCRYPTION_KEY (ou ENCRYPTION_KEY)")
@@ -160,9 +160,8 @@ def add_security_headers(response):
     response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
     return response
 
-# Gemini Config (via OpenAI-compatible SDK — plus fiable)
+# DeepSeek Config (primary — OpenAI-compatible SDK)
 DEEPSEEK_KEY = os.environ.get("DEEPSEEK_API_KEY")
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
 deepseek_client = None
 if DEEPSEEK_KEY:
     try:
@@ -174,17 +173,15 @@ if DEEPSEEK_KEY:
     except Exception as e:
         print(f"Error configuring DeepSeek: {e}")
 
-# Gemini via OpenAI-compatible endpoint
-genai_client = None
-if GEMINI_KEY:
+# OpenAI Fallback Config (GPT-4o-mini — si DeepSeek échoue)
+OPENAI_KEY = os.environ.get("OPENAI_API_KEY")
+openai_fallback_client = None
+if OPENAI_KEY:
     try:
         from openai import OpenAI
-        genai_client = OpenAI(
-            api_key=GEMINI_KEY,
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-        )
+        openai_fallback_client = OpenAI(api_key=OPENAI_KEY)
     except Exception as e:
-        print(f"Error configuring Gemini (OpenAI compat): {e}")
+        print(f"Error configuring OpenAI fallback: {e}")
 
 # Static Routes
 @app.route("/")
@@ -1411,25 +1408,7 @@ Here are the user's financial data to guide your analysis:
 {context_str}
 """
     
-    if genai_client:
-        try:
-            messages = [{"role": "system", "content": sys_prompt}]
-            for h in history:
-                role = "user" if h.get("role") == "user" else "assistant"
-                messages.append({"role": role, "content": h.get("text", "")})
-            messages.append({"role": "user", "content": user_msg})
-            
-            response = genai_client.chat.completions.create(
-                model="gemini-1.5-flash",
-                messages=messages,
-                max_tokens=1024
-            )
-            reply_text = response.choices[0].message.content
-            return jsonify({"success": True, "reply": reply_text})
-        except Exception as e:
-            print(f"Gemini error: {e}")
-    
-    # Fallback DeepSeek (si Gemini indisponible)
+    # Priorité 1: DeepSeek (via API)
     if deepseek_client:
         try:
             messages = [{"role": "system", "content": sys_prompt}]
@@ -1444,7 +1423,22 @@ Here are the user's financial data to guide your analysis:
         except Exception as e:
             print(f"DeepSeek error: {e}")
     
-    # Offline Mock Mode (si ni Gemini ni DeepSeek ne marchent)
+    # Priorité 2: OpenAI GPT-4o-mini (fallback si DeepSeek échoue)
+    if openai_fallback_client:
+        try:
+            messages = [{"role": "system", "content": sys_prompt}]
+            for h in history:
+                role = "user" if h.get("role") == "user" else "assistant"
+                messages.append({"role": role, "content": h.get("text", "")})
+            messages.append({"role": "user", "content": user_msg})
+            response = openai_fallback_client.chat.completions.create(
+                model="gpt-4o-mini", messages=messages, max_tokens=1024
+            )
+            return jsonify({"success": True, "reply": response.choices[0].message.content})
+        except Exception as e:
+            print(f"OpenAI fallback error: {e}")
+    
+    # Offline Mock Mode (si ni DeepSeek ni OpenAI ne marchent)
     reply = ""
     lower_msg = user_msg.lower()
     
