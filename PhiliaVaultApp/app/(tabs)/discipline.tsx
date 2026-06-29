@@ -94,7 +94,7 @@ export default function DisciplineScreen() {
 
   // My Target states
   const [targetSummary, setTargetSummary] = useState<any>(null);
-  const [targetStreak, setTargetStreak] = useState<{ streak_count: number; label: string }>({ streak_count: 0, label: 'Aucune' });
+  const [targetStreak, setTargetStreak] = useState<{ streak_count: number; label: string }>({ streak_count: 0, label: t('discipline.target_streak_none') });
   const [loadingTarget, setLoadingTarget] = useState(false);
   const [targetShowSetup, setTargetShowSetup] = useState(false);
   const [targetSavingsInput, setTargetSavingsInput] = useState('');
@@ -504,12 +504,12 @@ export default function DisciplineScreen() {
 
   const handleAbandonGoal = (goalId: number) => {
     Alert.alert(
-      t('cancel_sub_modal_title') || 'Confirmer',
-      'Abandonner cet objectif financier ?',
+      t('discipline.goal_abandon_title'),
+      t('discipline.abandon_goal_confirm'),
       [
-        { text: t('cancel') || 'Annuler', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: t('confirm') || 'OK',
+          text: t('discipline.confirm_abandon'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -530,7 +530,7 @@ export default function DisciplineScreen() {
     const savings = parseFloat(targetSavingsInput.replace(',', '.'));
     const budget = parseFloat(targetBudgetInput.replace(',', '.'));
     if (isNaN(savings) || isNaN(budget) || savings < 0 || budget < 0) {
-      Alert.alert('Erreur', 'Veuillez entrer des valeurs valides');
+      Alert.alert(t('error'), t('discipline.target_error_save'));
       return;
     }
     setSavingTargetGoal(true);
@@ -553,11 +553,11 @@ export default function DisciplineScreen() {
     const epargne = parseFloat(targetEpargne.replace(',', '.'));
     const depense = parseFloat(targetDepense.replace(',', '.'));
     if (isNaN(epargne)) {
-      Alert.alert('Erreur', 'Veuillez entrer un montant d\'épargne');
+      Alert.alert(t('error'), t('discipline.target_error_savings'));
       return;
     }
     if (isNaN(depense)) {
-      Alert.alert('Erreur', 'Veuillez entrer un montant de dépense');
+      Alert.alert(t('error'), t('discipline.target_error_expense'));
       return;
     }
     setTargetEntryLoading(true);
@@ -568,15 +568,15 @@ export default function DisciplineScreen() {
         const isSuccess = result.status === 'success';
         setTargetEntrySuccess(isSuccess);
         setTargetEntryMsg(isSuccess
-          ? `✅ Succès ! ${result.points_earned} points`
-          : '❌ Objectif non atteint aujourd\'hui');
+          ? t('discipline.target_entry_success').replace('{points}', result.points_earned?.toString() || '0')
+          : t('discipline.target_entry_failure'));
         setTargetEpargne('');
         setTargetDepense('');
         loadTargetData();
       }
     } catch (e: any) {
       setTargetEntrySuccess(false);
-      setTargetEntryMsg(e.message || 'Erreur lors de l\'enregistrement');
+      setTargetEntryMsg(e.message || t('discipline.target_error_save_entry'));
     } finally {
       setTargetEntryLoading(false);
       setTimeout(() => setTargetEntryMsg(null), 4000);
@@ -616,12 +616,42 @@ export default function DisciplineScreen() {
     }
   };
 
+  const getTranslatedStreakLabel = (label: string) => {
+    const labelMap: Record<string, string> = {
+      'Aucune': 'discipline.target_streak_none',
+      'Ninguna': 'discipline.target_streak_none',
+      'Nenhuma': 'discipline.target_streak_none',
+      'None': 'discipline.target_streak_none',
+      'Étincelle': 'discipline.target_streak_spark',
+      'Chispa': 'discipline.target_streak_spark',
+      'Faísca': 'discipline.target_streak_spark',
+      'Spark': 'discipline.target_streak_spark',
+      'Flamme': 'discipline.target_streak_flame',
+      'Llama': 'discipline.target_streak_flame',
+      'Chama': 'discipline.target_streak_flame',
+      'Flame': 'discipline.target_streak_flame',
+      'Brasier': 'discipline.target_streak_blaze',
+      'Brasa': 'discipline.target_streak_blaze',
+      'Blaze': 'discipline.target_streak_blaze',
+      'Phare': 'discipline.target_streak_beacon',
+      'Faro': 'discipline.target_streak_beacon',
+      'Farol': 'discipline.target_streak_beacon',
+      'Beacon': 'discipline.target_streak_beacon',
+      'Légende Philia': 'discipline.target_streak_legend',
+      'Leyenda Philia': 'discipline.target_streak_legend',
+      'Lenda Philia': 'discipline.target_streak_legend',
+      'Legend Philia': 'discipline.target_streak_legend',
+    };
+    const key = labelMap[label] || 'discipline.target_streak_none';
+    return t(key);
+  };
+
   const getCategoryLabel = (category: string) => {
     switch (category) {
       case 'savings': return t('discipline_category_necessary') || 'Épargne';
       case 'debt': return t('tab_liabilities') || 'Dette';
       case 'investment': return t('discipline_category_investment') || 'Investissement';
-      case 'project': return 'Projet personnel';
+      case 'project': return t('discipline.target_category_project');
       default: return category;
     }
   };
@@ -735,7 +765,7 @@ export default function DisciplineScreen() {
               <View style={[styles.inputWrapper, focusedInput === 'budget' && styles.inputFocused]}>
                 <TextInput
                   style={styles.input}
-                  placeholder="Ex: 50"
+                  placeholder={t('discipline.budget_placeholder')}
                   placeholderTextColor={COLORS.onSurfaceVariant}
                   keyboardType="numeric"
                   value={newBudgetVal}
@@ -775,7 +805,7 @@ export default function DisciplineScreen() {
             <View>
               <View style={styles.budgetIndicator}>
                 <Text style={styles.budgetText}>
-                  Daily Budget Limit: <Text style={styles.budgetAmount}>{formatAmount(dailyBudget)}</Text>
+                  {t('daily_budget_limit_label')} <Text style={styles.budgetAmount}>{formatAmount(dailyBudget)}</Text>
                 </Text>
                 <TouchableOpacity onPress={() => {
                   setNewBudgetVal(dailyBudget.toString());
@@ -902,13 +932,13 @@ export default function DisciplineScreen() {
         {/* Position 4: Financial Goals Section */}
         <View style={styles.goalsContainer}>
           <View style={styles.goalsHeaderRow}>
-            <Text style={styles.sectionTitle}>{t('discipline.goals_title') || '🎯 MES OBJECTIFS FINANCIERS'}</Text>
+            <Text style={styles.sectionTitle}>{t('discipline.goals_title')}</Text>
             <TouchableOpacity
               style={styles.newGoalBtn}
               onPress={() => setShowCreateGoalModal(true)}
               activeOpacity={0.8}
             >
-              <Text style={styles.newGoalBtnText}>{t('discipline.new_goal') || '+ Nouvel objectif'}</Text>
+              <Text style={styles.newGoalBtnText}>{t('discipline.new_goal')}</Text>
             </TouchableOpacity>
           </View>
           
@@ -916,7 +946,7 @@ export default function DisciplineScreen() {
             <ActivityIndicator color={COLORS.primary} size="small" style={{ marginVertical: 20 }} />
           ) : goals.length === 0 ? (
             <View style={styles.emptyGoalsCard}>
-              <Text style={styles.emptyGoalsText}>Aucun objectif actif. Planifie ton avenir !</Text>
+              <Text style={styles.emptyGoalsText}>{t('discipline.no_goals')}</Text>
             </View>
           ) : (
             goals.map((goal) => {
@@ -953,14 +983,14 @@ export default function DisciplineScreen() {
                       <Text style={styles.goalDetailLabel}>{t('discipline.target_date')}</Text>
                       <Text style={styles.goalDetailValue}>
                         {goal.days_remaining >= 0
-                          ? (t('discipline.days_remaining') || 'Dans {days} jours').replace('{days}', goal.days_remaining.toString())
-                          : t('discipline.status_expired') || 'Expiré'}
+                          ? t('discipline.days_remaining').replace('{days}', goal.days_remaining.toString())
+                          : t('discipline.status_expired')}
                       </Text>
                     </View>
                     <View style={styles.goalDetail}>
-                      <Text style={styles.goalDetailLabel}>{t('discipline.to_save') || 'À épargner :'}</Text>
+                      <Text style={styles.goalDetailLabel}>{t('discipline.to_save')}</Text>
                       <Text style={styles.goalDetailValue}>
-                        {formatAmount(goal.monthly_needed)}{t('discipline.per_month') || '/mois'}
+                        {formatAmount(goal.monthly_needed)}{t('discipline.per_month')}
                       </Text>
                     </View>
                   </View>
@@ -987,7 +1017,7 @@ export default function DisciplineScreen() {
                           style={styles.contributeBtnGrad}
                         >
                           <Text style={styles.contributeText}>
-                            {t('discipline.contribute') || '+ Contribuer'}
+                            {t('discipline.contribute')}
                           </Text>
                         </LinearGradient>
                       </TouchableOpacity>
@@ -1002,14 +1032,14 @@ export default function DisciplineScreen() {
         {/* Position 5: My Target Section */}
         <View style={styles.targetContainer}>
           <View style={styles.targetHeaderRow}>
-            <Text style={styles.sectionTitle}>🎯 MY TARGET</Text>
+            <Text style={styles.sectionTitle}>{t('discipline.my_target_title')}</Text>
             {!targetShowSetup && (
               <TouchableOpacity
                 style={styles.newGoalBtn}
                 onPress={() => setTargetShowSetup(true)}
                 activeOpacity={0.8}
               >
-                <Text style={styles.newGoalBtnText}>{'⚙️ Objectifs'}</Text>
+                <Text style={styles.newGoalBtnText}>{t('discipline.define_goals')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1018,12 +1048,12 @@ export default function DisciplineScreen() {
             <ActivityIndicator color={COLORS.primary} size="small" style={{ marginVertical: 20 }} />
           ) : targetShowSetup ? (
             <View style={styles.card}>
-              <Text style={styles.cardHeader}>DÉFINIR MES OBJECTIFS</Text>
-              <Text style={styles.formLabel}>Objectif d'épargne mensuel (€)</Text>
+              <Text style={styles.cardHeader}>{t('discipline.define_goals')}</Text>
+              <Text style={styles.formLabel}>{t('discipline.monthly_savings_label')}</Text>
               <View style={[styles.inputWrapper, focusedInput === 'targetSavings' && styles.inputFocused]}>
                 <TextInput
                   style={styles.input}
-                  placeholder="Ex: 500"
+                  placeholder={t('discipline.target_savings_placeholder')}
                   placeholderTextColor={COLORS.onSurfaceVariant}
                   keyboardType="numeric"
                   value={targetSavingsInput}
@@ -1032,11 +1062,11 @@ export default function DisciplineScreen() {
                   onBlur={() => setFocusedInput(null)}
                 />
               </View>
-              <Text style={styles.formLabel}>Budget mensuel (€)</Text>
+              <Text style={styles.formLabel}>{t('discipline.monthly_budget_label')}</Text>
               <View style={[styles.inputWrapper, focusedInput === 'targetBudget' && styles.inputFocused]}>
                 <TextInput
                   style={styles.input}
-                  placeholder="Ex: 2000"
+                  placeholder={t('discipline.budget_placeholder')}
                   placeholderTextColor={COLORS.onSurfaceVariant}
                   keyboardType="numeric"
                   value={targetBudgetInput}
@@ -1077,32 +1107,32 @@ export default function DisciplineScreen() {
               {/* Row 1: Budget & Savings Goal */}
               <View style={styles.targetRow}>
                 <View style={[styles.targetCard, { flex: 1 }]}>
-                  <Text style={styles.targetCardLabel}>BUDGET MENSUEL</Text>
+                  <Text style={styles.targetCardLabel}>{t('discipline.target_budget_label')}</Text>
                   <Text style={styles.targetCardValue} numberOfLines={1} adjustsFontSizeToFit>
                     {formatAmount(targetSummary.budget_mensuel)}
                   </Text>
-                  <Text style={styles.targetCardSub}>/ mois</Text>
+                  <Text style={styles.targetCardSub}>{t('discipline.target_per_month')}</Text>
                 </View>
                 <View style={[styles.targetCard, { flex: 1 }]}>
-                  <Text style={styles.targetCardLabel}>OBJECTIF ÉPARGNE</Text>
+                  <Text style={styles.targetCardLabel}>{t('discipline.target_savings_goal_label')}</Text>
                   <Text style={styles.targetCardValue} numberOfLines={1} adjustsFontSizeToFit>
                     {formatAmount(targetSummary.objectif_epargne)}
                   </Text>
-                  <Text style={styles.targetCardSub}>/ mois</Text>
+                  <Text style={styles.targetCardSub}>{t('discipline.target_per_month')}</Text>
                 </View>
               </View>
 
               {/* Row 2: Freedom Days & Progression */}
               <View style={styles.targetRow}>
                 <View style={[styles.targetCard, styles.targetCardGreen, { flex: 1 }]}>
-                  <Text style={styles.targetCardLabelGreen}>JOURS DE LIBERTÉ</Text>
+                  <Text style={styles.targetCardLabelGreen}>{t('discipline.target_freedom_days_label')}</Text>
                   <Text style={styles.targetCardValueGreen}>
                     {targetSummary.jours_liberte.toFixed(1)}
                   </Text>
-                  <Text style={styles.targetCardSubGreen}>gagnés</Text>
+                  <Text style={styles.targetCardSubGreen}>{t('discipline.target_freedom_suffix')}</Text>
                 </View>
                 <View style={[styles.targetCard, { flex: 1 }]}>
-                  <Text style={styles.targetCardLabel}>PROGRESSION</Text>
+                  <Text style={styles.targetCardLabel}>{t('discipline.target_progress_label')}</Text>
                   <Text style={styles.targetCardValueProgression}>
                     {targetSummary.progression}%
                   </Text>
@@ -1120,15 +1150,15 @@ export default function DisciplineScreen() {
                 <View style={[styles.targetCard, styles.targetStreakCard, { flex: 1 }]}>
                   <Text style={styles.streakEmoji}>🔥</Text>
                   <Text style={styles.targetStreakValue}>{targetStreak.streak_count}</Text>
-                  <Text style={styles.targetStreakLabel}>{targetStreak.label}</Text>
+                  <Text style={styles.targetStreakLabel}>{getTranslatedStreakLabel(targetStreak.label)}</Text>
                 </View>
 
                 {/* Daily Entry Form */}
                 <View style={[styles.targetCard, { flex: 1.5 }]}>
-                  <Text style={styles.targetCardLabel}>ENTRÉE DU JOUR</Text>
+                  <Text style={styles.targetCardLabel}>{t('discipline.target_daily_entry_label')}</Text>
                   <TextInput
                     style={[styles.targetMiniInput, focusedInput === 'targetEpargne' && styles.inputFocused]}
-                    placeholder="Épargne €"
+                    placeholder={t('discipline.target_savings_placeholder')}
                     placeholderTextColor={COLORS.onSurfaceVariant}
                     keyboardType="numeric"
                     value={targetEpargne}
@@ -1138,7 +1168,7 @@ export default function DisciplineScreen() {
                   />
                   <TextInput
                     style={[styles.targetMiniInput, focusedInput === 'targetDepense' && styles.inputFocused]}
-                    placeholder="Dépense €"
+                    placeholder={t('discipline.target_expense_placeholder')}
                     placeholderTextColor={COLORS.onSurfaceVariant}
                     keyboardType="numeric"
                     value={targetDepense}
@@ -1155,7 +1185,7 @@ export default function DisciplineScreen() {
                     {targetEntryLoading ? (
                       <ActivityIndicator color="#000000" size="small" />
                     ) : (
-                      <Text style={styles.targetEntryBtnText}>✅ Valider</Text>
+                      <Text style={styles.targetEntryBtnText}>{t('discipline.target_validate_btn')}</Text>
                     )}
                   </TouchableOpacity>
                   {targetEntryMsg && (
@@ -1183,7 +1213,7 @@ export default function DisciplineScreen() {
             style={styles.modalContainer}
           >
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>{t('discipline.new_goal') || 'Nouvel objectif'}</Text>
+              <Text style={styles.modalTitle}>{t('discipline.new_goal')}</Text>
               
               <Text style={styles.formLabel}>{t('discipline.goal_name_placeholder').split('(')[0]}</Text>
               <View style={[styles.inputWrapper, focusedInput === 'goalName' && styles.inputFocused]}>
@@ -1202,7 +1232,7 @@ export default function DisciplineScreen() {
               <View style={[styles.inputWrapper, focusedInput === 'goalAmount' && styles.inputFocused]}>
                 <TextInput
                   style={styles.input}
-                  placeholder="Ex: 5000"
+                  placeholder={t('discipline.goal_amount_placeholder')}
                   placeholderTextColor={COLORS.onSurfaceVariant}
                   keyboardType="numeric"
                   value={targetAmountInput}
