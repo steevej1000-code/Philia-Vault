@@ -1408,7 +1408,7 @@ Here are the user's financial data to guide your analysis:
 {context_str}
 """
     
-    # Priorité 1: OpenAI GPT-4o-mini (le moins cher)
+    # Priorité 1: GPT-4o-mini (le moins cher économiquement)
     if openai_fallback_client:
         try:
             messages = [{"role": "system", "content": sys_prompt}]
@@ -1423,7 +1423,7 @@ Here are the user's financial data to guide your analysis:
         except Exception as e:
             print(f"OpenAI error: {e}")
     
-    # Priorité 2: DeepSeek (fallback si OpenAI échoue)
+    # Priorité 2: DeepSeek (fallback si GPT-4o-mini échoue)
     if deepseek_client:
         try:
             messages = [{"role": "system", "content": sys_prompt}]
