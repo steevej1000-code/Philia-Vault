@@ -1408,23 +1408,23 @@ Here are the user's financial data to guide your analysis:
 {context_str}
 """
     
-    # Priorité 1: DeepSeek (via API)
-    if deepseek_client:
+    # Priorité 1: OpenAI GPT-4o-mini (le moins cher)
+    if openai_fallback_client:
         try:
             messages = [{"role": "system", "content": sys_prompt}]
             for h in history:
                 role = "user" if h.get("role") == "user" else "assistant"
                 messages.append({"role": role, "content": h.get("text", "")})
             messages.append({"role": "user", "content": user_msg})
-            response = deepseek_client.chat.completions.create(
-                model="deepseek-chat", messages=messages, max_tokens=1024
+            response = openai_fallback_client.chat.completions.create(
+                model="gpt-4o-mini", messages=messages, max_tokens=1024
             )
             return jsonify({"success": True, "reply": response.choices[0].message.content})
         except Exception as e:
-            print(f"DeepSeek error: {e}")
+            print(f"OpenAI error: {e}")
     
-    # Priorité 2: OpenAI GPT-4o-mini (fallback si DeepSeek échoue)
-    if openai_fallback_client:
+    # Priorité 2: DeepSeek (fallback si OpenAI échoue)
+    if deepseek_client:
         try:
             messages = [{"role": "system", "content": sys_prompt}]
             for h in history:
