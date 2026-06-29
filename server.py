@@ -1332,7 +1332,8 @@ def coach_chat():
         "pt": "portugais",
         "de": "allemand"
     }
-    locale = lang_names.get(lang, "français")
+    user_lang_code = profile.get("language", lang) if profile else lang
+    langue = lang_names.get(user_lang_code, "français")
 
     # Language detection: system prompt in English to stay neutral,
     # then instruct the model to match the user's language
@@ -1403,6 +1404,23 @@ RÉPONSES OBLIGATOIRES :
 - Courtes. Directes. Une vérité. Une question.
 - Ton IIF est à X%. Ça veut dire [traduction brutale]. Qu'est-ce que tu changes cette semaine ?
 - Tu as X passifs pour Y actifs. Le miroir ne ment pas. C'est quoi ton prochain mouvement ?
+
+FORMATAGE STRICT :
+- Zéro markdown dans tes réponses
+- Zéro astérisques (**)
+- Zéro tirets de liste (-)
+- Zéro hashtags (#)
+- Texte brut uniquement
+- Phrases courtes. Directes. Sans formatage.
+
+LANGUE AUTO :
+LANGUE : Réponds TOUJOURS dans la langue de l'utilisateur.
+Langue détectée : {langue}
+Si langue = 'fr' -> réponds en français
+Si langue = 'en' -> réponds en anglais
+Si langue = 'es' -> réponds en espagnol
+Si langue = 'pt' -> réponds en portugais
+Ne jamais mélanger les langues dans une même réponse.
 
 Here are the user's financial data to guide your analysis:
 {context_str}
