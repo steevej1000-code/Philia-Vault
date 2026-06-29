@@ -59,7 +59,7 @@ export default function ProfileScreen() {
   const [pushSupported, setPushSupported] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
 
-  const VAPID_PUBLIC_KEY = 'BKAEvpLXxMC8Aj0v1THOUmtxQJx5s6W-2MvOoj0t35J0GqkFL6oV8nqa9q5_ZllG2rRrXL9oFYnOKNS_0TvY6fI';
+  const VAPID_PUBLIC_KEY = 'BAs5hCyGjh0deXGpMhnQR99UMmpdWcgD1ByA6EL6HMoH6zRAc3gyaAIWJ4e2fdgADLPEM3E3Os7_iGu7jo3DORQ';
 
   useEffect(() => {
     (async () => {
