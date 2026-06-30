@@ -1,5 +1,4 @@
 import os
-import requests
 from flask import Flask, request, jsonify, send_from_directory, redirect
 import database
 import json
@@ -188,6 +187,7 @@ if OPENAI_KEY:
 
 def get_market_price(symbol, market_type):
     """Fetch current market price for crypto, metal, or stock symbols."""
+    import requests
     try:
         if market_type == 'crypto':
             # CoinGecko API — utilise l'ID complet, pas le ticker
