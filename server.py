@@ -247,41 +247,6 @@ def get_market_price(symbol, market_type):
         print(f"Market price error for {symbol} ({market_type}): {e}")
     return None
 
-@app.route("/api/assets/fetch-price", methods=["POST"])
-@require_auth
-def fetch_asset_price():
-    """Fetch live price for a given symbol/market_type."""
-    try:
-        data = request.get_json()
-        symbol = data.get("symbol", "").strip()
-        market_type = data.get("market_type", "").strip()
-        if not symbol or not market_type:
-            return jsonify({"error": "Missing symbol or market_type"}), 400
-        if market_type not in ("crypto", "metal", "stock"):
-            return jsonify({"error": "Invalid market_type (crypto/metal/stock)"}), 400
-        price = get_market_price(symbol, market_type)
-        if price is None:
-            return jsonify({"error": "Symbol not found or API error"}), 404
-        return jsonify({"symbol": symbol, "price": price}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/cron/update-market-prices", methods=["POST"])
-def update_market_prices():
-    """Cron: update prices for all market assets (every 6h)."""
-    secret = request.headers.get("X-Cron-Secret")
-    if secret != os.environ.get("CRON_SECRET"):
-        return jsonify({"error": "Unauthorized"}), 401
-
-    market_assets = database.get_market_assets()
-    updated = 0
-    for asset in market_assets:
-        price = get_market_price(asset["market_symbol"], asset["market_type"])
-        if price:
-            database.update_asset_price(asset["id"], price)
-            updated += 1
-    return jsonify({"updated": updated, "total": len(market_assets)}), 200
-
 # Static Routes
 @app.route("/")
 def serve_index():
@@ -401,6 +366,43 @@ def require_auth(f):
 
         return f(*args, **kwargs)
     return decorated
+
+# ─── Market Price Routes ───────────────────────────────────────────────────────
+
+@app.route("/api/assets/fetch-price", methods=["POST"])
+@require_auth
+def fetch_asset_price():
+    """Fetch live price for a given symbol/market_type."""
+    try:
+        data = request.get_json()
+        symbol = data.get("symbol", "").strip()
+        market_type = data.get("market_type", "").strip()
+        if not symbol or not market_type:
+            return jsonify({"error": "Missing symbol or market_type"}), 400
+        if market_type not in ("crypto", "metal", "stock"):
+            return jsonify({"error": "Invalid market_type (crypto/metal/stock)"}), 400
+        price = get_market_price(symbol, market_type)
+        if price is None:
+            return jsonify({"error": "Symbol not found or API error"}), 404
+        return jsonify({"symbol": symbol, "price": price}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/cron/update-market-prices", methods=["POST"])
+def update_market_prices():
+    """Cron: update prices for all market assets (every 6h)."""
+    secret = request.headers.get("X-Cron-Secret")
+    if secret != os.environ.get("CRON_SECRET"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    market_assets = database.get_market_assets()
+    updated = 0
+    for asset in market_assets:
+        price = get_market_price(asset["market_symbol"], asset["market_type"])
+        if price:
+            database.update_asset_price(asset["id"], price)
+            updated += 1
+    return jsonify({"updated": updated, "total": len(market_assets)}), 200
 
 # Google Auth Verification helper
 from google.oauth2 import id_token
