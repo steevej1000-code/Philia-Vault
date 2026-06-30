@@ -17,11 +17,19 @@ interface Asset {
   type: string;
   value: number;
   monthly_yield: number;
+  asset_category?: string;
+  market_symbol?: string;
+  market_type?: string;
+  current_market_price?: number;
+  quantity_held?: number;
+  passive_yield_percent?: number;
+  passive_income_manual?: number;
+  last_price_update?: string;
 }
 
 const ASSET_TYPES = ['Stocks', 'Crypto', 'Commerce', 'Real Estate', 'Other'];
+const MARKET_TYPES = ['crypto', 'stock', 'metal'];
 
-// Type translations for display matching user screenshot
 const TYPE_ICONS: Record<string, React.ComponentType<IconProps>> = {
   Stocks: IconTrendUp,
   Crypto: IconCoin,
@@ -46,6 +54,12 @@ const ASSET_TYPE_LABEL_KEYS: Record<string, string> = {
   Other: 'asset_type_other_short',
 };
 
+const MARKET_TYPE_LABELS: Record<string, string> = {
+  crypto: 'Crypto',
+  stock: 'Action',
+  metal: 'Métal précieux',
+};
+
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
   const { t, formatAmount } = useUserPreferences();
@@ -60,6 +74,17 @@ export default function AssetsScreen() {
   const [type, setType] = useState('Stocks');
   const [value, setValue] = useState('');
   const [yield_, setYield] = useState('');
+
+  // New form states
+  const [assetCategory, setAssetCategory] = useState<'manual' | 'market'>('manual');
+  const [marketSymbol, setMarketSymbol] = useState('');
+  const [marketType, setMarketType] = useState('crypto');
+  const [quantityHeld, setQuantityHeld] = useState('');
+  const [passiveYieldPercent, setPassiveYieldPercent] = useState('');
+  const [passiveIncomeManual, setPassiveIncomeManual] = useState('');
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [fetchedPrice, setFetchedPrice] = useState<number | null>(null);
+  const [hasPassiveIncome, setHasPassiveIncome] = useState(false);
 
   // Editing state
   const [editingAssetId, setEditingAssetId] = useState<number | null>(null);
@@ -80,12 +105,25 @@ export default function AssetsScreen() {
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
-  const handleOpenAdd = () => {
-    setEditingAssetId(null);
+  const resetForm = () => {
     setName('');
     setType('Stocks');
     setValue('');
     setYield('');
+    setAssetCategory('manual');
+    setMarketSymbol('');
+    setMarketType('crypto');
+    setQuantityHeld('');
+    setPassiveYieldPercent('');
+    setPassiveIncomeManual('');
+    setPriceLoading(false);
+    setFetchedPrice(null);
+    setHasPassiveIncome(false);
+  };
+
+  const handleOpenAdd = () => {
+    setEditingAssetId(null);
+    resetForm();
     setShowModal(true);
   };
 
@@ -95,33 +133,102 @@ export default function AssetsScreen() {
     setType(item.type);
     setValue(String(item.value));
     setYield(String(item.monthly_yield));
+    setAssetCategory((item.asset_category as 'manual' | 'market') || 'manual');
+    setMarketSymbol(item.market_symbol || '');
+    setMarketType(item.market_type || 'crypto');
+    setQuantityHeld(item.quantity_held ? String(item.quantity_held) : '');
+    setPassiveYieldPercent(item.passive_yield_percent ? String(item.passive_yield_percent) : '');
+    setPassiveIncomeManual(item.passive_income_manual ? String(item.passive_income_manual) : '');
+    setFetchedPrice(item.current_market_price || null);
+    setHasPassiveIncome(
+      (item.asset_category === 'market' && !!item.passive_yield_percent) ||
+      (item.asset_category !== 'market' && !!item.passive_income_manual)
+    );
     setShowModal(true);
   };
 
+  const handleFetchPrice = async () => {
+    if (!marketSymbol.trim()) {
+      Alert.alert('Erreur', 'Entrez un symbole');
+      return;
+    }
+    setPriceLoading(true);
+    try {
+      const result = await api.fetchPrice(marketSymbol.trim(), marketType);
+      if (result.price) {
+        setFetchedPrice(result.price);
+      }
+    } catch (e: any) {
+      Alert.alert('Erreur', e.message || 'Impossible de récupérer le prix');
+    } finally {
+      setPriceLoading(false);
+    }
+  };
+
   const handleSave = async () => {
-    if (!name.trim() || value.trim() === '' || yield_.trim() === '') {
+    if (!name.trim()) {
       Alert.alert(t('error'), t('fill_all_fields'));
       return;
     }
+
+    let assetValue = parseFloat(value) || 0;
+    let assetYield = parseFloat(yield_) || 0;
+
+    if (assetCategory === 'market') {
+      if (!marketSymbol.trim() || !quantityHeld) {
+        Alert.alert('Erreur', 'Remplissez le symbole et la quantité');
+        return;
+      }
+      if (fetchedPrice) {
+        assetValue = fetchedPrice * parseFloat(quantityHeld);
+      }
+      if (hasPassiveIncome && passiveYieldPercent) {
+        const annualIncome = assetValue * (parseFloat(passiveYieldPercent) / 100);
+        assetYield = annualIncome / 12;
+      }
+    } else {
+      if (value.trim() === '' || yield_.trim() === '') {
+        Alert.alert(t('error'), t('fill_all_fields'));
+        return;
+      }
+      if (hasPassiveIncome && passiveIncomeManual) {
+        assetYield = parseFloat(passiveIncomeManual);
+      }
+    }
+
     setSaving(true);
     try {
-      if (editingAssetId !== null) {
-        await api.updateAsset(editingAssetId, {
-          name,
-          type,
-          value: parseFloat(value),
-          monthly_yield: parseFloat(yield_),
-        });
+      const payload: any = {
+        name,
+        type,
+        value: assetValue,
+        monthly_yield: assetYield,
+        asset_category: assetCategory,
+      };
+
+      if (assetCategory === 'market') {
+        payload.market_symbol = marketSymbol.trim();
+        payload.market_type = marketType;
+        payload.quantity_held = parseFloat(quantityHeld);
+        payload.current_market_price = fetchedPrice;
+        payload.passive_yield_percent = hasPassiveIncome && passiveYieldPercent ? parseFloat(passiveYieldPercent) : null;
+        payload.passive_income_manual = 0;
       } else {
-        await api.addAsset({
-          name,
-          type,
-          value: parseFloat(value),
-          monthly_yield: parseFloat(yield_),
-        });
+        payload.market_symbol = null;
+        payload.market_type = null;
+        payload.quantity_held = null;
+        payload.current_market_price = null;
+        payload.passive_yield_percent = null;
+        payload.passive_income_manual = hasPassiveIncome && passiveIncomeManual ? parseFloat(passiveIncomeManual) : 0;
+      }
+
+      if (editingAssetId !== null) {
+        await api.updateAsset(editingAssetId, payload);
+      } else {
+        await api.addAsset(payload);
       }
       setShowModal(false);
-      setName(''); setValue(''); setYield(''); setType('Stocks');
+      resetForm();
       setEditingAssetId(null);
       load();
     } catch (e: any) {
@@ -152,7 +259,14 @@ export default function AssetsScreen() {
     );
   };
 
-  // Render a tiny vector trend line like the screenshot
+  const formatPriceAge = (lastUpdate?: string) => {
+    if (!lastUpdate) return '';
+    const mins = Math.floor((Date.now() - new Date(lastUpdate).getTime()) / 60000);
+    if (mins < 60) return `mis à jour il y a ${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    return `mis à jour il y a ${hrs}h`;
+  };
+
   const TrendLine = () => (
     <View style={styles.trendContainer}>
       <Svg width="120" height="36" viewBox="0 0 120 36">
@@ -169,7 +283,6 @@ export default function AssetsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Title Header */}
       <View style={styles.header}>
         <View style={{ flex: 1, marginRight: 12 }}>
           <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>{t('assets_title')}</Text>
@@ -188,35 +301,44 @@ export default function AssetsScreen() {
           contentContainerStyle={styles.scroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#ccff00" />}
         >
-          {/* Neon Grid of Assets */}
           <View style={styles.grid}>
             {assets.map((item) => {
               const Icon = TYPE_ICONS[item.type] || TYPE_ICONS.Other;
               const labelKeys = TYPE_LABEL_KEYS[item.type] || TYPE_LABEL_KEYS.Other;
+              const isMarket = item.asset_category === 'market';
               return (
                 <View key={item.id} style={styles.gridCard}>
-                  {/* Top line with Icon and category info */}
                   <View style={styles.cardHeader}>
                     <View style={styles.categoryIconWrapper}>
                       <Icon size={20} color={COLORS.primary} />
                     </View>
                     <View style={styles.categoryMeta}>
-                      <Text style={styles.categoryLabel}>{t(labelKeys.label)}</Text>
-                      <Text style={styles.categorySubLabel}>{t(labelKeys.subLabel)}</Text>
+                      <Text style={styles.categoryLabel}>
+                        {isMarket ? item.market_symbol : t(labelKeys.label)}
+                      </Text>
+                      <Text style={styles.categorySubLabel}>
+                        {isMarket ? `${item.quantity_held} ${item.market_symbol}` : t(labelKeys.subLabel)}
+                      </Text>
                       <Text style={styles.cardValue}>{formatAmount(item.value)}</Text>
                     </View>
                   </View>
-
-                  {/* Middle part: Yield info */}
                   <View style={styles.yieldContainer}>
-                    <Text style={styles.yieldLabel}>{t('monthly_yield')}</Text>
-                    <Text style={styles.yieldValue}>+{formatAmount(item.monthly_yield)}</Text>
+                    <Text style={styles.yieldLabel}>
+                      {isMarket && item.current_market_price
+                        ? `$${item.current_market_price}/u`
+                        : t('monthly_yield')}
+                    </Text>
+                    <Text style={styles.yieldValue}>
+                      +{formatAmount(item.monthly_yield || 0)}
+                      {isMarket && item.passive_yield_percent ? ` (${item.passive_yield_percent}%)` : ''}
+                    </Text>
+                    {isMarket && item.last_price_update && (
+                      <Text style={{ fontSize: 8, color: '#4d6600', marginTop: 2 }}>
+                        {formatPriceAge(item.last_price_update)}
+                      </Text>
+                    )}
                   </View>
-
-                  {/* SVG Wave graphic */}
                   <TrendLine />
-
-                  {/* Edit Pencil icon and Delete button bottom-right */}
                   <View style={styles.cardActionsContainer}>
                     <TouchableOpacity onPress={() => handleOpenEdit(item)} style={styles.editCardBtn}>
                       <Text style={{ fontSize: 13 }}>✎</Text>
@@ -230,12 +352,9 @@ export default function AssetsScreen() {
             })}
           </View>
 
-          {/* Performance Détaillée section */}
           {assets.length > 0 && (
             <View style={styles.performanceContainer}>
               <Text style={styles.perfTitle}>{t('detailed_performance')}</Text>
-
-              {/* Table headers */}
               <View style={styles.tableRowHeader}>
                 <Text style={[styles.colHeader, { flex: 1.5 }]}>{t('col_name')}</Text>
                 <Text style={[styles.colHeader, { flex: 1.5 }]}>{t('col_category')}</Text>
@@ -243,15 +362,13 @@ export default function AssetsScreen() {
                 <Text style={[styles.colHeader, { flex: 1.2, textAlign: 'right' }]}>{t('col_monthly_cashflow')}</Text>
                 <Text style={[styles.colHeader, { flex: 1.0, textAlign: 'center' }]}>{t('col_actions')}</Text>
               </View>
-
-              {/* Table items */}
               {assets.map((item) => (
                 <View key={item.id} style={styles.tableRow}>
                   <Text style={[styles.colText, { flex: 1.5, fontWeight: '700' }]} numberOfLines={1}>
                     {item.name}
                   </Text>
                   <Text style={[styles.colText, { flex: 1.5, color: '#8e8e93' }]} numberOfLines={1}>
-                    {t(ASSET_TYPE_LABEL_KEYS[item.type] || ASSET_TYPE_LABEL_KEYS.Other)}
+                    {item.asset_category === 'market' ? item.market_symbol : t(ASSET_TYPE_LABEL_KEYS[item.type] || ASSET_TYPE_LABEL_KEYS.Other)}
                   </Text>
                   <Text style={[styles.colText, { flex: 1.2, textAlign: 'right', fontWeight: '600' }]}>
                     {formatAmount(item.value)}
@@ -282,7 +399,6 @@ export default function AssetsScreen() {
         </ScrollView>
       )}
 
-      {/* Add / Edit Asset Modal */}
       <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
         <KeyboardAvoidingView
           style={styles.modalContainer}
@@ -325,29 +441,179 @@ export default function AssetsScreen() {
                 </View>
               </View>
 
+              {/* Toggle Type d'actif : Manuel / Marché live */}
               <View style={styles.formGroup}>
-                <Text style={styles.label}>{t('current_value_label')}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={value}
-                  onChangeText={setValue}
-                  placeholder="1000"
-                  placeholderTextColor="#48484a"
-                  keyboardType="numeric"
-                />
+                <Text style={styles.label}>Type d'actif</Text>
+                <View style={styles.toggleRow}>
+                  <TouchableOpacity
+                    style={[styles.toggleBtn, assetCategory === 'manual' && styles.toggleBtnActive]}
+                    onPress={() => setAssetCategory('manual')}
+                  >
+                    <Text style={[styles.toggleBtnText, assetCategory === 'manual' && styles.toggleBtnTextActive]}>
+                      Manuel
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.toggleBtn, assetCategory === 'market' && styles.toggleBtnActive]}
+                    onPress={() => setAssetCategory('market')}
+                  >
+                    <Text style={[styles.toggleBtnText, assetCategory === 'market' && styles.toggleBtnTextActive]}>
+                      Marché live
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>{t('monthly_yield_label')}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={yield_}
-                  onChangeText={setYield}
-                  placeholder="50"
-                  placeholderTextColor="#48484a"
-                  keyboardType="numeric"
-                />
-              </View>
+              {assetCategory === 'market' ? (
+                <>
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Symbole (ex: BTC, AAPL, XAU)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={marketSymbol}
+                      onChangeText={setMarketSymbol}
+                      placeholder="BTC"
+                      placeholderTextColor="#48484a"
+                      autoCapitalize="characters"
+                    />
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Type de marché</Text>
+                    <View style={styles.toggleRow}>
+                      {MARKET_TYPES.map((mt) => (
+                        <TouchableOpacity
+                          key={mt}
+                          style={[styles.toggleBtn, marketType === mt && styles.toggleBtnActive]}
+                          onPress={() => setMarketType(mt)}
+                        >
+                          <Text style={[styles.toggleBtnText, marketType === mt && styles.toggleBtnTextActive]}>
+                            {MARKET_TYPE_LABELS[mt]}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Quantité détenue</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={quantityHeld}
+                      onChangeText={setQuantityHeld}
+                      placeholder="0.5"
+                      placeholderTextColor="#48484a"
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+
+                  <TouchableOpacity style={styles.fetchPriceBtn} onPress={handleFetchPrice} disabled={priceLoading}>
+                    {priceLoading ? (
+                      <ActivityIndicator color="#0c0e12" size="small" />
+                    ) : (
+                      <Text style={styles.fetchPriceBtnText}>Vérifier le prix</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  {fetchedPrice !== null && (
+                    <View style={styles.priceResult}>
+                      <Text style={styles.priceLabel}>Prix actuel unitaire</Text>
+                      <Text style={styles.priceValue}>${fetchedPrice.toFixed(2)}</Text>
+                      {quantityHeld && (
+                        <>
+                          <Text style={styles.priceLabel}>Valeur totale calculée</Text>
+                          <Text style={styles.priceValue}>
+                            ${(fetchedPrice * parseFloat(quantityHeld || '0')).toFixed(2)}
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                  )}
+
+                  {/* Revenu passif toggle */}
+                  <View style={styles.formGroup}>
+                    <TouchableOpacity
+                      style={styles.passiveToggle}
+                      onPress={() => setHasPassiveIncome(!hasPassiveIncome)}
+                    >
+                      <Text style={styles.passiveToggleText}>
+                        {hasPassiveIncome ? '✓' : '○'} Cet actif génère un revenu passif
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {hasPassiveIncome && (
+                    <View style={styles.formGroup}>
+                      <Text style={styles.label}>Rendement annuel (%)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={passiveYieldPercent}
+                        onChangeText={setPassiveYieldPercent}
+                        placeholder="4.5"
+                        placeholderTextColor="#48484a"
+                        keyboardType="decimal-pad"
+                      />
+                      {fetchedPrice && quantityHeld && passiveYieldPercent && (
+                        <Text style={styles.calculatedNote}>
+                          Revenu mensuel estimé : ${((fetchedPrice * parseFloat(quantityHeld)) * (parseFloat(passiveYieldPercent) / 100) / 12).toFixed(2)}/mois
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </>
+              ) : (
+                <>
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>{t('current_value_label')}</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={value}
+                      onChangeText={setValue}
+                      placeholder="1000"
+                      placeholderTextColor="#48484a"
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  {/* Revenu passif toggle */}
+                  <View style={styles.formGroup}>
+                    <TouchableOpacity
+                      style={styles.passiveToggle}
+                      onPress={() => setHasPassiveIncome(!hasPassiveIncome)}
+                    >
+                      <Text style={styles.passiveToggleText}>
+                        {hasPassiveIncome ? '✓' : '○'} Cet actif génère un revenu passif
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {hasPassiveIncome && (
+                    <View style={styles.formGroup}>
+                      <Text style={styles.label}>Montant mensuel fixe ($)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={passiveIncomeManual}
+                        onChangeText={setPassiveIncomeManual}
+                        placeholder="50"
+                        placeholderTextColor="#48484a"
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+                  )}
+
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>{t('monthly_yield_label')}</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={yield_}
+                      onChangeText={setYield}
+                      placeholder="50"
+                      placeholderTextColor="#48484a"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </>
+              )}
 
               <TouchableOpacity style={styles.submitBtn} onPress={handleSave} disabled={saving}>
                 {saving ? (
@@ -395,230 +661,106 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   addBtnText: { fontSize: 13, fontWeight: '700', color: '#0c0e12' },
-  
-  scroll: {
-    paddingBottom: 40,
-  },
-
-  // Grid of Assets Matching Screenshot
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 18,
-    justifyContent: 'space-between',
-  },
+  scroll: { paddingBottom: 40 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 18, justifyContent: 'space-between' },
   gridCard: {
-    width: '48%',
-    backgroundColor: '#ccff00',
-    borderRadius: 30,
-    padding: 16,
-    marginBottom: 14,
-    position: 'relative',
-    minHeight: 180,
+    width: '48%', backgroundColor: '#ccff00', borderRadius: 30, padding: 16,
+    marginBottom: 14, position: 'relative', minHeight: 180,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+  cardHeader: { flexDirection: 'row', gap: 8 },
   categoryIconWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 38, height: 38, borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center',
   },
-  categoryEmoji: { fontSize: 20 },
-  categoryMeta: {
-    flex: 1,
-  },
-  categoryLabel: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#3d4d00',
-  },
-  categorySubLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#4d6600',
-    marginTop: 1,
-  },
-  cardValue: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#000000',
-    marginTop: 4,
-    letterSpacing: -0.5,
-  },
-  yieldContainer: {
-    marginTop: 12,
-  },
-  yieldLabel: {
-    fontSize: 10,
-    color: '#4d6600',
-    fontWeight: '700',
-  },
-  yieldValue: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: '#000000',
-    marginTop: 1,
-  },
-  trendContainer: {
-    marginTop: 8,
-    alignItems: 'center',
+  categoryMeta: { flex: 1 },
+  categoryLabel: { fontSize: 10, fontWeight: '900', color: '#3d4d00' },
+  categorySubLabel: { fontSize: 9, fontWeight: '700', color: '#4d6600', marginTop: 1 },
+  cardValue: { fontSize: 18, fontWeight: '900', color: '#000000', marginTop: 4, letterSpacing: -0.5 },
+  yieldContainer: { marginTop: 12 },
+  yieldLabel: { fontSize: 10, color: '#4d6600', fontWeight: '700' },
+  yieldValue: { fontSize: 15, fontWeight: '900', color: '#000000', marginTop: 1 },
+  trendContainer: { marginTop: 8, alignItems: 'center' },
+  cardActionsContainer: { position: 'absolute', bottom: 12, right: 12, flexDirection: 'row', gap: 6 },
+  editCardBtn: {
+    width: 24, height: 24, borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.04)', alignItems: 'center', justifyContent: 'center',
   },
   deleteCardBtn: {
-    position: 'absolute',
-    bottom: 12,
-    right: 12,
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 24, height: 24, borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.04)', alignItems: 'center', justifyContent: 'center',
   },
-  deleteCardIcon: { fontSize: 12, color: '#3d4d00' },
-
-  // Performance Détaillée Table style
   performanceContainer: {
-    backgroundColor: '#0c0e12',
-    marginHorizontal: 18,
-    marginTop: 12,
-    borderRadius: 30,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#1c222d',
+    backgroundColor: '#0c0e12', marginHorizontal: 18, marginTop: 12,
+    borderRadius: 30, padding: 20, borderWidth: 1, borderColor: '#1c222d',
   },
-  perfTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#ffffff',
-    letterSpacing: -0.5,
-    marginBottom: 16,
-  },
+  perfTitle: { fontSize: 20, fontWeight: '900', color: '#ffffff', letterSpacing: -0.5, marginBottom: 16 },
   tableRowHeader: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#1c222d',
-    paddingBottom: 8,
-    marginBottom: 10,
+    flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#1c222d',
+    paddingBottom: 8, marginBottom: 10,
   },
-  colHeader: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#8e8e93',
-    textTransform: 'uppercase',
-  },
+  colHeader: { fontSize: 10, fontWeight: '700', color: '#8e8e93', textTransform: 'uppercase' },
   tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.02)',
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.02)',
   },
-  colText: {
-    fontSize: 12,
-    color: '#ffffff',
-  },
-  tableAction: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tableActionText: {
-    fontSize: 13,
-    color: '#ff3b30',
-  },
-
-  // Empty View
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-    gap: 8,
-  },
-  emptyEmoji: { fontSize: 48 },
+  colText: { fontSize: 12, color: '#ffffff' },
+  tableAction: { alignItems: 'center', justifyContent: 'center' },
+  emptyContainer: { alignItems: 'center', paddingVertical: 60, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '700', color: '#ffffff' },
   emptySubText: { fontSize: 13, color: '#8e8e93' },
-
-  // Modal styling (Add Asset)
   modalContainer: { flex: 1, backgroundColor: '#000000' },
   modalScroll: { padding: 24, paddingBottom: 60 },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 32,
-    paddingTop: 8,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: 32, paddingTop: 8,
   },
   modalTitle: { fontSize: 22, fontWeight: '900', color: '#ffffff' },
-  modalClose: { fontSize: 22, color: '#8e8e93', fontWeight: '500' },
   form: { gap: 20 },
   formGroup: { gap: 6 },
-  label: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#8e8e93',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
+  label: { fontSize: 11, fontWeight: '700', color: '#8e8e93', textTransform: 'uppercase', letterSpacing: 0.6 },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: '#1c222d',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: '#ffffff',
+    backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: '#1c222d',
+    borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14,
+    fontSize: 15, color: '#ffffff',
   },
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   typeBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 99,
-    borderWidth: 1,
-    borderColor: '#1c222d',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99,
+    borderWidth: 1, borderColor: '#1c222d', backgroundColor: 'rgba(255,255,255,0.02)',
   },
-  typeBtnActive: {
-    borderColor: '#ccff00',
-    backgroundColor: 'rgba(204,255,0,0.1)',
-  },
+  typeBtnActive: { borderColor: '#ccff00', backgroundColor: 'rgba(204,255,0,0.1)' },
   typeBtnText: { fontSize: 13, color: '#8e8e93', fontWeight: '500' },
   typeBtnTextActive: { color: '#ccff00', fontWeight: '700' },
-  submitBtn: {
-    backgroundColor: '#ccff00',
-    borderRadius: 99,
-    paddingVertical: 16,
+  toggleRow: { flexDirection: 'row', gap: 8 },
+  toggleBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 99, borderWidth: 1,
+    borderColor: '#1c222d', backgroundColor: 'rgba(255,255,255,0.02)',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
+  },
+  toggleBtnActive: { borderColor: '#ccff00', backgroundColor: 'rgba(204,255,0,0.1)' },
+  toggleBtnText: { fontSize: 13, color: '#8e8e93', fontWeight: '600' },
+  toggleBtnTextActive: { color: '#ccff00', fontWeight: '700' },
+  fetchPriceBtn: {
+    backgroundColor: '#ccff00', borderRadius: 99, paddingVertical: 14,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  fetchPriceBtnText: { fontSize: 14, fontWeight: '800', color: '#0c0e12' },
+  priceResult: {
+    backgroundColor: '#1a1a1a', borderRadius: 16, padding: 16, gap: 4,
+  },
+  priceLabel: { fontSize: 11, color: '#8e8e93', fontWeight: '600', textTransform: 'uppercase' },
+  priceValue: { fontSize: 18, fontWeight: '900', color: '#ccff00' },
+  passiveToggle: {
+    paddingVertical: 12, paddingHorizontal: 16, borderRadius: 16,
+    borderWidth: 1, borderColor: '#1c222d', backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  passiveToggleText: { fontSize: 14, color: '#ffffff', fontWeight: '600' },
+  calculatedNote: { fontSize: 12, color: '#ccff00', fontWeight: '600', marginTop: 4 },
+  submitBtn: {
+    backgroundColor: '#ccff00', borderRadius: 99, paddingVertical: 16,
+    alignItems: 'center', justifyContent: 'center', marginTop: 12,
   },
   submitBtnText: { fontSize: 15, fontWeight: '800', color: '#0c0e12' },
-  cancelBtn: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelBtnText: {
-    fontSize: 14,
-    color: '#8e8e93',
-    fontWeight: '600',
-  },
-  cardActionsContainer: {
-    position: 'absolute',
-    bottom: 12,
-    right: 12,
-    flexDirection: 'row',
-    gap: 6,
-  },
-  editCardBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  cancelBtn: { paddingVertical: 14, alignItems: 'center' },
+  cancelBtnText: { fontSize: 14, color: '#8e8e93', fontWeight: '600' },
 });

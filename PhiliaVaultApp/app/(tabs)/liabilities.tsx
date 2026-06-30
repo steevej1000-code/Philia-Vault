@@ -20,6 +20,8 @@ interface Liability {
   type: string;
   monthly_cost: number;
   total_debt: number;
+  expense_type: string;
+  occurred_date: string;
 }
 
 const LIABILITY_TYPES = ['Loan', 'Mortgage', 'Subscription', 'Credit Card', 'Other'];
@@ -63,6 +65,10 @@ export default function LiabilitiesScreen() {
   const [monthCost, setMonthCost] = useState('');
   const [totalDebt, setTotalDebt] = useState('');
 
+  // New form states
+  const [expenseType, setExpenseType] = useState<'fixed' | 'one_time'>('fixed');
+  const [occurredDate, setOccurredDate] = useState('');
+
   // Editing state
   const [editingLiabilityId, setEditingLiabilityId] = useState<number | null>(null);
 
@@ -82,12 +88,18 @@ export default function LiabilitiesScreen() {
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
-  const handleOpenAdd = () => {
-    setEditingLiabilityId(null);
+  const resetForm = () => {
     setName('');
     setType('Subscription');
     setMonthCost('');
     setTotalDebt('');
+    setExpenseType('fixed');
+    setOccurredDate('');
+  };
+
+  const handleOpenAdd = () => {
+    setEditingLiabilityId(null);
+    resetForm();
     setShowModal(true);
   };
 
@@ -97,6 +109,8 @@ export default function LiabilitiesScreen() {
     setType(item.type);
     setMonthCost(String(item.monthly_cost));
     setTotalDebt(String(item.total_debt || ''));
+    setExpenseType((item.expense_type as 'fixed' | 'one_time') || 'fixed');
+    setOccurredDate(item.occurred_date || '');
     setShowModal(true);
   };
 
@@ -105,25 +119,28 @@ export default function LiabilitiesScreen() {
       Alert.alert(t('error'), t('fill_all_fields_short'));
       return;
     }
+    if (expenseType === 'one_time' && !occurredDate.trim()) {
+      Alert.alert('Erreur', 'Veuillez indiquer la date de cette dépense ponctuelle.');
+      return;
+    }
     setSaving(true);
     try {
+      const payload = {
+        name,
+        type,
+        monthly_cost: parseFloat(monthCost),
+        total_debt: parseFloat(totalDebt || '0'),
+        expense_type: expenseType,
+        occurred_date: expenseType === 'one_time' ? occurredDate : '',
+      };
+
       if (editingLiabilityId !== null) {
-        await api.updateLiability(editingLiabilityId, {
-          name,
-          type,
-          monthly_cost: parseFloat(monthCost),
-          total_debt: parseFloat(totalDebt || '0'),
-        });
+        await api.updateLiability(editingLiabilityId, payload);
       } else {
-        await api.addLiability({
-          name,
-          type,
-          monthly_cost: parseFloat(monthCost),
-          total_debt: parseFloat(totalDebt || '0'),
-        });
+        await api.addLiability(payload);
       }
       setShowModal(false);
-      setName(''); setMonthCost(''); setTotalDebt(''); setType('Subscription');
+      resetForm();
       setEditingLiabilityId(null);
       load();
     } catch (e: any) {
@@ -195,6 +212,7 @@ export default function LiabilitiesScreen() {
             {liabilities.map((item) => {
               const Icon = TYPE_ICONS[item.type] || TYPE_ICONS.Other;
               const details = TYPE_DETAILS[item.type] || TYPE_DETAILS.Other;
+              const isOneTime = item.expense_type === 'one_time';
               return (
                 <View key={item.id} style={styles.gridCard}>
                   {/* Top line with Icon and category info */}
@@ -210,6 +228,13 @@ export default function LiabilitiesScreen() {
                       </Text>
                     </View>
                   </View>
+
+                  {/* Expense type badge */}
+                  {isOneTime && item.occurred_date && (
+                    <View style={styles.expenseBadge}>
+                      <Text style={styles.expenseBadgeText}>Ponctuelle · {item.occurred_date}</Text>
+                    </View>
+                  )}
 
                   {/* Middle part: Yield info (monthly cost for liability) */}
                   <View style={styles.yieldContainer}>
@@ -328,6 +353,40 @@ export default function LiabilitiesScreen() {
                   ))}
                 </View>
               </View>
+
+              {/* Expense Type Toggle: Fixe / Ponctuelle */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Type de dépense</Text>
+                <View style={styles.toggleRow}>
+                  <TouchableOpacity
+                    style={[styles.toggleBtn, expenseType === 'fixed' && styles.toggleBtnActive]}
+                    onPress={() => setExpenseType('fixed')}
+                  >
+                    <Text style={[styles.toggleBtnText, expenseType === 'fixed' && styles.toggleBtnTextActive]}>Fixe (récurrent)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.toggleBtn, expenseType === 'one_time' && styles.toggleBtnActive]}
+                    onPress={() => setExpenseType('one_time')}
+                  >
+                    <Text style={[styles.toggleBtnText, expenseType === 'one_time' && styles.toggleBtnTextActive]}>Ponctuelle (une fois)</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Date field for one_time expenses */}
+              {expenseType === 'one_time' && (
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Date (JJ/MM/AAAA)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={occurredDate}
+                    onChangeText={setOccurredDate}
+                    placeholder="15/01/2026"
+                    placeholderTextColor="#48484a"
+                  />
+                  <Text style={styles.noteText}>Cette dépense ne comptera que pour le mois indiqué</Text>
+                </View>
+              )}
 
               <View style={styles.formGroup}>
                 <Text style={styles.label}>{t('monthly_cost_label')}</Text>
@@ -452,6 +511,19 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginTop: 4,
     letterSpacing: -0.5,
+  },
+  expenseBadge: {
+    marginTop: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+  },
+  expenseBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#ffffff',
   },
   yieldContainer: {
     marginTop: 12,
@@ -580,6 +652,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#ffffff',
   },
+  noteText: {
+    fontSize: 11,
+    color: '#8e8e93',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   typeBtn: {
     paddingHorizontal: 14,
@@ -595,6 +673,36 @@ const styles = StyleSheet.create({
   },
   typeBtnText: { fontSize: 13, color: '#8e8e93', fontWeight: '500' },
   typeBtnTextActive: { color: '#FF3B30', fontWeight: '700' },
+
+  // Toggle styles
+  toggleRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 99,
+    borderWidth: 1,
+    borderColor: '#1c222d',
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleBtnActive: {
+    borderColor: '#FF3B30',
+    backgroundColor: 'rgba(255,59,48,0.1)',
+  },
+  toggleBtnText: {
+    fontSize: 13,
+    color: '#8e8e93',
+    fontWeight: '500',
+  },
+  toggleBtnTextActive: {
+    color: '#FF3B30',
+    fontWeight: '700',
+  },
+
   submitBtn: {
     backgroundColor: '#FF3B30',
     borderRadius: 99,

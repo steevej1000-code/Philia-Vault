@@ -81,6 +81,15 @@ def generate_unique_referral_code(cursor):
     # Extremely unlikely fallback
     return secrets.token_hex(4).upper()
 
+def _add_column_if_not_exists(cursor, table, column, col_type):
+    """Add a column if it doesn't already exist (safe for idempotent migrations)."""
+    cursor.execute(f"PRAGMA table_info({table})")
+    existing = [row["name"] for row in cursor.fetchall()] if isinstance(cursor.fetchone(), dict) else [row[1] for row in cursor.fetchall()]
+    cursor.execute(f"PRAGMA table_info({table})")
+    existing = [row[1] for row in cursor.fetchall()]
+    if column not in existing:
+        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
@@ -172,6 +181,16 @@ def init_db():
     )
     """)
     
+    # Migration: add new columns for market assets (safe idempotent adds)
+    _add_column_if_not_exists(cursor, "assets", "asset_category", "TEXT DEFAULT 'manual'")
+    _add_column_if_not_exists(cursor, "assets", "market_symbol", "TEXT DEFAULT NULL")
+    _add_column_if_not_exists(cursor, "assets", "market_type", "TEXT DEFAULT NULL")
+    _add_column_if_not_exists(cursor, "assets", "current_market_price", "REAL DEFAULT NULL")
+    _add_column_if_not_exists(cursor, "assets", "quantity_held", "REAL DEFAULT NULL")
+    _add_column_if_not_exists(cursor, "assets", "passive_yield_percent", "REAL DEFAULT NULL")
+    _add_column_if_not_exists(cursor, "assets", "passive_income_manual", "REAL DEFAULT 0")
+    _add_column_if_not_exists(cursor, "assets", "last_price_update", "TIMESTAMP DEFAULT NULL")
+    
     # Create liabilities table (with user_id)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS liabilities (
@@ -186,7 +205,9 @@ def init_db():
     )
     """)
     
-    # Create transactions table (with user_id)
+    # Migration: add new columns for liabilities (expense_type, occurred_date)
+    _add_column_if_not_exists(cursor, "liabilities", "expense_type", "TEXT DEFAULT 'fixed'")
+    _add_column_if_not_exists(cursor, "liabilities", "occurred_date", "DATE DEFAULT NULL")
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -768,21 +789,40 @@ def get_assets(user_id):
     conn.close()
     return rows
 
-def add_asset(user_id, name, type_, value, monthly_yield):
+def add_asset(user_id, name, type_, value, monthly_yield, asset_category="manual",
+              market_symbol=None, market_type=None, quantity_held=None,
+              passive_yield_percent=None, passive_income_manual=0):
     conn = get_db()
     cursor = conn.cursor()
     enc_value = encrypt_val(value)
     enc_yield = encrypt_val(monthly_yield)
-    cursor.execute("INSERT INTO assets (user_id, name, type, value, monthly_yield) VALUES (?, ?, ?, ?, ?)", (user_id, name, type_, enc_value, enc_yield))
+    cursor.execute("""
+        INSERT INTO assets (user_id, name, type, value, monthly_yield,
+                            asset_category, market_symbol, market_type,
+                            quantity_held, passive_yield_percent, passive_income_manual)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, name, type_, enc_value, enc_yield, asset_category,
+          market_symbol, market_type, quantity_held, passive_yield_percent, passive_income_manual))
     conn.commit()
     conn.close()
 
-def update_asset(user_id, asset_id, name, type_, value, monthly_yield):
+def update_asset(user_id, asset_id, name, type_, value, monthly_yield,
+                 asset_category="manual", market_symbol=None, market_type=None,
+                 quantity_held=None, current_market_price=None,
+                 passive_yield_percent=None, passive_income_manual=0):
     conn = get_db()
     cursor = conn.cursor()
     enc_value = encrypt_val(value)
     enc_yield = encrypt_val(monthly_yield)
-    cursor.execute("UPDATE assets SET name=?, type=?, value=?, monthly_yield=? WHERE id=? AND user_id=?", (name, type_, enc_value, enc_yield, asset_id, user_id))
+    cursor.execute("""
+        UPDATE assets SET name=?, type=?, value=?, monthly_yield=?,
+           asset_category=?, market_symbol=?, market_type=?,
+           quantity_held=?, current_market_price=?,
+           passive_yield_percent=?, passive_income_manual=?
+        WHERE id=? AND user_id=?
+    """, (name, type_, enc_value, enc_yield, asset_category,
+          market_symbol, market_type, quantity_held, current_market_price,
+          passive_yield_percent, passive_income_manual, asset_id, user_id))
     conn.commit()
     conn.close()
 
@@ -792,6 +832,42 @@ def delete_asset(user_id, asset_id):
     cursor.execute("DELETE FROM assets WHERE id=? AND user_id=?", (asset_id, user_id))
     conn.commit()
     conn.close()
+
+def update_asset_price(asset_id, price):
+    conn = get_db()
+    cursor = conn.cursor()
+    from datetime import datetime
+    cursor.execute("UPDATE assets SET current_market_price=?, last_price_update=? WHERE id=?",
+                   (price, datetime.now(), asset_id))
+    conn.commit()
+    conn.close()
+
+def get_market_assets():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM assets WHERE asset_category = 'market'")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+# Net Worth Calculations
+def calculate_asset_value(asset):
+    if asset.get("asset_category") == "market":
+        if asset.get("current_market_price") and asset.get("quantity_held"):
+            return asset["current_market_price"] * asset["quantity_held"]
+        return 0
+    else:
+        return asset.get("value", 0)
+
+def calculate_passive_income(asset):
+    if asset.get("asset_category") == "market":
+        if asset.get("passive_yield_percent"):
+            asset_value = calculate_asset_value(asset)
+            annual_income = asset_value * (asset["passive_yield_percent"] / 100)
+            return annual_income / 12
+        return 0
+    else:
+        return asset.get("passive_income_manual") or 0
 
 # Liabilities CRUD Helpers
 def get_liabilities(user_id):
@@ -812,25 +888,33 @@ def get_liabilities(user_id):
     conn.close()
     return rows
 
-def add_liability(user_id, name, type_, total_amount, remaining_amount, monthly_cost):
+def add_liability(user_id, name, type_, total_amount, remaining_amount, monthly_cost,
+                  expense_type="fixed", occurred_date=None):
     conn = get_db()
     cursor = conn.cursor()
     enc_total = encrypt_val(total_amount)
     enc_rem = encrypt_val(remaining_amount)
     enc_cost = encrypt_val(monthly_cost)
-    cursor.execute("INSERT INTO liabilities (user_id, name, type, total_amount, remaining_amount, monthly_cost) VALUES (?, ?, ?, ?, ?, ?)",
-                   (user_id, name, type_, enc_total, enc_rem, enc_cost))
+    cursor.execute("""
+        INSERT INTO liabilities (user_id, name, type, total_amount, remaining_amount,
+                                 monthly_cost, expense_type, occurred_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, name, type_, enc_total, enc_rem, enc_cost, expense_type, occurred_date))
     conn.commit()
     conn.close()
 
-def update_liability(user_id, lib_id, name, type_, total_amount, remaining_amount, monthly_cost):
+def update_liability(user_id, lib_id, name, type_, total_amount, remaining_amount, monthly_cost,
+                     expense_type="fixed", occurred_date=None):
     conn = get_db()
     cursor = conn.cursor()
     enc_total = encrypt_val(total_amount)
     enc_rem = encrypt_val(remaining_amount)
     enc_cost = encrypt_val(monthly_cost)
-    cursor.execute("UPDATE liabilities SET name=?, type=?, total_amount=?, remaining_amount=?, monthly_cost=? WHERE id=? AND user_id=?",
-                   (name, type_, enc_total, enc_rem, enc_cost, lib_id, user_id))
+    cursor.execute("""
+        UPDATE liabilities SET name=?, type=?, total_amount=?, remaining_amount=?,
+                               monthly_cost=?, expense_type=?, occurred_date=?
+        WHERE id=? AND user_id=?
+    """, (name, type_, enc_total, enc_rem, enc_cost, expense_type, occurred_date, lib_id, user_id))
     conn.commit()
     conn.close()
 

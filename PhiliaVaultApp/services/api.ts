@@ -3,6 +3,29 @@ import { API_BASE, ENDPOINTS } from '../constants/api';
 import NetInfo from '@react-native-community/netinfo';
 import { CACHE_KEYS, saveToCache, getFromCache } from './offlineCache';
 
+interface AssetInput {
+  name: string;
+  type: string;
+  value: number;
+  monthly_yield: number;
+  asset_category?: string;
+  market_symbol?: string;
+  market_type?: string;
+  current_market_price?: number;
+  quantity_held?: number;
+  passive_yield_percent?: number;
+  passive_income_manual?: number;
+}
+
+interface LiabilityInput {
+  name: string;
+  type: string;
+  monthly_cost: number;
+  total_debt: number;
+  expense_type?: string;
+  occurred_date?: string;
+}
+
 class ApiClient {
   private userEmail: string | null = null;
 
@@ -236,7 +259,7 @@ class ApiClient {
     return this.withOfflineCache(CACHE_KEYS.assets, () => this.request(ENDPOINTS.assets));
   }
 
-  async addAsset(data: { name: string; type: string; value: number; monthly_yield: number }) {
+  async addAsset(data: AssetInput) {
     return this.request(ENDPOINTS.assets, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -247,10 +270,17 @@ class ApiClient {
     return this.request(`${ENDPOINTS.assets}/${id}`, { method: 'DELETE' });
   }
 
-  async updateAsset(id: number, data: { name: string; type: string; value: number; monthly_yield: number }) {
+  async updateAsset(id: number, data: AssetInput) {
     return this.request(`${ENDPOINTS.assets}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    });
+  }
+
+  async fetchPrice(symbol: string, marketType: string) {
+    return this.request('/api/assets/fetch-price', {
+      method: 'POST',
+      body: JSON.stringify({ symbol, market_type: marketType }),
     });
   }
 
@@ -267,7 +297,7 @@ class ApiClient {
     return res;
   }
 
-  async addLiability(data: { name: string; type: string; total_debt: number; monthly_cost: number }) {
+  async addLiability(data: LiabilityInput) {
     return this.request(ENDPOINTS.liabilities, {
       method: 'POST',
       body: JSON.stringify({
@@ -276,6 +306,8 @@ class ApiClient {
         monthly_cost: data.monthly_cost,
         total_amount: data.total_debt,
         remaining_amount: data.total_debt,
+        expense_type: data.expense_type,
+        occurred_date: data.occurred_date,
       }),
     });
   }
@@ -284,7 +316,7 @@ class ApiClient {
     return this.request(`${ENDPOINTS.liabilities}/${id}`, { method: 'DELETE' });
   }
 
-  async updateLiability(id: number, data: { name: string; type: string; total_debt: number; monthly_cost: number }) {
+  async updateLiability(id: number, data: LiabilityInput) {
     return this.request(`${ENDPOINTS.liabilities}/${id}`, {
       method: 'PUT',
       body: JSON.stringify({
@@ -293,6 +325,8 @@ class ApiClient {
         monthly_cost: data.monthly_cost,
         total_amount: data.total_debt,
         remaining_amount: data.total_debt,
+        expense_type: data.expense_type,
+        occurred_date: data.occurred_date,
       }),
     });
   }

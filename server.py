@@ -1,4 +1,5 @@
 import os
+import requests
 from flask import Flask, request, jsonify, send_from_directory, redirect
 import database
 import json
@@ -182,6 +183,104 @@ if OPENAI_KEY:
         openai_fallback_client = OpenAI(api_key=OPENAI_KEY)
     except Exception as e:
         print(f"Error configuring OpenAI fallback: {e}")
+
+# ─── Market Price API ───────────────────────────────────────────────────────────
+
+def get_market_price(symbol, market_type):
+    """Fetch current market price for crypto, metal, or stock symbols."""
+    try:
+        if market_type == 'crypto':
+            # CoinGecko API — utilise l'ID complet, pas le ticker
+            COINGECKO_IDS = {
+                "BTC": "bitcoin", "ETH": "ethereum", "SOL": "solana",
+                "XRP": "xrp", "ADA": "cardano", "DOGE": "dogecoin",
+                "DOT": "polkadot", "AVAX": "avalanche-2", "LINK": "chainlink",
+                "MATIC": "matic-network", "UNI": "uniswap", "ATOM": "cosmos",
+                "LTC": "litecoin", "BCH": "bitcoin-cash", "XLM": "stellar",
+                "TRX": "tron", "FIL": "filecoin", "APT": "aptos",
+                "ARB": "arbitrum", "OP": "optimism", "SUI": "sui",
+                "PEPE": "pepe", "INJ": "injective-protocol", "RUNE": "thorchain",
+                "AAVE": "aave", "MKR": "maker", "CRV": "curve-dao-token",
+                "ALGO": "algorand", "NEAR": "near", "FTM": "fantom",
+                "SAND": "the-sandbox", "MANA": "decentraland", "AXS": "axie-infinity",
+                "PAXG": "pax-gold", "XAU": "pax-gold",
+                "XAG": "kinesis-silver",
+            }
+            cg_id = COINGECKO_IDS.get(symbol.upper(), symbol.lower())
+            url = f"https://api.coingecko.com/api/v3/simple/price?ids={cg_id}&vs_currencies=usd"
+            resp = requests.get(url, timeout=5)
+            data = resp.json()
+            return data.get(cg_id, {}).get('usd')
+
+        elif market_type == 'metal':
+            # Fallback on CoinGecko tokens tracking metal prices
+            METAL_TOKENS = {"XAU": "pax-gold", "GOLD": "pax-gold",
+                            "XAG": "kinesis-silver", "SILVER": "kinesis-silver",
+                            "XPT": "platinum", "PLATINUM": "platinum",
+                            "XPD": "palladium", "PALLADIUM": "palladium"}
+            cg_id = METAL_TOKENS.get(symbol.upper())
+            if cg_id:
+                url = f"https://api.coingecko.com/api/v3/simple/price?ids={cg_id}&vs_currencies=usd"
+                resp = requests.get(url, timeout=5)
+                data = resp.json()
+                return data.get(cg_id, {}).get('usd')
+            # Fallback: metals-api.com si la clé est configurée
+            api_key = os.environ.get('METALS_API_KEY')
+            if api_key:
+                url = f"https://metals-api.com/api/latest?access_key={api_key}&base=USD&symbols={symbol.upper()}"
+                resp = requests.get(url, timeout=5)
+                data = resp.json()
+                rate = data.get('rates', {}).get(symbol.upper())
+                return 1 / rate if rate else None
+            return None
+
+        elif market_type == 'stock':
+            # Alpha Vantage
+            api_key = os.environ.get('ALPHA_VANTAGE_API_KEY')
+            if not api_key:
+                return None
+            url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol.upper()}&apikey={api_key}"
+            resp = requests.get(url, timeout=5)
+            data = resp.json()
+            return float(data.get('Global Quote', {}).get('05. price', 0))
+    except Exception as e:
+        print(f"Market price error for {symbol} ({market_type}): {e}")
+    return None
+
+@app.route("/api/assets/fetch-price", methods=["POST"])
+@require_auth
+def fetch_asset_price():
+    """Fetch live price for a given symbol/market_type."""
+    try:
+        data = request.get_json()
+        symbol = data.get("symbol", "").strip()
+        market_type = data.get("market_type", "").strip()
+        if not symbol or not market_type:
+            return jsonify({"error": "Missing symbol or market_type"}), 400
+        if market_type not in ("crypto", "metal", "stock"):
+            return jsonify({"error": "Invalid market_type (crypto/metal/stock)"}), 400
+        price = get_market_price(symbol, market_type)
+        if price is None:
+            return jsonify({"error": "Symbol not found or API error"}), 404
+        return jsonify({"symbol": symbol, "price": price}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/cron/update-market-prices", methods=["POST"])
+def update_market_prices():
+    """Cron: update prices for all market assets (every 6h)."""
+    secret = request.headers.get("X-Cron-Secret")
+    if secret != os.environ.get("CRON_SECRET"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    market_assets = database.get_market_assets()
+    updated = 0
+    for asset in market_assets:
+        price = get_market_price(asset["market_symbol"], asset["market_type"])
+        if price:
+            database.update_asset_price(asset["id"], price)
+            updated += 1
+    return jsonify({"updated": updated, "total": len(market_assets)}), 200
 
 # Static Routes
 @app.route("/")
@@ -647,11 +746,23 @@ def get_summary():
         assets = database.get_assets(user_id)
         liabilities = database.get_liabilities(user_id)
         
-        total_assets_val = sum(a["value"] for a in assets)
-        total_passive_income = sum(a["monthly_yield"] for a in assets)
+        # Use new calculation functions
+        total_assets_val = sum(database.calculate_asset_value(a) for a in assets)
+        total_passive_income = sum(database.calculate_passive_income(a) for a in assets)
         
-        total_liabilities_val = sum(l["remaining_amount"] for l in liabilities) + sum(l["monthly_cost"] for l in liabilities if l["type"] == "Subscription")
-        total_monthly_cost = sum(l["monthly_cost"] for l in liabilities)
+        # Monthly liabilities: fixed + one-time this month
+        from datetime import datetime
+        current_month = datetime.now().strftime('%Y-%m')
+        total_fixed = sum(l["monthly_cost"] for l in liabilities if l.get("expense_type", "fixed") == "fixed")
+        total_one_time = sum(
+            l["monthly_cost"] for l in liabilities
+            if l.get("expense_type") == "one_time"
+            and l.get("occurred_date") and str(l["occurred_date"]).startswith(current_month)
+        )
+        total_monthly_cost = total_fixed + total_one_time
+        
+        total_liabilities_val = sum(l["remaining_amount"] for l in liabilities) + \
+                                sum(l["monthly_cost"] for l in liabilities if l["type"] == "Subscription")
         
         monthly_income = database.get_user_income(user_id)
         
@@ -667,10 +778,9 @@ def get_summary():
         net_cashflow = total_passive_income - total_monthly_cost
         
         # Calculate percentages for categories for flow engine
-        # Group by types
         asset_types = {}
         for a in assets:
-            asset_types[a["type"]] = asset_types.get(a["type"], 0) + a["value"]
+            asset_types[a["type"]] = asset_types.get(a["type"], 0) + database.calculate_asset_value(a)
             
         liability_types = {}
         for l in liabilities:
@@ -705,11 +815,26 @@ def manage_assets():
         return jsonify({"success": True, "assets": database.get_assets(user_id)})
     
     data = request.json
-    if not data or "name" not in data or "type" not in data or "value" not in data or "monthly_yield" not in data:
+    if not data or "name" not in data or "type" not in data:
         return jsonify({"success": False, "error": "Missing parameters"}), 400
     
     try:
-        database.add_asset(user_id, data["name"], data["type"], float(data["value"]), float(data["monthly_yield"]))
+        asset_category = data.get("asset_category", "manual")
+        value = float(data.get("value", 0))
+        monthly_yield = float(data.get("monthly_yield", 0))
+        market_symbol = data.get("market_symbol")
+        market_type = data.get("market_type")
+        quantity_held = float(data.get("quantity_held")) if data.get("quantity_held") else None
+        passive_yield_percent = float(data.get("passive_yield_percent")) if data.get("passive_yield_percent") else None
+        passive_income_manual = float(data.get("passive_income_manual", 0))
+        
+        database.add_asset(
+            user_id, data["name"], data["type"], value, monthly_yield,
+            asset_category=asset_category, market_symbol=market_symbol,
+            market_type=market_type, quantity_held=quantity_held,
+            passive_yield_percent=passive_yield_percent,
+            passive_income_manual=passive_income_manual
+        )
         return jsonify({"success": True, "message": "Asset added successfully"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -726,7 +851,24 @@ def update_delete_asset(asset_id):
             
     data = request.json
     try:
-        database.update_asset(user_id, asset_id, data["name"], data["type"], float(data["value"]), float(data["monthly_yield"]))
+        asset_category = data.get("asset_category", "manual")
+        value = float(data.get("value", 0))
+        monthly_yield = float(data.get("monthly_yield", 0))
+        market_symbol = data.get("market_symbol")
+        market_type = data.get("market_type")
+        quantity_held = float(data.get("quantity_held")) if data.get("quantity_held") else None
+        current_market_price = float(data.get("current_market_price")) if data.get("current_market_price") else None
+        passive_yield_percent = float(data.get("passive_yield_percent")) if data.get("passive_yield_percent") else None
+        passive_income_manual = float(data.get("passive_income_manual", 0))
+        
+        database.update_asset(
+            user_id, asset_id, data["name"], data["type"], value, monthly_yield,
+            asset_category=asset_category, market_symbol=market_symbol,
+            market_type=market_type, quantity_held=quantity_held,
+            current_market_price=current_market_price,
+            passive_yield_percent=passive_yield_percent,
+            passive_income_manual=passive_income_manual
+        )
         return jsonify({"success": True, "message": "Asset updated successfully"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -743,7 +885,14 @@ def manage_liabilities():
         return jsonify({"success": False, "error": "Missing parameters"}), 400
         
     try:
-        database.add_liability(user_id, data["name"], data["type"], float(data["total_amount"]), float(data["remaining_amount"]), float(data["monthly_cost"]))
+        expense_type = data.get("expense_type", "fixed")
+        occurred_date = data.get("occurred_date")
+        database.add_liability(
+            user_id, data["name"], data["type"],
+            float(data["total_amount"]), float(data["remaining_amount"]),
+            float(data["monthly_cost"]),
+            expense_type=expense_type, occurred_date=occurred_date
+        )
         return jsonify({"success": True, "message": "Liability added successfully"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -1432,7 +1581,7 @@ Here are the user's financial data to guide your analysis:
 {context_str}
 """
     
-    # Priorité 1: GPT-4o-mini (le moins cher économiquement)
+    # Priorité 1 : GPT-4o-mini (primaire)
     if openai_fallback_client:
         try:
             messages = [{"role": "system", "content": sys_prompt}]
@@ -1441,28 +1590,30 @@ Here are the user's financial data to guide your analysis:
                 messages.append({"role": role, "content": h.get("text", "")})
             messages.append({"role": "user", "content": user_msg})
             response = openai_fallback_client.chat.completions.create(
-                model="gpt-4o-mini", messages=messages, max_tokens=1024
+                model="gpt-4o-mini", messages=messages,
+                max_tokens=300, temperature=0.7
             )
             return jsonify({"success": True, "reply": response.choices[0].message.content})
         except Exception as e:
             print(f"OpenAI error: {e}")
-    
-    # Priorité 2: DeepSeek (fallback si GPT-4o-mini échoue)
-    if deepseek_client:
+
+    # Priorité 2 : DeepSeek (fallback uniquement si GPT-4o-mini échoue)
+    elif deepseek_client:
         try:
             messages = [{"role": "system", "content": sys_prompt}]
             for h in history:
                 role = "user" if h.get("role") == "user" else "assistant"
                 messages.append({"role": role, "content": h.get("text", "")})
             messages.append({"role": "user", "content": user_msg})
-            response = openai_fallback_client.chat.completions.create(
-                model="gpt-4o-mini", messages=messages, max_tokens=1024
+            response = deepseek_client.chat.completions.create(
+                model="deepseek-chat", messages=messages,
+                max_tokens=300, temperature=0.7
             )
             return jsonify({"success": True, "reply": response.choices[0].message.content})
         except Exception as e:
-            print(f"OpenAI fallback error: {e}")
-    
-    # Offline Mock Mode (si ni DeepSeek ni OpenAI ne marchent)
+            print(f"DeepSeek fallback error: {e}")
+
+    # Priorité 3 : Offline
     reply = ""
     lower_msg = user_msg.lower()
     
