@@ -26,9 +26,9 @@ const TRIAL_DAYS    = 3;
 const FEATURES = [
   { Icon: IconSearch, key: 'paywall.benefit_ai'       },
   { Icon: IconAssets, key: 'paywall.benefit_cashflow'  },
-  { Icon: IconTarget, key: 'paywall.benefit_park'      },
+  { Icon: IconTarget, key: 'paywall.benefit_networth'      },
   { Icon: IconBolt,   key: 'paywall.benefit_instant'   },
-] as const;
+];
 
 export default function PaywallScreen() {
   const router                                     = useRouter();
@@ -39,6 +39,13 @@ export default function PaywallScreen() {
   const [plan, setPlan]                        = useState<'annual' | 'monthly'>('annual');
   const [monthlyPrice, setMonthlyPrice]        = useState('$14.99');
   const [annualPrice, setAnnualPrice]          = useState('$149.90');
+
+  // Date précise du premier prélèvement
+  const trialEndDate = new Date();
+  trialEndDate.setDate(trialEndDate.getDate() + TRIAL_DAYS);
+  const billingDateStr = trialEndDate.toLocaleDateString('fr-FR', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  });
 
   useEffect(() => {
     const fetchPrices = async () => {
@@ -251,8 +258,8 @@ export default function PaywallScreen() {
                 }
                 <Text style={styles.subTextSub}>
                   {plan === 'annual'
-                    ? 'Économisez 17% vs mensuel · Sans engagement'
-                    : `Sans engagement · ${monthlyPrice}/mois ensuite`
+                    ? `Économisez 17% vs mensuel · ${annualPrice}/an`
+                    : `Sans engagement · Facturé ${monthlyPrice} le ${billingDateStr}`
                   }
                 </Text>
               </View>

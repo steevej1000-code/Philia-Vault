@@ -1,0 +1,69 @@
+06-29 17:48:52.898   488  1964 W Binder  : Caught a RuntimeException from the binder stub implementation.
+06-29 17:48:52.898   488  1964 W Binder  : java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 0
+06-29 17:48:54.078  7265  7292 W unknown:ReactNative: The packager does not seem to be running as we got an IOException requesting its status: Failed to connect to /10.0.2.2:8081
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: FATAL EXCEPTION: pool-2-thread-1
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: Process: com.philia.vault, PID: 7265
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: java.lang.NoClassDefFoundError: Failed resolution of: Lexpo/modules/kotlin/types/AnyTypeProvider;
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at expo.modules.clipboard.ClipboardModule.definition(ClipboardModule.kt:277)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at expo.modules.kotlin.ModuleHolder.<init>(ModuleHolder.kt:22)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at expo.modules.kotlin.ModuleRegistry.register(ModuleRegistry.kt:29)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at expo.modules.kotlin.ModuleRegistry.register(ModuleRegistry.kt:45)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at expo.modules.kotlin.AppContext.<init>(AppContext.kt:131)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at expo.modules.kotlin.KotlinInteropModuleRegistry.<init>(KotlinInteropModuleRegistry.kt:18)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at expo.modules.adapters.react.NativeModulesProxy.<init>(NativeModulesProxy.java:45)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at expo.modules.adapters.react.ModuleRegistryAdapter.getOrCreateNativeModulesProxy(ModuleRegistryAdapter.java:140)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at expo.modules.adapters.react.ModuleRegistryAdapter.createNativeModules(ModuleRegistryAdapter.java:65)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at expo.modules.ExpoModulesPackage.createNativeModules(ExpoModulesPackage.kt:35)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.ReactPackageTurboModuleManagerDelegate.initialize(ReactPackageTurboModuleManagerDelegate.kt:64)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.ReactPackageTurboModuleManagerDelegate.<init>(ReactPackageTurboModuleManagerDelegate.kt:42)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.defaults.DefaultTurboModuleManagerDelegate.<init>(DefaultTurboModuleManagerDelegate.kt:35)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.defaults.DefaultTurboModuleManagerDelegate.<init>(Unknown Source:0)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.defaults.DefaultTurboModuleManagerDelegate$Builder.build(DefaultTurboModuleManagerDelegate.kt:63)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.defaults.DefaultTurboModuleManagerDelegate$Builder.build(DefaultTurboModuleManagerDelegate.kt:43)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.ReactPackageTurboModuleManagerDelegate$Builder.build(ReactPackageTurboModuleManagerDelegate.kt:222)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.ReactInstance.<init>(ReactInstance.kt:183)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.ReactHostImpl.getOrCreateReactInstanceTask$lambda$44$lambda$40(ReactHostImpl.kt:1039)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.ReactHostImpl.$r8$lambda$kGNcmxBxZbp8b1wWTaqIXDdkV8g(Unknown Source:0)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.ReactHostImpl$$ExternalSyntheticLambda26.then(D8$$SyntheticClass:0)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.completeImmediately$lambda$3(Task.kt:360)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.$r8$lambda$b7MTC0ufkn_2TjF4BGcNqGR9qK0(Unknown Source:0)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion$$ExternalSyntheticLambda3.run(D8$$SyntheticClass:0)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Executors$ImmediateExecutor.execute(Executors.kt:41)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.completeImmediately(Task.kt:358)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.access$completeImmediately(Task.kt:254)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task.continueWith(Task.kt:133)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task.continueWith$default(Task.kt:117)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task.onSuccess$lambda$12(Task.kt:176)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task.$r8$lambda$l0wwo5AvbHxlwfI1R7CH_codxoo(Unknown Source:0)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$$ExternalSyntheticLambda2.then(D8$$SyntheticClass:0)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.completeAfterTask$lambda$5(Task.kt:394)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.$r8$lambda$IPpysnehFwANEiW061YzapkMdoE(Unknown Source:0)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion$$ExternalSyntheticLambda4.run(D8$$SyntheticClass:0)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1137)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at java.lang.Thread.run(Thread.java:1012)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: Caused by: java.lang.ClassNotFoundException: Didn't find class "expo.modules.kotlin.types.AnyTypeProvider" on path: DexPathList[[zip file "/data/app/~~7CI-ogLCmiIIrLNrZKRiHA==/com.philia.vault-Ci7zbDbLStZ1HLwynt9wNg==/base.apk"],nativeLibraryDirectories=[/data/app/~~7CI-ogLCmiIIrLNrZKRiHA==/com.philia.vault-Ci7zbDbLStZ1HLwynt9wNg==/lib/arm64, /data/app/~~7CI-ogLCmiIIrLNrZKRiHA==/com.philia.vault-Ci7zbDbLStZ1HLwynt9wNg==/base.apk!/lib/arm64-v8a, /system/lib64, /system_ext/lib64]]
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at dalvik.system.BaseDexClassLoader.findClass(BaseDexClassLoader.java:259)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at java.lang.ClassLoader.loadClass(ClassLoader.java:379)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	at java.lang.ClassLoader.loadClass(ClassLoader.java:312)
+06-29 17:48:54.368  7265  7293 E AndroidRuntime: 	... 38 more
+06-29 17:48:54.572   488  1115 I ActivityManager: Process com.philia.vault (pid 7265) has died: fg  TOP 
+06-29 17:48:54.772  1008  1008 W BcSmartspaceView: java.lang.SecurityException: No access to content://settings/secure/doze_always_on: Neither user 10156 nor current process has android.permission.INTERACT_ACROSS_USERS_FULL.
+06-29 17:48:54.772  1008  1008 W BcSmartspaceView: 	at android.os.Parcel.createExceptionOrNull(Parcel.java:3011)
+06-29 17:48:54.772  1008  1008 W BcSmartspaceView: 	at android.os.Parcel.createException(Parcel.java:2995)
+06-29 17:48:54.772  1008  1008 W BcSmartspaceView: 	at android.os.Parcel.readException(Parcel.java:2978)
+06-29 17:48:54.772  1008  1008 W BcSmartspaceView: 	at android.os.Parcel.readException(Parcel.java:2920)
+06-29 17:48:54.772  1008  1008 W BcSmartspaceView: Caused by: android.os.RemoteException: Remote stack trace:
+06-29 17:48:54.826   488   507 W WindowManager: android.os.DeadObjectException
+06-29 17:48:54.828   488   507 W WindowManager: Exception thrown during dispatchAppVisibility Window{b5be613 u0 com.philia.vault/com.philia.vault.MainActivity EXITING}
+06-29 17:48:54.828   488   507 W WindowManager: android.os.DeadObjectException
+06-29 17:48:54.885   488   507 W WindowManager: android.os.DeadObjectException
+06-29 17:48:54.891  1008  2004 E OneSearchSuggestProvider: java.util.concurrent.CompletionException: java.util.NoSuchElementException: No value present
+06-29 17:48:54.891  1008  2004 E OneSearchSuggestProvider: 	at java.util.concurrent.CompletableFuture.completeExceptionally(CompletableFuture.java:2064)
+06-29 17:48:54.891  1008  2004 E OneSearchSuggestProvider: Caused by: java.util.NoSuchElementException: No value present
+06-29 17:48:55.198  1623  2030 W A       : DiscoverPrecheckException(precheckFailureReason=com.google.android.apps.search.googleapp.discover.z.a.c@53baf2d)
+06-29 17:48:55.208  1623  2030 W A       : DiscoverPrecheckException(precheckFailureReason=com.google.android.apps.search.googleapp.discover.z.a.c@53baf2d)
+06-29 17:48:55.233  1623  1623 W A       : com.google.android.apps.search.googleapp.discover.y.i: DiscoverPrecheckException(precheckFailureReason=com.google.android.apps.search.googleapp.discover.z.a.c@53baf2d)
+06-29 17:48:55.233  1623  1623 W A       : Caused by: DiscoverPrecheckException(precheckFailureReason=com.google.android.apps.search.googleapp.discover.z.a.c@53baf2d)
+06-29 17:49:21.140  6274  7333 W TapAndPay: java.lang.NullPointerException: NfcAdapter is null
+06-29 17:49:21.281   488  7349 E StatsCompanionService: android.content.pm.PackageManager$NameNotFoundException: com.google.android.trichromelibrary
