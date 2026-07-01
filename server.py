@@ -1107,6 +1107,7 @@ def manage_preferences():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/affiliation/stats", methods=["GET"])
+@require_auth
 def affiliation_stats():
     user_id = get_current_user_id()
     try:
@@ -1116,6 +1117,7 @@ def affiliation_stats():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/affiliate/network", methods=["GET"])
+@require_auth
 def affiliate_network():
     """Retourne la liste des filleuls de l'utilisateur connecté."""
     user_id = get_current_user_id()
