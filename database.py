@@ -463,6 +463,19 @@ def init_db():
     )
     """)
 
+    # Create admin_announcements table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS admin_announcements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        target_segment TEXT DEFAULT 'all',
+        sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        sent_count INTEGER DEFAULT 0,
+        failed_count INTEGER DEFAULT 0
+    )
+    """)
+
     # Create daily_discipline table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS daily_discipline (

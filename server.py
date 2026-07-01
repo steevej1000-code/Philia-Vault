@@ -267,6 +267,9 @@ def serve_app():
 @app.route("/admin")
 @app.route("/admin/")
 def serve_admin():
+    access_key = request.args.get('key')
+    if access_key != os.environ.get('ADMIN_PAGE_ACCESS_KEY'):
+        return "Not found", 404
     return send_from_directory("static", "admin.html")
 
 @app.route("/assets/<path:path>")

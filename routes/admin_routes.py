@@ -3,6 +3,7 @@ import json
 import csv
 from io import StringIO
 from functools import wraps
+from datetime import datetime
 
 from flask import Blueprint, request, jsonify, Response
 from werkzeug.security import check_password_hash
@@ -16,7 +17,7 @@ from database import (
     get_user_detail_for_admin,
     block_user, block_founder, update_founder_spots_counter,
     get_product_metrics, get_payment_history,
-    get_config, set_config,
+    get_config, set_config, get_db,
 )
 from middleware.admin_auth import generate_admin_token, require_admin_auth
 
@@ -336,3 +337,89 @@ def export_csv(export_type):
         mimetype="text/csv",
         headers={"Content-Disposition": f"attachment;filename={export_type}_export.csv"}
     )
+
+
+# ─── Announcements ────────────────────────────────────────────────────────────
+
+@admin_bp.route('/announcement/send', methods=['POST'])
+@require_admin_auth()
+def send_announcement():
+    data = request.get_json() or {}
+    title = data.get('title')
+    body = data.get('body')
+    segment = data.get('target_segment', 'all')
+
+    if not title or not body:
+        return jsonify({'error': 'Title and body required'}), 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if segment == 'all':
+        cursor.execute("SELECT DISTINCT user_id FROM push_subscriptions WHERE is_active = 1")
+    elif segment == 'founder_only':
+        cursor.execute("""
+            SELECT DISTINCT ps.user_id FROM push_subscriptions ps
+            JOIN users u ON u.id = ps.user_id
+            WHERE u.stripe_status = 'founder' AND ps.is_active = 1
+        """)
+    elif segment == 'premium_only':
+        cursor.execute("""
+            SELECT DISTINCT ps.user_id FROM push_subscriptions ps
+            JOIN users u ON u.id = ps.user_id
+            WHERE u.stripe_status IN ('active', 'founder') AND ps.is_active = 1
+        """)
+    else:
+        return jsonify({'error': 'Invalid segment'}), 400
+
+    users = cursor.fetchall()
+    sent_count = 0
+    failed_count = 0
+
+    for user in users:
+        cursor.execute(
+            "SELECT * FROM push_subscriptions WHERE user_id = ? AND is_active = 1",
+            (user['user_id'],)
+        )
+        subscriptions = cursor.fetchall()
+        for sub in subscriptions:
+            try:
+                from pywebpush import webpush, WebPushException
+                import os as _os
+                webpush(
+                    subscription_info={
+                        "endpoint": sub['endpoint'],
+                        "keys": {"p256dh": sub['p256dh'], "auth": sub['auth']}
+                    },
+                    data=json.dumps({
+                        "title": title, "body": body, "url": "/dashboard"
+                    }),
+                    vapid_private_key=_os.environ.get('VAPID_PRIVATE_KEY'),
+                    vapid_claims={
+                        "sub": f"mailto:{_os.environ.get('VAPID_CLAIMS_EMAIL', 'contact@philiaentreprisellc.com')}"
+                    }
+                )
+                sent_count += 1
+            except Exception as e:
+                failed_count += 1
+                if '410' in str(e) or '404' in str(e):
+                    cursor.execute("UPDATE push_subscriptions SET is_active = 0 WHERE id = ?", (sub['id'],))
+
+    cursor.execute(
+        "INSERT INTO admin_announcements (title, body, target_segment, sent_count, failed_count) VALUES (?, ?, ?, ?, ?)",
+        (title, body, segment, sent_count, failed_count)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'sent': sent_count, 'failed': failed_count}), 200
+
+
+@admin_bp.route('/announcement/history', methods=['GET'])
+@require_admin_auth()
+def announcement_history():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM admin_announcements ORDER BY sent_at DESC LIMIT 50")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return jsonify({'announcements': rows}), 200
