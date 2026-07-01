@@ -745,6 +745,20 @@ def generate_financial_verdict(user_id) -> str:
 def get_summary():
     try:
         user_id = get_current_user_id()
+        
+        # Refresh market prices if older than 1h before calculating
+        try:
+            from datetime import datetime, timedelta
+            market_assets = database.get_market_assets_for_user(user_id)
+            for asset in market_assets:
+                last_update = asset.get("last_price_update")
+                if not last_update or (datetime.now() - datetime.fromisoformat(str(last_update).replace("Z", ""))).total_seconds() > 3600:
+                    price = get_market_price(asset["market_symbol"], asset["market_type"])
+                    if price:
+                        database.update_asset_price(asset["id"], price)
+        except Exception as e:
+            print(f"Summary price refresh error: {e}")
+        
         assets = database.get_assets(user_id)
         liabilities = database.get_liabilities(user_id)
         

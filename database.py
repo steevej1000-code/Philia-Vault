@@ -851,6 +851,14 @@ def get_market_assets():
     return rows
 
 # Net Worth Calculations
+def get_market_assets_for_user(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM assets WHERE user_id = ? AND asset_category = 'market'", (user_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
 def calculate_asset_value(asset):
     if asset.get("asset_category") == "market":
         if asset.get("current_market_price") and asset.get("quantity_held"):
@@ -867,7 +875,47 @@ def calculate_passive_income(asset):
             return annual_income / 12
         return 0
     else:
-        return asset.get("passive_income_manual") or 0
+        # Nouveau champ (créé après refactor marché live)
+        manual_income = asset.get("passive_income_manual") or 0
+        if manual_income:
+            return manual_income
+        # Fallback : legacy monthly_yield pour les actifs créés avant le refactor
+        return asset.get("monthly_yield") or 0
+
+# Monthly liabilities calculation
+def calculate_monthly_liabilities(liabilities):
+    from datetime import datetime
+    current_month = datetime.now().strftime('%Y-%m')
+    total_fixed = sum(l["monthly_cost"] for l in liabilities if l.get("expense_type", "fixed") == "fixed")
+    total_one_time = sum(
+        l["monthly_cost"] for l in liabilities
+        if l.get("expense_type") == "one_time"
+        and l.get("occurred_date") and str(l["occurred_date"]).startswith(current_month)
+    )
+    return total_fixed + total_one_time
+
+def calculate_cashflow_net(user_id, monthly_income=None):
+    """Recalcule le cashflow net complet (actifs passifs - passifs)."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM assets WHERE user_id = ?", (user_id,))
+    assets = [dict(r) for r in cursor.fetchall()]
+    cursor.execute("SELECT * FROM liabilities WHERE user_id = ?", (user_id,))
+    liabilities = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    # Décrypter les valeurs
+    for a in assets:
+        a["value"] = decrypt_val(a["value"]) if a["value"] else 0
+        a["monthly_yield"] = decrypt_val(a["monthly_yield"]) if a["monthly_yield"] else 0
+    for l in liabilities:
+        l["monthly_cost"] = decrypt_val(l["monthly_cost"]) if l["monthly_cost"] else 0
+        l["remaining_amount"] = decrypt_val(l["remaining_amount"]) if l["remaining_amount"] else 0
+
+    cashflow_actifs = sum(calculate_passive_income(a) for a in assets)
+    couts_passifs = calculate_monthly_liabilities(liabilities)
+    cashflow_net = cashflow_actifs - couts_passifs
+    return cashflow_net, cashflow_actifs, couts_passifs
 
 # Liabilities CRUD Helpers
 def get_liabilities(user_id):
