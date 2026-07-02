@@ -602,13 +602,27 @@ export default function DisciplineScreen() {
           <Text style={styles.title}>{t('discipline_title')}</Text>
           <View style={styles.headerRow}>
             <Text style={styles.subtitle}>{t('discipline_subtitle')}</Text>
-            <Link href="../tasks" asChild>
+            <Link href="/(tabs)/todo" asChild>
               <TouchableOpacity style={styles.tasksLink}>
                 <Text style={styles.tasksLinkText}>✓ Tâches</Text>
               </TouchableOpacity>
             </Link>
           </View>
         </View>
+
+        {/* ✓ Tâches du jour */}
+        <Link href="/(tabs)/todo" asChild>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#39FF14', paddingVertical: 12, borderRadius: 12,
+              alignItems: 'center', marginBottom: 8, marginHorizontal: 16,
+            }}
+          >
+            <Text style={{ color: '#000', fontWeight: '800', fontSize: 14 }}>
+              ✓ Tâches du jour
+            </Text>
+          </TouchableOpacity>
+        </Link>
 
         {/* Position 1: Calendar Dashboard */}
         <View style={[
@@ -844,20 +858,6 @@ export default function DisciplineScreen() {
             <Text style={styles.freedomDaysLabel}>{getFreedomDaysLabel()}</Text>
           </View>
         </View>
-
-        {/* ✓ Tâches du jour */}
-        <Link href="/(tabs)/todo" asChild>
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#39FF14', paddingVertical: 12, borderRadius: 12,
-              alignItems: 'center', marginBottom: 8, marginHorizontal: 16,
-            }}
-          >
-            <Text style={{ color: '#000', fontWeight: '800', fontSize: 14 }}>
-              ✓ Tâches du jour
-            </Text>
-          </TouchableOpacity>
-        </Link>
 
         {/* Position 4: Financial Goals Section */}
         <View style={styles.goalsContainer}>
