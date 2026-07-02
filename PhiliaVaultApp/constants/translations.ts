@@ -69,6 +69,7 @@ export const translations: Record<Language, Dict> = {
     'discipline.target_savings_placeholder': 'Savings €',
     'discipline.target_expense_placeholder': 'Expense €',
     'discipline.target_validate_btn': '✅ Validate',
+    'discipline.enter_today': "Enter today's numbers to track your discipline",
     'discipline.target_entry_success': '✅ Success! {points} points',
     'discipline.target_entry_failure': '❌ Target not reached today',
     'discipline.target_error_save': 'Please enter valid values',

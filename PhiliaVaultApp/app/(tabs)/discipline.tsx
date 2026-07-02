@@ -105,6 +105,7 @@ export default function DisciplineScreen() {
   const [targetEntryLoading, setTargetEntryLoading] = useState(false);
   const [targetEntryMsg, setTargetEntryMsg] = useState<string | null>(null);
   const [targetEntrySuccess, setTargetEntrySuccess] = useState(false);
+  const [hasEntryToday, setHasEntryToday] = useState(false);
 
   // Contribute modal states
   const [showContributeModal, setShowContributeModal] = useState(false);
@@ -568,10 +569,11 @@ export default function DisciplineScreen() {
         const isSuccess = result.status === 'success';
         setTargetEntrySuccess(isSuccess);
         setTargetEntryMsg(isSuccess
-          ? t('discipline.target_entry_success').replace('{points}', result.points_earned?.toString() || '0')
-          : t('discipline.target_entry_failure'));
+          ? '✅ ' + t('discipline.target_entry_success').replace('{points}', result.points_earned?.toString() || '0')
+          : '❌ ' + t('discipline.target_entry_failure'));
         setTargetEpargne('');
         setTargetDepense('');
+        setHasEntryToday(true);
         loadTargetData();
       }
     } catch (e: any) {
@@ -579,7 +581,7 @@ export default function DisciplineScreen() {
       setTargetEntryMsg(e.message || t('discipline.target_error_save_entry'));
     } finally {
       setTargetEntryLoading(false);
-      setTimeout(() => setTargetEntryMsg(null), 4000);
+      setTimeout(() => setTargetEntryMsg(null), 8000);
     }
   };
 
@@ -1195,11 +1197,15 @@ export default function DisciplineScreen() {
                       <Text style={styles.targetEntryBtnText}>{t('discipline.target_validate_btn')}</Text>
                     )}
                   </TouchableOpacity>
-                  {targetEntryMsg && (
+                  {targetEntryMsg ? (
                     <Text style={[styles.targetEntryMsg, { color: targetEntrySuccess ? '#22c55e' : '#ef4444' }]}>
                       {targetEntryMsg}
                     </Text>
-                  )}
+                  ) : !hasEntryToday ? (
+                    <Text style={[styles.targetEntryMsg, { color: '#8e8e93' }]}>
+                      {t('discipline.enter_today') || 'Entre tes chiffres du jour pour suivre ta discipline'}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
             </View>
