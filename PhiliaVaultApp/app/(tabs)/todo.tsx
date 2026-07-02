@@ -3,9 +3,12 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, A
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 import { COLORS, RADIUS } from '../../constants/colors';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
+import { OfflineBanner } from '../../components/OfflineBanner';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 
 interface TodoTask {
   id: number;
@@ -14,38 +17,67 @@ interface TodoTask {
   completed: boolean | number;
 }
 
+const CACHE_PREFIX = '@philia_todo:';
+const LAST_SYNC_KEY = '@philia_todo:last_sync';
+
 export default function TodoScreen() {
   const insets = useSafeAreaInsets();
   const { language } = useUserPreferences();
+  const { isOnline } = useNetworkStatus();
   const today = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(today);
   const [tasks, setTasks] = useState<TodoTask[]>([]);
   const [newTitle, setNewTitle] = useState('');
   const [marked, setMarked] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
+  const [lastSync, setLastSync] = useState<string | null>(null);
+
+  // Load last sync timestamp
+  useEffect(() => {
+    AsyncStorage.getItem(LAST_SYNC_KEY).then(v => setLastSync(v));
+  }, []);
+
+  // Save last sync timestamp
+  const touchSync = async () => {
+    const ts = new Date().toISOString();
+    await AsyncStorage.setItem(LAST_SYNC_KEY, ts);
+    setLastSync(ts);
+  };
+
+  // Cache for a date
+  const cacheKey = (date: string) => `${CACHE_PREFIX}tasks_${date}`;
+  const cacheMarks = (month: string) => `${CACHE_PREFIX}marks_${month}`;
 
   const load = useCallback(async () => {
     setLoading(true);
+    const month = selectedDate.substring(0, 7);
     try {
-      const [tasksRes] = await Promise.all([
+      const [tasksRes, countsRes] = await Promise.all([
         api.getTodoTasks(selectedDate),
+        api.getTodoTaskCounts(month),
       ]);
       setTasks(tasksRes.tasks || []);
+      await AsyncStorage.setItem(cacheKey(selectedDate), JSON.stringify(tasksRes.tasks || []));
       
-      // Marks for month
-      const month = selectedDate.substring(0, 7);
-      const countsRes = await api.getTodoTaskCounts(month);
       const marks: Record<string, any> = {};
       (countsRes.counts || []).forEach((c: any) => {
         marks[c.task_date] = { marked: true, dotColor: '#39FF14' };
       });
       marks[selectedDate] = { ...(marks[selectedDate] || {}), selected: true, selectedColor: '#39FF14' };
       setMarked(marks);
-    } catch (e) { /* silencieux */ }
-    finally { setLoading(false); }
+      await AsyncStorage.setItem(cacheMarks(month), JSON.stringify(marks));
+      await touchSync();
+    } catch {
+      // Offline fallback — load from cache
+      const cached = await AsyncStorage.getItem(cacheKey(selectedDate));
+      if (cached) setTasks(JSON.parse(cached));
+      const cachedMarks = await AsyncStorage.getItem(cacheMarks(month));
+      if (cachedMarks) setMarked(JSON.parse(cachedMarks));
+    }
+    setLoading(false);
   }, [selectedDate]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const addTask = async () => {
     const t = newTitle.trim();
@@ -54,18 +86,18 @@ export default function TodoScreen() {
       await api.createTodoTask(t, selectedDate);
       setNewTitle('');
       load();
-    } catch (e: any) { Alert.alert('Erreur', 'Création impossible'); }
+    } catch { Alert.alert('Erreur', 'Création impossible'); }
   };
 
   const toggle = async (task: TodoTask) => {
     try {
       await api.toggleTodoTask(task.id, !task.completed);
       load();
-    } catch (e: any) { Alert.alert('Erreur', 'Mise à jour impossible'); }
+    } catch { Alert.alert('Erreur', 'Mise à jour impossible'); }
   };
 
   const remove = (task: TodoTask) => {
-    Alert.alert('Supprimer', `Supprimer "${task.title}" ?`, [
+    Alert.alert('Supprimer', `"${task.title}" ?`, [
       { text: 'Annuler', style: 'cancel' },
       { text: 'Supprimer', style: 'destructive', onPress: async () => {
         await api.deleteTodoTask(task.id);
@@ -81,32 +113,27 @@ export default function TodoScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
+      {!isOnline && <OfflineBanner lastSync={lastSync} />}
+      
       <Calendar
         onDayPress={(d: any) => setSelectedDate(d.dateString)}
         markedDates={marked}
         theme={{
-          backgroundColor: '#0c0e12',
-          calendarBackground: '#0c0e12',
-          todayTextColor: '#39FF14',
-          todayBackgroundColor: '#39FF1433',
-          dayTextColor: '#fff',
-          textDisabledColor: '#3a3a3c',
-          monthTextColor: '#fff',
-          arrowColor: '#39FF14',
-          selectedDayBackgroundColor: '#39FF14',
-          selectedDayTextColor: '#000',
+          backgroundColor: '#0c0e12', calendarBackground: '#0c0e12',
+          todayTextColor: '#39FF14', todayBackgroundColor: '#39FF1433',
+          dayTextColor: '#fff', textDisabledColor: '#3a3a3c',
+          monthTextColor: '#fff', arrowColor: '#39FF14',
+          selectedDayBackgroundColor: '#39FF14', selectedDayTextColor: '#000',
         }}
         style={{ borderRadius: 20, borderWidth: 1, borderColor: '#2c2c2e', margin: 16, overflow: 'hidden' }}
       />
-      
+
       <Text style={styles.dateLabel}>{dateLabel}</Text>
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator color="#39FF14" /></View>
       ) : tasks.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.empty}>Aucune tâche pour ce jour</Text>
-        </View>
+        <View style={styles.center}><Text style={styles.empty}>Aucune tâche pour ce jour</Text></View>
       ) : (
         <FlatList
           data={tasks}
@@ -122,9 +149,7 @@ export default function TodoScreen() {
               <View style={[styles.circle, item.completed ? styles.circleDone : null]}>
                 {item.completed ? <Text style={styles.check}>✓</Text> : null}
               </View>
-              <Text style={[styles.title, item.completed ? styles.titleDone : null]}>
-                {item.title}
-              </Text>
+              <Text style={[styles.title, item.completed ? styles.titleDone : null]}>{item.title}</Text>
             </TouchableOpacity>
           )}
         />
