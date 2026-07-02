@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Animated, ScrollView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Modal, Pressable, Animated, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { COLORS, RADIUS } from '../constants/colors';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import { LANGUAGES, Language } from '../constants/translations';
@@ -27,6 +27,7 @@ interface PreferencesSelectorModalProps {
 export function PreferencesSelectorModal({ visible, type, onClose }: PreferencesSelectorModalProps) {
   const { language, currency, setLanguage, setCurrency, t } = useUserPreferences();
   const [toastVisible, setToastVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const toastOpacity = React.useRef(new Animated.Value(0)).current;
 
   const showToast = () => {
@@ -39,16 +40,24 @@ export function PreferencesSelectorModal({ visible, type, onClose }: Preferences
   };
 
   useEffect(() => {
-    if (!visible) setToastVisible(false);
+    if (!visible) { setToastVisible(false); setSearchQuery(''); }
   }, [visible]);
 
   if (!type) return null;
 
-  const options: Option[] = type === 'language'
+  const allOptions: Option[] = type === 'language'
     ? LANGUAGES.map((l) => ({ code: l.code, flag: l.flag, label: l.label }))
-    : CURRENCIES.map((c) => ({ code: c.code, flag: c.flag, label: `${t('currency_' + c.code.toLowerCase())} (${c.symbol})` }));
+    : CURRENCIES.map((c) => ({ code: c.code, flag: c.flag, label: `${c.name} (${c.symbol})` }));
 
   const selected = type === 'language' ? language : currency;
+
+  // Filter by search query for currencies
+  const options = type === 'language' ? allOptions : searchQuery.trim()
+    ? allOptions.filter(o =>
+        o.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        o.code.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : allOptions;
 
   const handleSelect = async (code: string) => {
     if (type === 'language') {
@@ -63,34 +72,66 @@ export function PreferencesSelectorModal({ visible, type, onClose }: Preferences
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={styles.sheet}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.sheet}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? -40 : 0}
+      >
         <View style={styles.handle} />
         <Text style={styles.title}>{type === 'language' ? t('language') : t('currency')}</Text>
 
-        <ScrollView style={styles.optionsList} showsVerticalScrollIndicator={false}>
-          {options.map((opt, i) => {
-            const isSelected = opt.code === selected;
-            return (
-              <TouchableOpacity
-                key={opt.code}
-                style={[styles.optionRow, i === options.length - 1 && { borderBottomWidth: 0 }]}
-                onPress={() => handleSelect(opt.code)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.optionLeft}>
-                  <Text style={styles.flag}>{opt.flag}</Text>
-                  <Text style={styles.optionLabel}>{opt.label}</Text>
-                </View>
-                {isSelected && <Text style={styles.check}>✓</Text>}
+        {/* Search bar — only for currencies (languages are few) */}
+        {type === 'currency' && (
+          <View style={styles.searchContainer}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher une devise..."
+              placeholderTextColor="#8e8e93"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearBtn}>
+                <Text style={styles.clearText}>✕</Text>
               </TouchableOpacity>
-            );
-          })}
+            )}
+          </View>
+        )}
+
+        <ScrollView style={styles.optionsList} showsVerticalScrollIndicator={false}>
+          {options.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Aucune devise trouvée</Text>
+            </View>
+          ) : (
+            options.map((opt, i) => {
+              const isSelected = opt.code === selected;
+              const isLast = i === options.length - 1;
+              return (
+                <TouchableOpacity
+                  key={opt.code}
+                  style={[styles.optionRow, isLast && { borderBottomWidth: 0 }]}
+                  onPress={() => handleSelect(opt.code)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.optionLeft}>
+                    <Text style={styles.flag}>{opt.flag}</Text>
+                    <Text style={styles.optionLabel} numberOfLines={1}>{opt.label}</Text>
+                  </View>
+                  {isSelected && <Text style={styles.check}>✓</Text>}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </ScrollView>
 
         <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.8}>
           <Text style={styles.cancelText}>{t('cancel')}</Text>
         </TouchableOpacity>
-      </View>
+      </KeyboardAvoidingView>
 
       {toastVisible && (
         <Animated.View style={[styles.toast, { opacity: toastOpacity }]}>
@@ -119,7 +160,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 32,
-    maxHeight: '70%',
+    maxHeight: '75%',
   },
   handle: {
     width: 40,
@@ -136,12 +177,49 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 4,
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2c2c2e',
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    height: 42,
+  },
+  searchIcon: {
+    fontSize: 14,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  clearBtn: {
+    padding: 6,
+  },
+  clearText: {
+    color: '#8e8e93',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   optionsList: {
     backgroundColor: '#0c0e12',
     borderWidth: 1,
     borderColor: '#2c2c2e',
     borderRadius: 20,
     paddingHorizontal: 16,
+  },
+  emptyState: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#8e8e93',
+    fontSize: 13,
   },
   optionRow: {
     flexDirection: 'row',
@@ -155,6 +233,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+    paddingRight: 12,
   },
   flag: {
     fontSize: 22,
@@ -163,6 +243,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#ffffff',
     fontWeight: '600',
+    flex: 1,
   },
   check: {
     color: COLORS.primary,

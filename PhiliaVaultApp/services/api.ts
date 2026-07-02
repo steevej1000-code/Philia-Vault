@@ -502,6 +502,47 @@ class ApiClient {
     });
   }
 
+  // ─── Tasks ─────────────────────────────────────────────────────────────────
+
+  async getTaskCategories() {
+    return this.request('/api/tasks/categories');
+  }
+
+  async createTaskCategory(name: string, color: string = '#39FF14') {
+    return this.request('/api/tasks/categories', {
+      method: 'POST',
+      body: JSON.stringify({ name, color }),
+    });
+  }
+
+  async deleteTaskCategory(categoryId: number) {
+    return this.request(`/api/tasks/categories/${categoryId}`, { method: 'DELETE' });
+  }
+
+  async getTasks(categoryId: number, date?: string) {
+    const params = new URLSearchParams({ category_id: categoryId.toString() });
+    if (date) params.append('date', date);
+    return this.request(`/api/tasks?${params}`);
+  }
+
+  async createTask(categoryId: number, title: string, taskDate: string) {
+    return this.request('/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ category_id: categoryId, title, task_date: taskDate }),
+    });
+  }
+
+  async updateTask(taskId: number, data: { completed?: boolean; title?: string }) {
+    return this.request(`/api/tasks/${taskId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTask(taskId: number) {
+    return this.request(`/api/tasks/${taskId}`, { method: 'DELETE' });
+  }
+
   async syncAll(): Promise<void> {
     const online = await this.isOnline();
     if (!online) return;
