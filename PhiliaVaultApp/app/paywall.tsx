@@ -276,6 +276,16 @@ export default function PaywallScreen() {
         </Text>
       </TouchableOpacity>
 
+      {/* Back to login */}
+      <TouchableOpacity
+        onPress={() => router.replace('/login')}
+        style={{ alignItems: 'center', marginTop: 8, padding: 8 }}
+      >
+        <Text style={{ fontSize: 13, color: '#555', textDecorationLine: 'underline' }}>
+          Retour à la connexion
+        </Text>
+      </TouchableOpacity>
+
       {/* DEV bypass — preservé exactement comme avant */}
       {__DEV__ && (
         <TouchableOpacity
