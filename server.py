@@ -2395,138 +2395,103 @@ def abandon_goal(goal_id: int):
     return jsonify({"success": True}), 200
 
 
-# ─── API Tasks ─────────────────────────────────────────────────────────────────
+# ─── API TODO Tasks ───────────────────────────────────────────────────────────
 
-@app.route("/api/tasks/categories", methods=["GET"])
+@app.route("/api/todo/tasks/setup", methods=["GET"])
+def todo_setup_test():
+    """Health check for todo endpoints."""
+    return jsonify({"status": "ok"}), 200
+
+
+@app.route("/api/todo/tasks", methods=["GET"])
 @require_auth
-def get_task_categories():
+def get_todo_tasks():
     user_id = get_current_user_id()
-    conn = database.get_db()
-    categories = conn.execute(
-        "SELECT * FROM task_categories WHERE user_id = ? ORDER BY created_at DESC",
-        (user_id,)
-    ).fetchall()
-    conn.close()
-    return jsonify({"categories": [dict(c) for c in categories]}), 200
-
-
-@app.route("/api/tasks/categories", methods=["POST"])
-@require_auth
-def create_task_category():
-    user_id = get_current_user_id()
-    data = request.get_json() or {}
-    name = data.get("name")
-    color = data.get("color", "#39FF14")
-    if not name:
-        return jsonify({"error": "Name required"}), 400
-    conn = database.get_db()
-    conn.execute(
-        "INSERT INTO task_categories (user_id, name, color) VALUES (?, ?, ?)",
-        (user_id, name, color)
-    )
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True}), 201
-
-
-@app.route("/api/tasks/categories/<int:category_id>", methods=["DELETE"])
-@require_auth
-def delete_task_category(category_id):
-    user_id = get_current_user_id()
-    conn = database.get_db()
-    cat = conn.execute(
-        "SELECT * FROM task_categories WHERE id = ? AND user_id = ?",
-        (category_id, user_id)
-    ).fetchone()
-    if not cat:
-        conn.close()
-        return jsonify({"error": "Not found"}), 404
-    conn.execute("DELETE FROM tasks WHERE category_id = ?", (category_id,))
-    conn.execute("DELETE FROM task_categories WHERE id = ?", (category_id,))
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True}), 200
-
-
-@app.route("/api/tasks", methods=["GET"])
-@require_auth
-def get_tasks():
-    user_id = get_current_user_id()
-    category_id = request.args.get("category_id")
     date = request.args.get("date")
-    query = "SELECT * FROM tasks WHERE user_id = ?"
-    params = [user_id]
-    if category_id:
-        query += " AND category_id = ?"
-        params.append(int(category_id))
-    if date:
-        query += " AND task_date = ?"
-        params.append(date)
-    query += " ORDER BY task_date ASC, id ASC"
+    if not date:
+        return jsonify({"error": "Date required"}), 400
     conn = database.get_db()
-    tasks = conn.execute(query, tuple(params)).fetchall()
+    tasks = conn.execute(
+        "SELECT * FROM todo_tasks WHERE user_id = ? AND task_date = ? ORDER BY created_at ASC",
+        (user_id, date)
+    ).fetchall()
     conn.close()
     return jsonify({"tasks": [dict(t) for t in tasks]}), 200
 
 
-@app.route("/api/tasks", methods=["POST"])
+@app.route("/api/todo/tasks", methods=["POST"])
 @require_auth
-def create_task():
+def create_todo_task():
     user_id = get_current_user_id()
     data = request.get_json() or {}
-    category_id = data.get("category_id")
     title = data.get("title")
     task_date = data.get("task_date")
-    if not all([category_id, title, task_date]):
-        return jsonify({"error": "Missing required fields"}), 400
+    if not title or not task_date:
+        return jsonify({"error": "Title and task_date required"}), 400
     conn = database.get_db()
     conn.execute(
-        "INSERT INTO tasks (category_id, user_id, title, task_date) VALUES (?, ?, ?, ?)",
-        (category_id, user_id, title, task_date)
+        "INSERT INTO todo_tasks (user_id, title, task_date) VALUES (?, ?, ?)",
+        (user_id, title, task_date)
     )
     conn.commit()
     conn.close()
     return jsonify({"success": True}), 201
 
 
-@app.route("/api/tasks/<int:task_id>", methods=["PATCH"])
+@app.route("/api/todo/tasks/<int:task_id>", methods=["PATCH"])
 @require_auth
-def update_task(task_id):
+def toggle_todo_task(task_id):
     user_id = get_current_user_id()
     conn = database.get_db()
     task = conn.execute(
-        "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
+        "SELECT * FROM todo_tasks WHERE id = ? AND user_id = ?",
         (task_id, user_id)
     ).fetchone()
     if not task:
         conn.close()
         return jsonify({"error": "Not found"}), 404
     data = request.get_json() or {}
-    if "completed" in data:
-        conn.execute("UPDATE tasks SET completed = ? WHERE id = ?", (1 if data["completed"] else 0, task_id))
-    if "title" in data:
-        conn.execute("UPDATE tasks SET title = ? WHERE id = ?", (data["title"], task_id))
+    completed = data.get("completed", not task["completed"])
+    conn.execute("UPDATE todo_tasks SET completed = ? WHERE id = ?", (1 if completed else 0, task_id))
     conn.commit()
     conn.close()
     return jsonify({"success": True}), 200
 
 
-@app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
+@app.route("/api/todo/tasks/<int:task_id>", methods=["DELETE"])
 @require_auth
-def delete_task(task_id):
+def delete_todo_task(task_id):
     user_id = get_current_user_id()
     conn = database.get_db()
     task = conn.execute(
-        "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
+        "SELECT * FROM todo_tasks WHERE id = ? AND user_id = ?",
         (task_id, user_id)
     ).fetchone()
     if not task:
         conn.close()
         return jsonify({"error": "Not found"}), 404
-    conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.execute("DELETE FROM todo_tasks WHERE id = ?", (task_id,))
     conn.commit()
     conn.close()
     return jsonify({"success": True}), 200
+
+
+@app.route("/api/todo/tasks/count-by-month", methods=["GET"])
+@require_auth
+def count_tasks_by_month():
+    user_id = get_current_user_id()
+    month = request.args.get("month")
+    if not month:
+        return jsonify({"error": "Month required"}), 400
+    conn = database.get_db()
+    counts = conn.execute("""
+        SELECT task_date, COUNT(*) as total, SUM(completed) as done
+        FROM todo_tasks
+        WHERE user_id = ? AND task_date LIKE ?
+        GROUP BY task_date
+    """, (user_id, f"{month}%")).fetchall()
+    conn.close()
+    return jsonify({"counts": [dict(c) for c in counts]}), 200
 
 
 # ─── My Target Endpoints ──────────────────────────────────────────────────────

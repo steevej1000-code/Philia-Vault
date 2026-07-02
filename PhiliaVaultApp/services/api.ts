@@ -502,45 +502,34 @@ class ApiClient {
     });
   }
 
-  // ─── Tasks ─────────────────────────────────────────────────────────────────
+  // ─── TODO Tasks ───────────────────────────────────────────────────────────
 
-  async getTaskCategories() {
-    return this.request('/api/tasks/categories');
+  async getTodoTasks(date: string) {
+    return this.request(`/api/todo/tasks?date=${date}`);
   }
 
-  async createTaskCategory(name: string, color: string = '#39FF14') {
-    return this.request('/api/tasks/categories', {
+  async createTodoTask(title: string, taskDate: string) {
+    return this.request('/api/todo/tasks', {
       method: 'POST',
-      body: JSON.stringify({ name, color }),
+      body: JSON.stringify({ title, task_date: taskDate }),
     });
   }
 
-  async deleteTaskCategory(categoryId: number) {
-    return this.request(`/api/tasks/categories/${categoryId}`, { method: 'DELETE' });
-  }
-
-  async getTasks(categoryId: number, date?: string) {
-    const params = new URLSearchParams({ category_id: categoryId.toString() });
-    if (date) params.append('date', date);
-    return this.request(`/api/tasks?${params}`);
-  }
-
-  async createTask(categoryId: number, title: string, taskDate: string) {
-    return this.request('/api/tasks', {
-      method: 'POST',
-      body: JSON.stringify({ category_id: categoryId, title, task_date: taskDate }),
-    });
-  }
-
-  async updateTask(taskId: number, data: { completed?: boolean; title?: string }) {
-    return this.request(`/api/tasks/${taskId}`, {
+  async toggleTodoTask(taskId: number, completed: boolean) {
+    return this.request(`/api/todo/tasks/${taskId}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ completed }),
     });
   }
 
-  async deleteTask(taskId: number) {
-    return this.request(`/api/tasks/${taskId}`, { method: 'DELETE' });
+  async deleteTodoTask(taskId: number) {
+    return this.request(`/api/todo/tasks/${taskId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getTodoTaskCounts(month: string) {
+    return this.request(`/api/todo/tasks/count-by-month?month=${month}`);
   }
 
   async syncAll(): Promise<void> {

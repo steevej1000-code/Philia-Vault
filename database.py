@@ -476,6 +476,19 @@ def init_db():
     )
     """)
 
+    # Create todo_tasks table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS todo_tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        task_date DATE NOT NULL,
+        completed BOOLEAN DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
     # Create task_categories table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS task_categories (
