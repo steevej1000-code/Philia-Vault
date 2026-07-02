@@ -107,7 +107,22 @@ export default function PaywallScreen() {
 
   const handleRestore = async () => {
     if (Platform.OS === 'web') {
-      Alert.alert('Restore Access', 'Contact support@philiavault.com to restore your access.');
+      // Web: check subscription status via backend
+      setLoading(true);
+      try {
+        const status = await api.getSubscriptionStatus();
+        if (status?.active || status?.is_premium) {
+          await api.setPremiumStatus(1).catch(() => {});
+          setPremium(true);
+          router.replace('/(tabs)');
+        } else {
+          Alert.alert('Rien à restaurer', "Aucun abonnement actif trouvé sur ce compte. Si tu as déjà payé, contacte support@philiavault.com.");
+        }
+      } catch {
+        Alert.alert('Rien à restaurer', "Aucun abonnement actif trouvé. Contacte support@philiavault.com.");
+      } finally {
+        setLoading(false);
+      }
       return;
     }
     setLoading(true);
@@ -283,6 +298,19 @@ export default function PaywallScreen() {
       >
         <Text style={{ fontSize: 13, color: '#555', textDecorationLine: 'underline' }}>
           Retour à la connexion
+        </Text>
+      </TouchableOpacity>
+
+      {/* Déconnexion */}
+      <TouchableOpacity
+        onPress={async () => {
+          try { await api.logout(); } catch {}
+          router.replace('/login');
+        }}
+        style={{ alignItems: 'center', marginTop: 4, padding: 8, marginBottom: 20 }}
+      >
+        <Text style={{ fontSize: 12, color: '#444' }}>
+          Se déconnecter et changer de compte
         </Text>
       </TouchableOpacity>
 
