@@ -169,7 +169,7 @@ export default function TasksScreen() {
   if (screen === 'categories') {
     return (
       <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
-        <OfflineBanner />
+        {!isOnline && <OfflineBanner />}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>📋 Catégories</Text>
           <TouchableOpacity style={styles.addBtn} onPress={() => setModalAddCat(true)}>
@@ -246,7 +246,7 @@ export default function TasksScreen() {
     const today = new Date().toISOString().split('T')[0];
     return (
       <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
-        <OfflineBanner />
+        {!isOnline && <OfflineBanner />}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => { setScreen('categories'); setSelectedCategory(null); }}>
             <Text style={styles.backBtn}>‹ Retour</Text>
@@ -285,7 +285,7 @@ export default function TasksScreen() {
     : '';
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
-      <OfflineBanner />
+      {!isOnline && <OfflineBanner />}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => { setScreen('calendar'); setTasks([]); }}>
           <Text style={styles.backBtn}>‹ Calendrier</Text>
