@@ -7,7 +7,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, Link } from 'expo-router';
 import api from '../../services/api';
 import { COLORS, RADIUS, SHADOW } from '../../constants/colors';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
@@ -691,7 +691,14 @@ export default function DisciplineScreen() {
         {/* Title Header */}
         <View style={styles.header}>
           <Text style={styles.title}>{t('discipline_title')}</Text>
-          <Text style={styles.subtitle}>{t('discipline_subtitle')}</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.subtitle}>{t('discipline_subtitle')}</Text>
+            <Link href="../tasks" asChild>
+              <TouchableOpacity style={styles.tasksLink}>
+                <Text style={styles.tasksLinkText}>✓ Tâches</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
         </View>
 
         {/* Position 1: Calendar Dashboard */}
@@ -1511,6 +1518,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.onSurfaceVariant,
     marginTop: 4,
+    flex: 1,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  tasksLink: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginLeft: 12,
+  },
+  tasksLinkText: {
+    color: '#000',
+    fontSize: 13,
+    fontWeight: '800',
   },
   calendarContainer: {
     backgroundColor: '#000000',

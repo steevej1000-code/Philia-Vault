@@ -2399,11 +2399,12 @@ def abandon_goal(goal_id: int):
 
 @app.route("/api/tasks/categories", methods=["GET"])
 @require_auth
-def get_task_categories(user):
+def get_task_categories():
+    user_id = get_current_user_id()
     conn = database.get_db()
     categories = conn.execute(
         "SELECT * FROM task_categories WHERE user_id = ? ORDER BY created_at DESC",
-        (user['id'],)
+        (user_id,)
     ).fetchall()
     conn.close()
     return jsonify({"categories": [dict(c) for c in categories]}), 200
@@ -2411,7 +2412,8 @@ def get_task_categories(user):
 
 @app.route("/api/tasks/categories", methods=["POST"])
 @require_auth
-def create_task_category(user):
+def create_task_category():
+    user_id = get_current_user_id()
     data = request.get_json() or {}
     name = data.get("name")
     color = data.get("color", "#39FF14")
@@ -2420,7 +2422,7 @@ def create_task_category(user):
     conn = database.get_db()
     conn.execute(
         "INSERT INTO task_categories (user_id, name, color) VALUES (?, ?, ?)",
-        (user["id"], name, color)
+        (user_id, name, color)
     )
     conn.commit()
     conn.close()
@@ -2429,11 +2431,12 @@ def create_task_category(user):
 
 @app.route("/api/tasks/categories/<int:category_id>", methods=["DELETE"])
 @require_auth
-def delete_task_category(user, category_id):
+def delete_task_category(category_id):
+    user_id = get_current_user_id()
     conn = database.get_db()
     cat = conn.execute(
         "SELECT * FROM task_categories WHERE id = ? AND user_id = ?",
-        (category_id, user["id"])
+        (category_id, user_id)
     ).fetchone()
     if not cat:
         conn.close()
@@ -2447,11 +2450,12 @@ def delete_task_category(user, category_id):
 
 @app.route("/api/tasks", methods=["GET"])
 @require_auth
-def get_tasks(user):
+def get_tasks():
+    user_id = get_current_user_id()
     category_id = request.args.get("category_id")
     date = request.args.get("date")
     query = "SELECT * FROM tasks WHERE user_id = ?"
-    params = [user["id"]]
+    params = [user_id]
     if category_id:
         query += " AND category_id = ?"
         params.append(int(category_id))
@@ -2467,7 +2471,8 @@ def get_tasks(user):
 
 @app.route("/api/tasks", methods=["POST"])
 @require_auth
-def create_task(user):
+def create_task():
+    user_id = get_current_user_id()
     data = request.get_json() or {}
     category_id = data.get("category_id")
     title = data.get("title")
@@ -2477,7 +2482,7 @@ def create_task(user):
     conn = database.get_db()
     conn.execute(
         "INSERT INTO tasks (category_id, user_id, title, task_date) VALUES (?, ?, ?, ?)",
-        (category_id, user["id"], title, task_date)
+        (category_id, user_id, title, task_date)
     )
     conn.commit()
     conn.close()
@@ -2486,11 +2491,12 @@ def create_task(user):
 
 @app.route("/api/tasks/<int:task_id>", methods=["PATCH"])
 @require_auth
-def update_task(user, task_id):
+def update_task(task_id):
+    user_id = get_current_user_id()
     conn = database.get_db()
     task = conn.execute(
         "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
-        (task_id, user["id"])
+        (task_id, user_id)
     ).fetchone()
     if not task:
         conn.close()
@@ -2507,11 +2513,12 @@ def update_task(user, task_id):
 
 @app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
 @require_auth
-def delete_task(user, task_id):
+def delete_task(task_id):
+    user_id = get_current_user_id()
     conn = database.get_db()
     task = conn.execute(
         "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
-        (task_id, user["id"])
+        (task_id, user_id)
     ).fetchone()
     if not task:
         conn.close()
