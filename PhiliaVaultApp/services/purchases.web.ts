@@ -1,8 +1,6 @@
-/**
- * Web stub for purchases.ts.
- * Metro bundler automatically picks this file over purchases.ts on web builds.
- * On web: RevenueCat is unavailable — redirect to Stripe checkout instead.
- */
+import { Platform } from 'react-native';
+
+// Web stub — RevenueCat n'existe pas sur le web
 
 export const COACH_ENTITLEMENT_ID = 'coach_premium';
 
@@ -12,20 +10,19 @@ export const PRODUCT_IDS = {
 } as const;
 
 export function configurePurchases(_appUserId?: string) {
-  console.log('[Purchases] Web — RevenueCat désactivé, Stripe actif.');
+  // No-op on web
 }
 
-export async function getCurrentOffering() {
+export async function getCurrentOffering(): Promise<null> {
   return null;
 }
 
 export async function purchasePlan(_plan: 'monthly' | 'yearly'): Promise<null> {
-  // On web, payment goes through Stripe checkout (see services/stripe.ts)
-  throw new Error('Utilisez stripeCheckout() sur web.');
+  throw new Error('Les achats natifs ne sont pas disponibles sur le web. Utilisez Stripe.');
 }
 
-export async function restorePurchases(): Promise<any> {
-  throw new Error('Restore non disponible sur web — contactez support@philiavault.com');
+export async function restorePurchases(): Promise<null> {
+  throw new Error('Les restaurations natives ne sont pas disponibles sur le web.');
 }
 
 export function hasCoachEntitlement(_info: any): boolean {
