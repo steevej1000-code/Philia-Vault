@@ -93,13 +93,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="todo"
-        options={{
-          title: 'Tâches',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} emoji="✓" label="Tâches" />,
-        }}
-      />
-      <Tabs.Screen
         name="simulator"
         options={{
           href: null,

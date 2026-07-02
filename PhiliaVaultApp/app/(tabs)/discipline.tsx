@@ -92,20 +92,6 @@ export default function DisciplineScreen() {
   const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [showGoalCatDropdown, setShowGoalCatDropdown] = useState(false);
 
-  // My Target states
-  const [targetSummary, setTargetSummary] = useState<any>(null);
-  const [targetStreak, setTargetStreak] = useState<{ streak_count: number; label: string }>({ streak_count: 0, label: t('discipline.target_streak_none') });
-  const [loadingTarget, setLoadingTarget] = useState(false);
-  const [targetShowSetup, setTargetShowSetup] = useState(false);
-  const [targetSavingsInput, setTargetSavingsInput] = useState('');
-  const [targetBudgetInput, setTargetBudgetInput] = useState('');
-  const [savingTargetGoal, setSavingTargetGoal] = useState(false);
-  const [targetEpargne, setTargetEpargne] = useState('');
-  const [targetDepense, setTargetDepense] = useState('');
-  const [targetEntryLoading, setTargetEntryLoading] = useState(false);
-  const [targetEntryMsg, setTargetEntryMsg] = useState<string | null>(null);
-  const [targetEntrySuccess, setTargetEntrySuccess] = useState(false);
-  const [hasEntryToday, setHasEntryToday] = useState(false);
 
   // Contribute modal states
   const [showContributeModal, setShowContributeModal] = useState(false);
@@ -198,33 +184,12 @@ export default function DisciplineScreen() {
     }
   }, []);
 
-  const loadTargetData = useCallback(async () => {
-    try {
-      setLoadingTarget(true);
-      const [summaryRes, streakRes] = await Promise.all([
-        api.getTargetSummary(),
-        api.getTargetStreak(),
-      ]);
-      if (summaryRes.success) {
-        setTargetSummary(summaryRes);
-      }
-      if (streakRes.success) {
-        setTargetStreak({ streak_count: streakRes.streak_count, label: streakRes.label });
-      }
-    } catch (e) {
-      console.error('Failed to load target data:', e);
-    } finally {
-      setLoadingTarget(false);
-    }
-  }, []);
-
   // Fetch all on focus
   useFocusEffect(
     useCallback(() => {
       loadHistoryData(currentVisibleMonth);
       loadGoalsData();
-      loadTargetData();
-    }, [loadHistoryData, loadGoalsData, loadTargetData, currentVisibleMonth])
+    }, [loadHistoryData, loadGoalsData, currentVisibleMonth])
   );
 
   // Trigger neon green screen flash animation
@@ -525,64 +490,6 @@ export default function DisciplineScreen() {
         }
       ]
     );
-  };
-
-  const handleSaveTargetGoal = async () => {
-    const savings = parseFloat(targetSavingsInput.replace(',', '.'));
-    const budget = parseFloat(targetBudgetInput.replace(',', '.'));
-    if (isNaN(savings) || isNaN(budget) || savings < 0 || budget < 0) {
-      Alert.alert(t('error'), t('discipline.target_error_save'));
-      return;
-    }
-    setSavingTargetGoal(true);
-    try {
-      const result = await api.setTargetGoal(savings, budget);
-      if (result.success) {
-        setTargetShowSetup(false);
-        setTargetSavingsInput('');
-        setTargetBudgetInput('');
-        loadTargetData();
-      }
-    } catch (e: any) {
-      Alert.alert(t('error'), e.message || 'An error occurred.');
-    } finally {
-      setSavingTargetGoal(false);
-    }
-  };
-
-  const handleTargetDailyEntry = async () => {
-    const epargne = parseFloat(targetEpargne.replace(',', '.'));
-    const depense = parseFloat(targetDepense.replace(',', '.'));
-    if (isNaN(epargne)) {
-      Alert.alert(t('error'), t('discipline.target_error_savings'));
-      return;
-    }
-    if (isNaN(depense)) {
-      Alert.alert(t('error'), t('discipline.target_error_expense'));
-      return;
-    }
-    setTargetEntryLoading(true);
-    setTargetEntryMsg(null);
-    try {
-      const result = await api.logTargetDailyEntry(epargne, depense);
-      if (result.success) {
-        const isSuccess = result.status === 'success';
-        setTargetEntrySuccess(isSuccess);
-        setTargetEntryMsg(isSuccess
-          ? '✅ ' + t('discipline.target_entry_success').replace('{points}', result.points_earned?.toString() || '0')
-          : '❌ ' + t('discipline.target_entry_failure'));
-        setTargetEpargne('');
-        setTargetDepense('');
-        setHasEntryToday(true);
-        loadTargetData();
-      }
-    } catch (e: any) {
-      setTargetEntrySuccess(false);
-      setTargetEntryMsg(e.message || t('discipline.target_error_save_entry'));
-    } finally {
-      setTargetEntryLoading(false);
-      setTimeout(() => setTargetEntryMsg(null), 8000);
-    }
   };
 
   const getGoalStatus = (goal: any) => {
@@ -938,6 +845,20 @@ export default function DisciplineScreen() {
           </View>
         </View>
 
+        {/* ✓ Tâches du jour */}
+        <Link href="/(tabs)/todo" asChild>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#39FF14', paddingVertical: 12, borderRadius: 12,
+              alignItems: 'center', marginBottom: 8, marginHorizontal: 16,
+            }}
+          >
+            <Text style={{ color: '#000', fontWeight: '800', fontSize: 14 }}>
+              ✓ Tâches du jour
+            </Text>
+          </TouchableOpacity>
+        </Link>
+
         {/* Position 4: Financial Goals Section */}
         <View style={styles.goalsContainer}>
           <View style={styles.goalsHeaderRow}>
@@ -1038,179 +959,6 @@ export default function DisciplineScreen() {
           )}
         </View>
 
-        {/* Position 5: My Target Section */}
-        <View style={styles.targetContainer}>
-          <View style={styles.targetHeaderRow}>
-            <Text style={styles.sectionTitle}>{t('discipline.my_target_title')}</Text>
-            {!targetShowSetup && (
-              <TouchableOpacity
-                style={styles.newGoalBtn}
-                onPress={() => setTargetShowSetup(true)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.newGoalBtnText}>{t('discipline.define_goals')}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {loadingTarget ? (
-            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginVertical: 20 }} />
-          ) : targetShowSetup ? (
-            <View style={styles.card}>
-              <Text style={styles.cardHeader}>{t('discipline.define_goals')}</Text>
-              <Text style={styles.formLabel}>{t('discipline.monthly_savings_label')}</Text>
-              <View style={[styles.inputWrapper, focusedInput === 'targetSavings' && styles.inputFocused]}>
-                <TextInput
-                  style={styles.input}
-                  placeholder={t('discipline.target_savings_placeholder')}
-                  placeholderTextColor={COLORS.onSurfaceVariant}
-                  keyboardType="numeric"
-                  value={targetSavingsInput}
-                  onChangeText={setTargetSavingsInput}
-                  onFocus={() => setFocusedInput('targetSavings')}
-                  onBlur={() => setFocusedInput(null)}
-                />
-              </View>
-              <Text style={styles.formLabel}>{t('discipline.monthly_budget_label')}</Text>
-              <View style={[styles.inputWrapper, focusedInput === 'targetBudget' && styles.inputFocused]}>
-                <TextInput
-                  style={styles.input}
-                  placeholder={t('discipline.budget_placeholder')}
-                  placeholderTextColor={COLORS.onSurfaceVariant}
-                  keyboardType="numeric"
-                  value={targetBudgetInput}
-                  onChangeText={setTargetBudgetInput}
-                  onFocus={() => setFocusedInput('targetBudget')}
-                  onBlur={() => setFocusedInput(null)}
-                />
-              </View>
-              <View style={{ flexDirection: 'row', marginTop: 12, gap: 10 }}>
-                {targetSummary && targetSummary.budget_mensuel > 0 && (
-                  <TouchableOpacity
-                    style={[styles.cancelBtn, { flex: 1 }]}
-                    onPress={() => setTargetShowSetup(false)}
-                  >
-                    <Text style={styles.cancelBtnText}>{t('cancel')}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={[styles.setupBtn, { flex: 1 }]}
-                  onPress={handleSaveTargetGoal}
-                  disabled={savingTargetGoal}
-                >
-                  <LinearGradient
-                    colors={['#CCFF00', '#CCFF00']}
-                    style={styles.validateBtnGrad}
-                  >
-                    {savingTargetGoal ? (
-                      <ActivityIndicator color="#0c0e12" size="small" />
-                    ) : (
-                      <Text style={styles.validateText}>{t('save')}</Text>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : targetSummary && (targetSummary.budget_mensuel > 0 || targetSummary.objectif_epargne > 0) ? (
-            <View>
-              {/* Row 1: Budget & Savings Goal */}
-              <View style={styles.targetRow}>
-                <View style={[styles.targetCard, { flex: 1 }]}>
-                  <Text style={styles.targetCardLabel}>{t('discipline.target_budget_label')}</Text>
-                  <Text style={styles.targetCardValue} numberOfLines={1} adjustsFontSizeToFit>
-                    {formatAmount(targetSummary.budget_mensuel)}
-                  </Text>
-                  <Text style={styles.targetCardSub}>{t('discipline.target_per_month')}</Text>
-                </View>
-                <View style={[styles.targetCard, { flex: 1 }]}>
-                  <Text style={styles.targetCardLabel}>{t('discipline.target_savings_goal_label')}</Text>
-                  <Text style={styles.targetCardValue} numberOfLines={1} adjustsFontSizeToFit>
-                    {formatAmount(targetSummary.objectif_epargne)}
-                  </Text>
-                  <Text style={styles.targetCardSub}>{t('discipline.target_per_month')}</Text>
-                </View>
-              </View>
-
-              {/* Row 2: Freedom Days & Progression */}
-              <View style={styles.targetRow}>
-                <View style={[styles.targetCard, styles.targetCardGreen, { flex: 1 }]}>
-                  <Text style={styles.targetCardLabelGreen}>{t('discipline.target_freedom_days_label')}</Text>
-                  <Text style={styles.targetCardValueGreen}>
-                    {targetSummary.jours_liberte.toFixed(1)}
-                  </Text>
-                  <Text style={styles.targetCardSubGreen}>{t('discipline.target_freedom_suffix')}</Text>
-                </View>
-                <View style={[styles.targetCard, { flex: 1 }]}>
-                  <Text style={styles.targetCardLabel}>{t('discipline.target_progress_label')}</Text>
-                  <Text style={styles.targetCardValueProgression}>
-                    {targetSummary.progression}%
-                  </Text>
-                  <View style={styles.targetProgressTrack}>
-                    <View style={[styles.targetProgressBar, { width: `${Math.min(100, targetSummary.progression)}%` }]} />
-                  </View>
-                  <Text style={styles.targetCardSub}>
-                    {formatAmount(targetSummary.total_epargne_mois)} / {formatAmount(targetSummary.objectif_epargne)}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Row 3: Streak */}
-              <View style={styles.targetRow}>
-                <View style={[styles.targetCard, styles.targetStreakCard, { flex: 1 }]}>
-                  <Text style={styles.streakEmoji}>🔥</Text>
-                  <Text style={styles.targetStreakValue}>{targetStreak.streak_count}</Text>
-                  <Text style={styles.targetStreakLabel}>{getTranslatedStreakLabel(targetStreak.label)}</Text>
-                </View>
-
-                {/* Daily Entry Form */}
-                <View style={[styles.targetCard, { flex: 1.5 }]}>
-                  <Text style={styles.targetCardLabel}>{t('discipline.target_daily_entry_label')}</Text>
-                  <TextInput
-                    style={[styles.targetMiniInput, focusedInput === 'targetEpargne' && styles.inputFocused]}
-                    placeholder={t('discipline.target_savings_placeholder')}
-                    placeholderTextColor={COLORS.onSurfaceVariant}
-                    keyboardType="numeric"
-                    value={targetEpargne}
-                    onChangeText={setTargetEpargne}
-                    onFocus={() => setFocusedInput('targetEpargne')}
-                    onBlur={() => setFocusedInput(null)}
-                  />
-                  <TextInput
-                    style={[styles.targetMiniInput, focusedInput === 'targetDepense' && styles.inputFocused]}
-                    placeholder={t('discipline.target_expense_placeholder')}
-                    placeholderTextColor={COLORS.onSurfaceVariant}
-                    keyboardType="numeric"
-                    value={targetDepense}
-                    onChangeText={setTargetDepense}
-                    onFocus={() => setFocusedInput('targetDepense')}
-                    onBlur={() => setFocusedInput(null)}
-                  />
-                  <TouchableOpacity
-                    style={styles.targetEntryBtn}
-                    onPress={handleTargetDailyEntry}
-                    disabled={targetEntryLoading}
-                    activeOpacity={0.8}
-                  >
-                    {targetEntryLoading ? (
-                      <ActivityIndicator color="#000000" size="small" />
-                    ) : (
-                      <Text style={styles.targetEntryBtnText}>{t('discipline.target_validate_btn')}</Text>
-                    )}
-                  </TouchableOpacity>
-                  {targetEntryMsg ? (
-                    <Text style={[styles.targetEntryMsg, { color: targetEntrySuccess ? '#22c55e' : '#ef4444' }]}>
-                      {targetEntryMsg}
-                    </Text>
-                  ) : !hasEntryToday ? (
-                    <Text style={[styles.targetEntryMsg, { color: '#8e8e93' }]}>
-                      {t('discipline.enter_today') || 'Entre tes chiffres du jour pour suivre ta discipline'}
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-            </View>
-          ) : null}
-        </View>
       </ScrollView>
 
       {/* CREATE GOAL MODAL */}
@@ -2070,159 +1818,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // My Target Styles
-  targetContainer: {
-    marginTop: 10,
-  },
-  targetHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  targetRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 10,
-  },
-  targetCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    padding: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  targetCardLabel: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 9,
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  targetCardValue: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 22,
-    color: '#f8fafc',
-    fontWeight: '900',
-  },
-  targetCardSub: {
-    fontFamily: 'PlusJakartaSans-Regular',
-    fontSize: 10,
-    color: '#94a3b8',
-    marginTop: 2,
-  },
-  targetCardGreen: {
-    backgroundColor: '#CCFF00',
-    borderColor: '#CCFF00',
-    shadowColor: '#CCFF00',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  targetCardLabelGreen: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 9,
-    color: '#000000',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 2,
-  },
-  targetCardValueGreen: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 26,
-    color: '#000000',
-    fontWeight: '900',
-  },
-  targetCardSubGreen: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
-    fontSize: 10,
-    color: '#000000',
-    marginTop: 2,
-  },
-  targetCardValueProgression: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 22,
-    color: '#CCFF00',
-    fontWeight: '900',
-  },
-  targetProgressTrack: {
-    height: 6,
-    backgroundColor: '#0c0e12',
-    borderRadius: RADIUS.full,
-    overflow: 'hidden',
-    width: '100%',
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  targetProgressBar: {
-    height: '100%',
-    backgroundColor: '#CCFF00',
-    borderRadius: RADIUS.full,
-  },
-  targetStreakCard: {
-    borderWidth: 1.5,
-    borderColor: '#CCFF00',
-    shadowColor: '#CCFF00',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  targetStreakValue: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 24,
-    color: '#CCFF00',
-    fontWeight: '900',
-    textShadowColor: 'rgba(204, 255, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
-  },
-  targetStreakLabel: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
-    fontSize: 10,
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 2,
-  },
-  targetMiniInput: {
-    height: 36,
-    backgroundColor: '#0c0e12',
-    borderRadius: RADIUS.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    color: '#f8fafc',
-    fontFamily: 'PlusJakartaSans-Regular',
-    fontSize: 13,
-    paddingHorizontal: 10,
-    marginBottom: 6,
-    width: '100%',
-  },
-  targetEntryBtn: {
-    height: 34,
-    backgroundColor: '#CCFF00',
-    borderRadius: RADIUS.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    marginTop: 2,
-  },
-  targetEntryBtnText: {
-    fontFamily: 'PlusJakartaSans-Bold',
-    fontSize: 13,
-    color: '#000000',
-    fontWeight: '800',
-  },
-  targetEntryMsg: {
-    fontFamily: 'PlusJakartaSans-SemiBold',
-    fontSize: 11,
-    marginTop: 4,
-    textAlign: 'center',
-  },
   budgetSetupContainer: {
     padding: 20,
     alignItems: 'center' as const,

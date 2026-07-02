@@ -442,35 +442,7 @@ class ApiClient {
 
   // ─── My Target ────────────────────────────────────────────────────────────
 
-  async logTargetDailyEntry(epargne: number, depense: number) {
-    return this.request('/api/target/daily-entry', {
-      method: 'POST',
-      body: JSON.stringify({ epargne, depense }),
-    });
-  }
-
-  async getTargetCalendar(month?: string) {
-    let url = '/api/target/calendar';
-    if (month) {
-      url += `?month=${month}`;
-    }
-    return this.request(url);
-  }
-
-  async getTargetStreak() {
-    return this.request('/api/target/streak');
-  }
-
-  async getTargetSummary() {
-    return this.request('/api/target/summary');
-  }
-
-  async setTargetGoal(savings_goal: number, monthly_budget: number) {
-    return this.request('/api/target/set-goal', {
-      method: 'POST',
-      body: JSON.stringify({ savings_goal, monthly_budget }),
-    });
-  }
+  // ─── TODO Tasks ───────────────────────────────────────────────────────────
 
   /**
    * Pre-fetches and caches all offline-supported endpoints. Intended to run
