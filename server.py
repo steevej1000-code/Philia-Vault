@@ -2395,6 +2395,133 @@ def abandon_goal(goal_id: int):
     return jsonify({"success": True}), 200
 
 
+# ─── API Tasks ─────────────────────────────────────────────────────────────────
+
+@app.route("/api/tasks/categories", methods=["GET"])
+@require_auth
+def get_task_categories(user):
+    conn = database.get_db()
+    categories = conn.execute(
+        "SELECT * FROM task_categories WHERE user_id = ? ORDER BY created_at DESC",
+        (user['id'],)
+    ).fetchall()
+    conn.close()
+    return jsonify({"categories": [dict(c) for c in categories]}), 200
+
+
+@app.route("/api/tasks/categories", methods=["POST"])
+@require_auth
+def create_task_category(user):
+    data = request.get_json() or {}
+    name = data.get("name")
+    color = data.get("color", "#39FF14")
+    if not name:
+        return jsonify({"error": "Name required"}), 400
+    conn = database.get_db()
+    conn.execute(
+        "INSERT INTO task_categories (user_id, name, color) VALUES (?, ?, ?)",
+        (user["id"], name, color)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True}), 201
+
+
+@app.route("/api/tasks/categories/<int:category_id>", methods=["DELETE"])
+@require_auth
+def delete_task_category(user, category_id):
+    conn = database.get_db()
+    cat = conn.execute(
+        "SELECT * FROM task_categories WHERE id = ? AND user_id = ?",
+        (category_id, user["id"])
+    ).fetchone()
+    if not cat:
+        conn.close()
+        return jsonify({"error": "Not found"}), 404
+    conn.execute("DELETE FROM tasks WHERE category_id = ?", (category_id,))
+    conn.execute("DELETE FROM task_categories WHERE id = ?", (category_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True}), 200
+
+
+@app.route("/api/tasks", methods=["GET"])
+@require_auth
+def get_tasks(user):
+    category_id = request.args.get("category_id")
+    date = request.args.get("date")
+    query = "SELECT * FROM tasks WHERE user_id = ?"
+    params = [user["id"]]
+    if category_id:
+        query += " AND category_id = ?"
+        params.append(int(category_id))
+    if date:
+        query += " AND task_date = ?"
+        params.append(date)
+    query += " ORDER BY task_date ASC, id ASC"
+    conn = database.get_db()
+    tasks = conn.execute(query, tuple(params)).fetchall()
+    conn.close()
+    return jsonify({"tasks": [dict(t) for t in tasks]}), 200
+
+
+@app.route("/api/tasks", methods=["POST"])
+@require_auth
+def create_task(user):
+    data = request.get_json() or {}
+    category_id = data.get("category_id")
+    title = data.get("title")
+    task_date = data.get("task_date")
+    if not all([category_id, title, task_date]):
+        return jsonify({"error": "Missing required fields"}), 400
+    conn = database.get_db()
+    conn.execute(
+        "INSERT INTO tasks (category_id, user_id, title, task_date) VALUES (?, ?, ?, ?)",
+        (category_id, user["id"], title, task_date)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True}), 201
+
+
+@app.route("/api/tasks/<int:task_id>", methods=["PATCH"])
+@require_auth
+def update_task(user, task_id):
+    conn = database.get_db()
+    task = conn.execute(
+        "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
+        (task_id, user["id"])
+    ).fetchone()
+    if not task:
+        conn.close()
+        return jsonify({"error": "Not found"}), 404
+    data = request.get_json() or {}
+    if "completed" in data:
+        conn.execute("UPDATE tasks SET completed = ? WHERE id = ?", (1 if data["completed"] else 0, task_id))
+    if "title" in data:
+        conn.execute("UPDATE tasks SET title = ? WHERE id = ?", (data["title"], task_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True}), 200
+
+
+@app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
+@require_auth
+def delete_task(user, task_id):
+    conn = database.get_db()
+    task = conn.execute(
+        "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
+        (task_id, user["id"])
+    ).fetchone()
+    if not task:
+        conn.close()
+        return jsonify({"error": "Not found"}), 404
+    conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True}), 200
+
+
 # ─── My Target Endpoints ──────────────────────────────────────────────────────
 
 @app.route('/api/target/daily-entry', methods=['POST'])

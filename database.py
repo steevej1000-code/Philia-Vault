@@ -476,6 +476,33 @@ def init_db():
     )
     """)
 
+    # Create task_categories table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS task_categories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        color TEXT DEFAULT '#39FF14',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
+    # Create tasks table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        task_date DATE NOT NULL,
+        completed BOOLEAN DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (category_id) REFERENCES task_categories(id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
     # Create daily_discipline table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS daily_discipline (
